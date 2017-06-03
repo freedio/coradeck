@@ -1,9 +1,26 @@
+/*
+ * Copyright ⓒ 2017 by Coradec GmbH.
+ *
+ * This file is part of the Coradeck.
+ *
+ * Coradeck is free software: you can redistribute it under the the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version.
+ *
+ * Coradeck is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR ANY PARTICULAR PURPOSE.  See the GNU General Public License for further details.
+ *
+ * The GNU General Public License is available from <http://www.gnu.org/licenses/>.
+ *
+ * @license GPL-3.0+ <http://spdx.org/licenses/GPL-3.0+>
+ *
+ * @author Dominik Wezel <dom@coradec.com>
+ */
+
 package com.coradec.coracore.util;
 
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.ctrl.RecursiveObjects;
 import com.coradec.coracore.model.Tuple;
+import com.coradec.coracore.trouble.UnexpectedEndOfDataException;
 
 import java.lang.reflect.Method;
 import java.net.URL;
@@ -27,6 +44,7 @@ import java.util.stream.Stream;
 public class ClassUtil {
 
     private static final RecursiveObjects registry = RecursiveObjects.getInstance();
+    @SuppressWarnings("ArraysAsListWithZeroOrOneArgument")
     private static final Set<String> IGNORED_PROPERTIES = new HashSet<>(Arrays.asList("Class"));
     private static final Class[] VALUE_CLASSES = {
             String.class, Number.class, Date.class, Throwable.class, Boolean.class, Character.class,
@@ -159,7 +177,13 @@ public class ClassUtil {
         return fromSignature(internal)[0];
     }
 
-    public static String signatureOf(Class<?> klass) {
+    /**
+     * Returns the descriptor of the specified class.
+     *
+     * @param klass the class.
+     * @return the descriptor.
+     */
+    public static String descriptorOf(Class<?> klass) {
         StringBuilder collector = new StringBuilder();
         while (klass.isArray()) {
             collector.append('[');
@@ -218,8 +242,12 @@ public class ClassUtil {
                 case 'L':
                     collector.append(' ');
                     while ((c = signature.charAt(i++)) != ';') {
-                        if (c == '/') c = '.';
-                        collector.append(c);
+                        if (c == '<') {
+                            i = decodeTypeParameters(signature, collector, i, is);
+                        } else {
+                            if (c == '/') c = '.';
+                            collector.append(c);
+                        }
                     }
                     break;
                 case 'S':
@@ -247,6 +275,71 @@ public class ClassUtil {
         };
     }
 
+    private static int decodeTypeParameters(final String signature, final StringBuilder collector,
+                                            int offset, final int length) {
+        collector.append('<');
+        StringBuilder suffices = new StringBuilder();
+        while (offset < length) {
+            char c = signature.charAt(offset++);
+            switch (c) {
+                case '>':
+                    if (collector.charAt(collector.length() - 1) == ',')
+                        collector.setLength(collector.length() - 1);
+                    collector.append(c).append(suffices);
+                    return offset;
+                case 'B':
+                    collector.append("byte");
+                    break;
+                case 'C':
+                    collector.append("char");
+                    break;
+                case 'D':
+                    collector.append("double");
+                    break;
+                case 'F':
+                    collector.append("float");
+                    break;
+                case 'I':
+                    collector.append("int");
+                    break;
+                case 'J':
+                    collector.append("long");
+                    break;
+                case 'L':
+                    while ((c = signature.charAt(offset++)) != ';') {
+                        if (c == '<') {
+                            offset = decodeTypeParameters(signature, collector, offset, length);
+                        } else {
+                            if (c == '/') c = '.';
+                            collector.append(c);
+                        }
+                    }
+                    break;
+                case 'S':
+                    collector.append("short");
+                    break;
+                case 'T':
+                    while ((c = signature.charAt(offset++)) != ';') {
+                        collector.append(c);
+                    }
+                    break;
+                case 'V':
+                    collector.append("void");
+                    break;
+                case 'Z':
+                    collector.append("boolean");
+                    break;
+                case '[':
+                    suffices.append("[]");
+                    continue;
+                default:
+                    collector.append(' ').append(c).append("???");
+            }
+            collector.append(',');
+        }
+        throw new UnexpectedEndOfDataException(signature);
+    }
+
     /**
      * Returns the internal name of the specified class.
      *
@@ -254,10 +347,37 @@ public class ClassUtil {
      * @return the internal name.
      */
     public static String internalNameOf(final Class<?> type) {
-        return type.toString().replace('.', '/');
+        return type.getName().replace('.', '/');
     }
 
     public static Class<?> classForDescriptor(final String desc) throws ClassNotFoundException {
-        return Class.forName(toExternal(desc));
+        final String className = toExternal(desc);
+        switch (className) {
+            case "boolean":
+                return Boolean.TYPE;
+            case "byte":
+                return Byte.TYPE;
+            case "short":
+                return Short.TYPE;
+            case "int":
+                return Integer.TYPE;
+            case "long":
+                return Long.TYPE;
+            case "float":
+                return Float.TYPE;
+            case "double":
+                return Double.TYPE;
+            default:
+                return Class.forName(removeTypeParameters(className));
+        }
+    }
+
+    private static String removeTypeParameters(final String className) {
+        return className.replaceFirst("<.+>", "");
+    }
+
+    public static String internalNameOf(final String signature) {
+        final String result = removeTypeParameters(signature);
+        return result.substring(1, result.length() - 1);
     }
 }

@@ -1,3 +1,19 @@
+/*
+ * Copyright ⓒ 2017 by Coradec GmbH.
+ *
+ * This file is part of the Coradeck.
+ *
+ * Coradeck is free software: you can redistribute it under the the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version.
+ *
+ * Coradeck is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR ANY PARTICULAR PURPOSE.  See the GNU General Public License for further details.
+ *
+ * The GNU General Public License is available from <http://www.gnu.org/licenses/>.
+ *
+ * @license GPL-3.0+ <http://spdx.org/licenses/GPL-3.0+>
+ *
+ * @author Dominik Wezel <dom@coradec.com>
+ */
+
 package com.coradec.coracore.util;
 
 import static java.util.stream.Collectors.*;
@@ -6,6 +22,11 @@ import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.ctrl.RecursiveObjects;
 import com.coradec.coracore.model.Representable;
 
+import java.lang.reflect.AnnotatedType;
+import java.lang.reflect.GenericDeclaration;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
@@ -20,7 +41,7 @@ import java.util.stream.Stream;
 /**
  * ​​Static library of String utilities.
  */
-@SuppressWarnings("UseOfObsoleteDateTimeApi")
+@SuppressWarnings({"UseOfObsoleteDateTimeApi", "WeakerAccess"})
 public final class StringUtil {
 
     private static final RecursiveObjects registry = RecursiveObjects.getInstance();
@@ -81,6 +102,7 @@ public final class StringUtil {
         if (o.getClass().isArray()) return array(o);
         if (o instanceof CharSequence) return "\"" + o + '"';
         if (o instanceof Character) return "'" + escape((char)o) + "'";
+        if (o instanceof Class) return ClassUtil.nameOf((Class<?>)o);
         if (o instanceof Optional<?>) {
             //noinspection unchecked
             return (String)((Optional)o).map(StringUtil::toString).orElse(NULL_REPR);
@@ -107,6 +129,24 @@ public final class StringUtil {
                                               ": " +
                                               toString(entry.getValue()))
                                 .collect(joining(", ", "Mainfest{", "}"));
+        }
+        if (o instanceof TypeVariable) {
+            TypeVariable<?> typeVar = (TypeVariable<?>)o;
+            final String name = typeVar.getName();
+            final GenericDeclaration genericDeclaration = typeVar.getGenericDeclaration();
+            final AnnotatedType[] annotatedBounds = typeVar.getAnnotatedBounds();
+            return String.format("name=%s, genericDeclaration=%s, annotatedBounds=%s",
+                    toString(name), ClassUtil.toString(genericDeclaration, genericDeclaration),
+                    ClassUtil.toString(annotatedBounds, annotatedBounds));
+        }
+        if (o instanceof ParameterizedType) {
+            ParameterizedType type = (ParameterizedType)o;
+            final Type ownerType = type.getOwnerType();
+            final Type rawType = type.getRawType();
+            final Type[] actualTypeArguments = type.getActualTypeArguments();
+            return String.format("owner=%s, rawType=%s, actualTypeArgs=%s",
+                    StringUtil.toString(ownerType), StringUtil.toString(rawType),
+                    StringUtil.toString(actualTypeArguments));
         }
         return o.toString();
     }

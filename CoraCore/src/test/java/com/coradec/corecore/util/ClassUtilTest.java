@@ -1,3 +1,19 @@
+/*
+ * Copyright ⓒ 2017 by Coradec GmbH.
+ *
+ * This file is part of the Coradeck.
+ *
+ * Coradeck is free software: you can redistribute it under the the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version.
+ *
+ * Coradeck is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR ANY PARTICULAR PURPOSE.  See the GNU General Public License for further details.
+ *
+ * The GNU General Public License is available from <http://www.gnu.org/licenses/>.
+ *
+ * @license GPL-3.0+ <http://spdx.org/licenses/GPL-3.0+>
+ *
+ * @author Dominik Wezel <dom@coradec.com>
+ */
+
 package com.coradec.corecore.util;
 
 import static org.hamcrest.CoreMatchers.*;
@@ -14,6 +30,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+@SuppressWarnings("UseOfObsoleteDateTimeApi")
 public class ClassUtilTest {
 
     @Test public void testToStringWithoutAttributes() {
@@ -55,8 +72,7 @@ public class ClassUtilTest {
                 is("(Date 2009-02-14T00:31:30.123000000)"));
         assertThat(ClassUtil.toString(123.456), is("(Double 123.456)"));
         assertThat(ClassUtil.toString(new StringBuffer()), is("(StringBuffer \"\")"));
-        assertThat(ClassUtil.toString(
-                new RuntimeException("Something went bad", new NoSuchElementException())),
+        assertThat(ClassUtil.toString(new RuntimeException("Something went bad", new NoSuchElementException())),
                 is("(RuntimeException java.lang.RuntimeException: Something went bad)"));
         assertThat(ClassUtil.toString(new ResourceFileNotFoundException("a.context")),
                 is("(com.coradec.coracore.trouble.ResourceFileNotFoundException com.coradec" +
@@ -69,7 +85,7 @@ public class ClassUtilTest {
         assertThat(ClassUtil.toString(new char[] {'a', '\n', '\20'}),
                 is("(char['a', '\\n', '\\20'])"));
         assertThat(ClassUtil.toString(Arrays.asList("x", "y", "z")),
-                is("(com.google.common.collect.RegularImmutableList [\"x\", \"y\", \"z\"])"));
+                is("(com.google.common" + ".collect.RegularImmutableList [\"x\", \"y\", \"z\"])"));
         assertThat(ClassUtil.toString(rmap),
                 is("(com.google.common.collect.RegularImmutableMap {\"died\": " +
                    "2009-02-14T00:31:30.123000000, \"born\": 1977-06-07T22:44:50.123000000, " +

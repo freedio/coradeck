@@ -1,13 +1,22 @@
-package com.coradec.corajet.cldr.protocols.car;
-
 /*
- * Copyright (c) by IntellAgent GmbH. All rights reserved.
+ * Copyright ⓒ 2017 by Coradec GmbH.
  *
- * For further info, see http://www.intellagent.ch/software/copyright.
+ * This file is part of the Coradeck.
  *
- * Created on Apr 18, 2012 by dio (dominik.wezel@intellagent.ch).
+ * Coradeck is free software: you can redistribute it under the the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version.
+ *
+ * Coradeck is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR ANY PARTICULAR PURPOSE.  See the GNU General Public License for further details.
+ *
+ * The GNU General Public License is available from <http://www.gnu.org/licenses/>.
+ *
+ * @license GPL-3.0+ <http://spdx.org/licenses/GPL-3.0+>
+ *
+ * @author Dominik Wezel <dom@coradec.com>
  */
 
+package com.coradec.corajet.cldr.protocols.car;
+
+import com.coradec.coracore.annotation.Nullable;
 import com.coradec.corajet.cldr.Syslog;
 
 import java.io.IOException;
@@ -26,6 +35,7 @@ import java.util.zip.ZipInputStream;
  */
 public class Handler extends URLStreamHandler {
 
+    @SuppressWarnings("ClassHasNoToStringMethod")
     private class ZipUrlConnection extends URLConnection {
 
         /** The stream. */
@@ -41,7 +51,7 @@ public class Handler extends URLStreamHandler {
          * @param zip the input stream (required).
          * @param url the URL (required).
          */
-        public ZipUrlConnection(final URL url, final ZipInputStream zip) {
+        ZipUrlConnection(final URL url, final ZipInputStream zip) {
             super(url);
             this.stream = zip;
         }
@@ -56,6 +66,7 @@ public class Handler extends URLStreamHandler {
 
     }
 
+    @SuppressWarnings("ClassHasNoToStringMethod")
     private class JarUrlConnection extends URLConnection {
 
         private final JarInputStream stream;
@@ -70,7 +81,7 @@ public class Handler extends URLStreamHandler {
          * @param url the URL to which the connection belongs (required).
          * @param jar the stream for which to create the connection.
          */
-        public JarUrlConnection(final URL url, final JarInputStream jar) {
+        JarUrlConnection(final URL url, final JarInputStream jar) {
             super(url);
             this.stream = jar;
         }
@@ -86,7 +97,7 @@ public class Handler extends URLStreamHandler {
 
     }
 
-    @Override protected URLConnection openConnection(final URL url) throws IOException {
+    @Nullable @Override protected URLConnection openConnection(final URL url) throws IOException {
         URLConnection result = null;
         final String path = url.getPath();
         final String probe = url.getRef();
@@ -126,8 +137,8 @@ public class Handler extends URLStreamHandler {
      * @author dio (dominik.wezel@intellagent.ch)
      * @since Apr 18, 2012
      */
-    private URLConnection openZipConnection(final URL url, final ZipInputStream zip, String probe)
-            throws IOException {
+    @SuppressWarnings("AssignmentToNull") @Nullable private URLConnection openZipConnection(
+            final URL url, final ZipInputStream zip, String probe) throws IOException {
         URLConnection result = null;
         String path = probe;
         final int endProbe = probe.indexOf('#');
@@ -171,8 +182,8 @@ public class Handler extends URLStreamHandler {
      * inaccessible.
      * @throws IOException if an I/O error occurred.
      */
-    private URLConnection openJarConnection(final URL url, final JarInputStream jar, String probe)
-            throws IOException {
+    @SuppressWarnings("AssignmentToNull") @Nullable private URLConnection openJarConnection(
+            final URL url, final JarInputStream jar, String probe) throws IOException {
         URLConnection result = null;
         String path = probe;
         final int endProbe = probe.indexOf('#');
@@ -199,7 +210,9 @@ public class Handler extends URLStreamHandler {
 //                                url, probe);
                         result = openZipConnection(url, new ZipInputStream(jar), probe);
                     } else {
-                        Syslog.error("Unknown container type: %s. No knowledge about how to get at %s", path, probe);
+                        Syslog.error(
+                                "Unknown container type: %s. No knowledge about how to get at %s",
+                                path, probe);
                     }
                 } else {
 //                    Syslog.debug("Opening URL connection to {0} from here", url);

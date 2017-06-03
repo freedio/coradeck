@@ -1,10 +1,25 @@
+/*
+ * Copyright ⓒ 2017 by Coradec GmbH.
+ *
+ * This file is part of the Coradeck.
+ *
+ * Coradeck is free software: you can redistribute it under the the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version.
+ *
+ * Coradeck is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR ANY PARTICULAR PURPOSE.  See the GNU General Public License for further details.
+ *
+ * The GNU General Public License is available from <http://www.gnu.org/licenses/>.
+ *
+ * @license GPL-3.0+ <http://spdx.org/licenses/GPL-3.0+>
+ *
+ * @author Dominik Wezel <dom@coradec.com>
+ */
+
 package com.coradec.coracore.trouble;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.*;
 
 import com.coradec.coracore.annotation.ToString;
-import com.coradec.coracore.trouble.BasicException;
 import org.junit.Test;
 
 public class BasicExceptionTest {
@@ -51,7 +66,7 @@ public class BasicExceptionTest {
 
     private class MessageNoArgsException extends BasicException {
 
-        private MessageNoArgsException() {
+        MessageNoArgsException() {
             super("This is a message");
         }
     }
@@ -62,7 +77,7 @@ public class BasicExceptionTest {
         private final int number;
         private final Object internal;
 
-        public NoMessageWithArgsException(final String text, final int number) {
+        NoMessageWithArgsException(final String text, final int number) {
             this.text = text;
             this.number = number;
             this.internal = new Object();
@@ -87,7 +102,7 @@ public class BasicExceptionTest {
         private final int number;
         private final Object internal;
 
-        public MessageWithArgsException(final String text, final int number) {
+        MessageWithArgsException(final String text, final int number) {
             super("This is a message");
             this.text = text;
             this.number = number;

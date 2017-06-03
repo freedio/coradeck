@@ -1,3 +1,19 @@
+/*
+ * Copyright ⓒ 2017 by Coradec GmbH.
+ *
+ * This file is part of the Coradeck.
+ *
+ * Coradeck is free software: you can redistribute it under the the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version.
+ *
+ * Coradeck is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR ANY PARTICULAR PURPOSE.  See the GNU General Public License for further details.
+ *
+ * The GNU General Public License is available from <http://www.gnu.org/licenses/>.
+ *
+ * @license GPL-3.0+ <http://spdx.org/licenses/GPL-3.0+>
+ *
+ * @author Dominik Wezel <dom@coradec.com>
+ */
+
 package com.coradec.corajet.cldr;
 
 import com.coradec.coracore.annotation.Nullable;
@@ -16,6 +32,7 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -29,7 +46,7 @@ import java.util.zip.ZipInputStream;
 /**
  * ​​Implementation of the Comprehensive ARchive class loader.
  */
-@SuppressWarnings("ClassHasNoToStringMethod")
+@SuppressWarnings({"ClassHasNoToStringMethod", "WeakerAccess"})
 public class CarClassLoader extends ClassLoader {
 
     private static final String PROP_ENV_CLASSPATH = "java.class.path";
@@ -39,13 +56,15 @@ public class CarClassLoader extends ClassLoader {
     private static final String PROP_ZIP_EXT = ".zip";
     private static final String PROP_JAR_EXT = ".jar";
     private static final String PROP_CAR_EXT = ".car";
+    private static final String NAME_INJECTOR = "com.coradec.corajet.cldr.CarInjector";
 
     private final Object injector;
-    private final Method embed;
+    private final Method embed, analyze;
     private final Map<String, List<URL>> resourceMap;
     private final Set<String> components = new HashSet<>();
     private final Set<String> implementations = new HashSet<>();
     private final Map<String, Class<?>> classes = new HashMap<>();
+    private final List<String> fileList = new LinkedList<>();
 
     CarClassLoader() {
         this(Thread.currentThread().getContextClassLoader());
@@ -55,12 +74,19 @@ public class CarClassLoader extends ClassLoader {
         super(parent);
         resourceMap = createResourceMap();
         try {
-            final Class<?> injectorClass = findClass("com.coradec.corajet.cldr.CarInjector");
-            final Constructor<?> injectorConstructor =
-                    injectorClass.getConstructor();
+            Syslog.info("Loading the injector ...");
+            final Class<?> injectorClass = findClass(NAME_INJECTOR);
+            final Constructor<?> injectorConstructor = injectorClass.getConstructor();
             embed = injectorClass.getMethod("embedClass", String.class, byte[].class, Integer.TYPE,
                     Integer.TYPE);
+            analyze = injectorClass.getMethod("analyzeClass", String.class, byte[].class,
+                    Integer.TYPE, Integer.TYPE);
             injector = injectorConstructor.newInstance();
+            Syslog.info("Analyzing naked resources ...");
+            for (final String file : fileList) {
+                final URL resource = findResource(file);
+                if (resource != null) parseAnnotations(file, resource);
+            }
             implementations.forEach(implementation -> {
                 try {
                     findClass(implementation);
@@ -69,6 +95,8 @@ public class CarClassLoader extends ClassLoader {
                     Syslog.error(e);
                 }
             });
+            Syslog.debug("Collected components: %s", components);
+            Syslog.debug("Collected implementations: %s", implementations);
         }
         catch (Exception e) {
             Syslog.error(e);
@@ -102,14 +130,16 @@ public class CarClassLoader extends ClassLoader {
      */
     private void collectResources(final Map<String, List<URL>> resourceMap,
                                   final String[] classPath) throws IOException {
+        Syslog.info("Collecting resources ...");
         registerProtocols();
         for (final String path : classPath) {
-//            Syslog.info("ClassPath entry: \"%s\"", path);
+            Syslog.trace("ClassPath entry: \"%s\"", path);
             final File file = new File(path);
             if (file.exists()) {
                 if (file.isDirectory()) {
-                    searchDirectory(resourceMap, file.toURI(), file.listFiles());
-                } else if (path.endsWith(".jar")) {
+                    searchDirectory(resourceMap, file.toURI(), file.listFiles(),
+                            file.toString().length() + 1);
+                } else if (path.endsWith(PROP_JAR_EXT)) {
                     searchJarFile(resourceMap, "car:" + file.toURI(),
                             new JarInputStream(new FileInputStream(file)), false);
                 } else if (path.endsWith(PROP_ZIP_EXT)) {
@@ -118,22 +148,54 @@ public class CarClassLoader extends ClassLoader {
                 }
             }
         }
-        Syslog.debug("Collected components: %s", components);
-        Syslog.debug("Collected implementations: %s", implementations);
 //        Syslog.debug("Collected resources:");
 //        resourceMap.forEach((key, value) -> System.out.printf("%s → %s%n", key, value));
     }
 
     private static void addResource(final Map<String, List<URL>> resourceMap, final String path,
                                     final URL url) {
+        Syslog.trace("Adding %s → %s", path, url);
         resourceMap.computeIfAbsent(path, k -> new ArrayList<>()).add(url);
     }
 
-    private static void searchDirectory(final Map<String, List<URL>> resourceMap, final URI prefix,
-                                        final File[] files) throws IOException {
-        for (final File file : files) {
-            addResource(resourceMap, file.getPath(), file.toURI().toURL());
+    private void searchDirectory(final Map<String, List<URL>> resourceMap, final URI prefix,
+                                 final @Nullable File[] files, final int fprefix)
+            throws IOException {
+        if (files != null) {
+            for (final File file : files) {
+                InputStream in = null;
+                if (file != null) {
+                    final String path = file.getPath();
+                    if (file.isDirectory()) {
+                        searchDirectory(resourceMap, file.toURI(), file.listFiles(), fprefix);
+                    } else if (path.endsWith(PROP_JAR_EXT)) {
+                        searchJarFile(resourceMap, "car:" + file.toURI(), (JarInputStream)(in =
+                                new JarInputStream(new FileInputStream(file))), false);
+                    } else if (path.endsWith(PROP_ZIP_EXT)) {
+                        searchZipFile(resourceMap, "car:" + file.toURI(), (ZipInputStream)(in =
+                                new ZipInputStream(new FileInputStream(file))));
+                    } else {
+                        final String name = file.getPath().substring(fprefix);
+                        final URL location = file.toURI().toURL();
+                        fileList.add(name);
+                        addResource(resourceMap, name, location);
+                    }
+                }
+                if (in != null) in.close();
+            }
         }
+    }
+
+    /**
+     * Parses the class in the specified input stream for annotations to find out whether it is a
+     * component or implementation.
+     *
+     * @param name     the name of the class.
+     * @param location the location of the class.
+     * @throws IOException if the class failed to be read.
+     */
+    private void parseAnnotations(final String name, final URL location) throws IOException {
+        readClass(name.replaceFirst("\\.class$", "").replace('/', '.'), location, false, true);
     }
 
     private void searchZipFile(final Map<String, List<URL>> resourceMap, final String prefix,
@@ -151,8 +213,7 @@ public class CarClassLoader extends ClassLoader {
         }
     }
 
-    private void searchJarFile(final Map<String, List<URL>> resourceMap, final String prefix,
-                               final JarInputStream jarFile, final boolean flat)
+    private void searchJarFile(final Map<String, List<URL>> resourceMap, final String prefix, final JarInputStream jarFile, final boolean flat)
             throws IOException {
         final Manifest manifest = jarFile.getManifest();
         Set<String> classPath = null;
@@ -229,9 +290,7 @@ public class CarClassLoader extends ClassLoader {
     private void registerImplementations(final String jarURL, final @Nullable String list) {
 //        Syslog.debug("Registering implementations from list \"%s\"", list);
         if (list != null && !list.isEmpty()) {
-            if (list != null && !list.isEmpty()) {
-                Collections.addAll(implementations, list.split("\\s+"));
-            }
+            Collections.addAll(implementations, list.split("\\s+"));
         }
     }
 
@@ -239,8 +298,7 @@ public class CarClassLoader extends ClassLoader {
         System.setProperty("java.protocol.handler.pkgs", "com.coradec.corajet.cldr.protocols");
     }
 
-    @Override protected URL findResource(final String name) {
-        // Validate preconditions: done by findResources.
+    @Override @Nullable protected URL findResource(final String name) {
         URL result = null;
         try {
             final Enumeration<URL> resources = findResources(name);
@@ -262,6 +320,7 @@ public class CarClassLoader extends ClassLoader {
         catch (Exception e) {
             throw new IOException("Failed to load the injector", e);
         }
+        //noinspection unchecked
         return Collections.enumeration(
                 resourceList == null ? Collections.EMPTY_LIST : resourceList);
     }
@@ -279,10 +338,11 @@ public class CarClassLoader extends ClassLoader {
     }
 
     @Override public Class<?> findClass(final String name) throws ClassNotFoundException {
+        if (name.startsWith("java.") || name.startsWith("sun.")) return super.findClass(name);
         try {
             return classes.computeIfAbsent(name, k -> {
                 URL location = findResource(toResourceName(name));
-    //        Syslog.debug("findClass(%s) -> location = %s%n", name, location);
+                //        Syslog.debug("findClass(%s) -> location = %s%n", name, location);
                 try {
                     if (location == null) return super.findClass(name);
                     else return loadClass(name, location);
@@ -310,6 +370,13 @@ public class CarClassLoader extends ClassLoader {
      */
     private Class<?> loadClass(final String name, final URL location) throws IOException {
         Syslog.debug("Loading class %s from %s", name, location);
+        byte[] data = readClass(name, location,
+                components.contains(name) || implementations.contains(name), false);
+        return defineClass(name, data, 0, data.length);
+    }
+
+    private byte[] readClass(final String name, final URL location, final boolean doEmbed,
+                             final boolean doAnalyze) throws IOException {
         final InputStream in = location.openStream();
         final int blocksize = 65536;
         byte[] buffer = new byte[blocksize];  // should covert 99% of all classes.
@@ -320,19 +387,36 @@ public class CarClassLoader extends ClassLoader {
             buflen += len;
             if (buflen == buffer.length) buffer = Arrays.copyOf(buffer, buflen + blocksize);
         }
-        byte[] data;
-        if (injector != null && (components.contains(name) || implementations.contains(name))) {
-            Syslog.debug(">> Injector.embed(%s)%n", name);
-            try {
-                data = (byte[])embed.invoke(injector, name, buffer, 0, buflen);
+        byte[] data = Arrays.copyOfRange(buffer, 0, buflen);
+        if (injector != null) {
+            if (doEmbed) {
+                Syslog.debug(">> Injector.embed(%s)", name);
+                try {
+                    data = (byte[])embed.invoke(injector, name, buffer, 0, buflen);
+                }
+                catch (Throwable e) {
+                    Syslog.error(e);
+                }
+            } else if (doAnalyze) {
+                Syslog.debug(">> Injector.analyze(%s)", name);
+                try {
+                    int state = (int)analyze.invoke(injector, name, buffer, 0, buflen);
+                    if ((state & 1) != 0) {
+                        Syslog.debug("-> Adding as component");
+                        components.add(name);
+                    }
+                    if ((state & 2) != 0) {
+                        Syslog.debug("-> Adding as implementation");
+                        implementations.add(name);
+                    }
+                }
+                catch (Throwable e) {
+                    Syslog.error(e);
+                }
             }
-            catch (Throwable e) {
-                Syslog.error(e);
-                ;
-                data = Arrays.copyOfRange(buffer, 0, buflen);
-            }
-        } else data = Arrays.copyOfRange(buffer, 0, buflen);
-        return defineClass(name, data, 0, data.length);
+        }
+        return data;
+//        Files.write(Paths.get("/tmp/", name + ".class"), data, CREATE, TRUNCATE_EXISTING);
     }
 
     private static String toResourceName(final String name) {
