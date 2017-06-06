@@ -33,9 +33,9 @@ import com.coradec.corajet.cldr.data.GenericInterface;
 public class Test2 {
 
     @Inject
-    private GenericInterface<Integer> i;
+    private GenericInterface<Byte> b;
     @Inject
-    private GenericInterface<Long> j;
+    private GenericInterface<Short> s;
     @Inject
     private GenericInterface<Float> f;
     @Inject
@@ -48,8 +48,8 @@ public class Test2 {
     }
 
     private void launch() {
-        assertThat(i.value(), is(equalTo(42)));
-        assertThat(j.value(), is(equalTo(4711L)));
+        assertThat(b.value(), is(equalTo((byte)42)));
+        assertThat(s.value(), is(equalTo((short)4711)));
         assertThat(f.value(), is(equalTo(2.71828184f)));
         assertThat(d.value(), is(equalTo(Math.PI)));
         assertThat(x.value(), is(equalTo("Hello, World!")));

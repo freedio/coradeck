@@ -20,12 +20,16 @@
 
 package com.coradec.corajet.cldr;
 
+import static com.coradec.coracore.model.InjectionMode.*;
 import static com.coradec.coracore.model.Scope.*;
 import static org.objectweb.asm.Opcodes.*;
 
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.Nullable;
+import com.coradec.coracore.annotation.ToString;
+import com.coradec.coracore.ctrl.Factory;
+import com.coradec.coracore.model.InjectionMode;
 import com.coradec.coracore.model.Scope;
 import com.coradec.coracore.trouble.ObjectInstantiationFailure;
 import com.coradec.coracore.util.ClassUtil;
@@ -142,13 +146,16 @@ public class CarInjector {
                         field.isAnnotationPresent(Inject.class)) {
                         final Class<?> fieldType = field.getType();
                         final Type genericType = field.getGenericType();
-                        Syslog.debug("Field %s.%s has generic type parameters %s",
-                                instance.getClass().getName(), field.getName(), genericType);
+                        final String name = field.getName();
+                        Syslog.trace("Field %s.%s has generic type parameters %s",
+                                instance.getClass().getName(), name, genericType);
                         List<Type> typeArgs = Collections.EMPTY_LIST;
                         if (genericType instanceof ParameterizedType) typeArgs = Arrays.asList(
                                 ((ParameterizedType)genericType).getActualTypeArguments());
                         field.setAccessible(true);
                         field.set(instance, implementationFor(fieldType, typeArgs));
+                        Syslog.debug("Field %s of %s set to %s", name, instance,
+                                StringUtil.toString(field.get(instance)));
                     }
                 }
                 return null;
@@ -175,15 +182,19 @@ public class CarInjector {
             throws ClassNotFoundException, ImplementationNotFoundException {
         Syslog.debug("Looking for an implementation of %s", interfaceType);
         Class<?> interfaceClass = ClassUtil.classForDescriptor(interfaceType);
-        return implementationFor(interfaceClass, extractTypeParameters(interfaceType));
+        final List<Type> typeArgs = extractTypeParameters(interfaceType);
+        Syslog.debug("i.e. %s%s", interfaceClass.getName(), StringUtil.toString(typeArgs));
+        return implementationFor(interfaceClass, typeArgs);
     }
 
-    private static Object implementationFor(final Class<?> interfaceClass, final List<Type> types)
-            throws ImplementationNotFoundException {
+    private static Object implementationFor(final Class<?> interfaceClass, final List<Type> types,
+                                            Object... args) throws ImplementationNotFoundException {
+        if (interfaceClass == Factory.class) {
+            return new ObjectFactory(types);
+        }
         return getImplementationClasses().stream()
                                          .filter(ic -> ic.matches(interfaceClass, types))
-                                         .findAny()
-                                         .map(ic -> ic.instantiate(types))
+                                         .findAny().map(ic -> ic.instantiate(types, args))
                                          .orElseThrow(() -> new ImplementationNotFoundException(
                                                  interfaceClass.getName()));
     }
@@ -199,13 +210,15 @@ public class CarInjector {
         List<Type> ptypes = new ArrayList<>();
         int start = genericTypeName.indexOf('<');
         int end = genericTypeName.lastIndexOf('>');
-        if (start == -1 || end == -1) return Collections.EMPTY_LIST;
+        if (start == -1 || end == -1) return ptypes;
         String paraTypes = genericTypeName.substring(start + 1, end);
-        if (start++ != -1 && end > start) {
-            for (start = 0, end = paraTypes.indexOf(';', start + 1);
-                 end != -1;
-                 start = end + 1, end = paraTypes.indexOf(';', start + 1)) {
-                ptypes.add(ClassUtil.classForDescriptor(paraTypes.substring(start, end + 1)));
+        start = 0;
+        for (int i = 0, level = 0, is = paraTypes.length(); i < is; ++i) {
+            char c = paraTypes.charAt(i);
+            if (c == '<') ++level;
+            else if (c == '>') --level;
+            else if (c == ';' && level == 0) {
+                ptypes.add(ClassUtil.typeForDescriptor(paraTypes.substring(start, start = i + 1)));
             }
         }
         return ptypes;
@@ -213,6 +226,8 @@ public class CarInjector {
 
     @SuppressWarnings("ClassHasNoToStringMethod")
     private static class ImplementationClass<T> {
+
+        private static final Object UNASSIGNED = new Object();
 
         private final Class<? super T> klass;
         private final Scope scope;
@@ -244,11 +259,12 @@ public class CarInjector {
          * the type parameters of the class.
          *
          * @param types the type arguments.
+         * @param extras additional arguments.
          * @return an instance of the class.
          * @throws ObjectInstantiationFailure if the class could not be instantiated due to one or
          *                                    more of several reasons..
          */
-        @SuppressWarnings("unchecked") T instantiate(final List<Type> types)
+        @SuppressWarnings("unchecked") T instantiate(final List<Type> types, final Object[] extras)
                 throws ObjectInstantiationFailure {
             Syslog.info("Instantiating %s%s", //
                     klass.getName(), StringUtil.toString(typeParameters)
@@ -286,7 +302,17 @@ public class CarInjector {
                             continue outer;
                         }
                     } else if (para instanceof Class<?>) {
-                        arguments[i] = implementationFor((Class<?>)para, Collections.EMPTY_LIST);
+                        Class<?> klass = (Class<?>)para;
+                        Object value = UNASSIGNED;
+                        for (final Object extra : extras) {
+                            if (klass.isInstance(extra)) {
+                                value = extra;
+                                break;
+                            }
+                        }
+                        if (value == UNASSIGNED)
+                            value = implementationFor((Class<?>)para, Collections.EMPTY_LIST);
+                        arguments[i] = value;
                     } else {
                         Syslog.warn("Found unrecognizable parameter type %s",
                                 ClassUtil.toString(para, para));
@@ -298,7 +324,8 @@ public class CarInjector {
                 args = arguments;
                 conScope = scope;
             }
-            if (constructor == null) throw new ObjectInstantiationFailure(klass);
+            if (constructor == null)
+                throw new ObjectInstantiationFailure(klass, "No suitable public constructor found");
             try {
                 switch (conScope) {
                     case SINGLETON:
@@ -324,12 +351,58 @@ public class CarInjector {
         }
     }
 
+    /**
+     * Implementation of a generic object factory.
+     */
+    private static class ObjectFactory<T> implements Factory<T> {
+
+        private final Class<? super T> rawType;
+        private final List<Type> typeArgs;
+
+        ObjectFactory(final List<Type> types) {
+            if (types.isEmpty())
+                throw new IllegalArgumentException("Factory without type parameters!");
+            Syslog.info("Creating object factory for %s", StringUtil.toString(types));
+            final Type primaryType = types.get(0);
+            if (primaryType instanceof Class<?>) {
+                rawType = (Class<? super T>)primaryType;
+                typeArgs = types.subList(1, types.size());
+            } else if (primaryType instanceof ParameterizedType) {
+                rawType = (Class<? super T>)((ParameterizedType)primaryType).getRawType();
+                typeArgs = Arrays.asList(((ParameterizedType)primaryType).getActualTypeArguments());
+            } else throw new IllegalArgumentException(
+                    String.format("First type parameter of factory must be a class, but was <%s>!",
+                            ClassUtil.toString(primaryType, primaryType)));
+        }
+
+        @ToString public Class<? super T> getRawType() {
+            return this.rawType;
+        }
+
+        @ToString public List<Type> getTypeArgs() {
+            return this.typeArgs;
+        }
+
+        @Override public T get(final Object... args) {
+            return (T)implementationFor(rawType, typeArgs, args);
+        }
+
+        @Override public T create(final Object... args) {
+            return (T)implementationFor(rawType, typeArgs, args);
+        }
+
+        @Override public String toString() {
+            return ClassUtil.toString(this);
+        }
+    }
+
     @SuppressWarnings("ClassHasNoToStringMethod")
     private class ClassModeler extends ClassVisitor {
 
         private String currentClassName;
         private final Map<String, String> fieldInjections = new HashMap<>();
         private boolean patch = false;
+        private InjectionMode injectionMode = DIRECT; // default
 
         ClassModeler(final ClassWriter writer) {
             super(Opcodes.ASM5, writer);
@@ -371,7 +444,8 @@ public class CarInjector {
                     Syslog.debug("Found constructor %s for class %s.", descriptor,
                             currentClassName);
                     return new ConstructorPatcher(currentClassName, descriptor,
-                            cv.visitMethod(access, name, desc, signature, exceptions));
+                            cv.visitMethod(access, name, desc, signature, exceptions),
+                            injectionMode);
                 }
                 if (name.equals("<clinit>") && !fieldInjections.isEmpty()) {
                     return new ClassModeler.ClassConstructorPatcher(
@@ -437,6 +511,7 @@ public class CarInjector {
                 if (desc.equals(INJECT_DESC) && visible) {
                     if (isStatic) fieldInjections.put(name, this.type);
                     patch = true;
+                    return new InjectionVisitor(fv.visitAnnotation(desc, visible));
                 }
                 return super.visitAnnotation(desc, visible);
             }
@@ -457,6 +532,30 @@ public class CarInjector {
             @Override public void visitMaxs(final int maxStack, final int maxLocals) {
                 super.visitMaxs(Integer.max(maxStack, 1), maxLocals);
             }
+        }
+
+        private class InjectionVisitor extends AnnotationVisitor {
+
+            InjectionVisitor(final AnnotationVisitor annotationVisitor) {
+                super(Opcodes.ASM5, annotationVisitor);
+            }
+
+            @Override
+            public void visitEnum(final String name, final String desc, final String value) {
+                try {
+                    Class<?> annotationValueType = ClassUtil.classForDescriptor(desc);
+                    if ("value".equals(name) && annotationValueType == InjectionMode.class) {
+                        Syslog.debug("Found injection with type %s", value);
+                        injectionMode = InjectionMode.valueOf(value);
+                    } else Syslog.error("Unrecognized combination: name=%s, desc=%s, scope=\"%s\"",
+                            name, desc, value);
+                }
+                catch (ClassNotFoundException e) {
+                    Syslog.error(e);
+                }
+                super.visitEnum(name, desc, value);
+            }
+
         }
 
     }
@@ -510,6 +609,7 @@ public class CarInjector {
             }
             super.visitEnum(name, desc, value);
         }
+
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")
@@ -517,12 +617,15 @@ public class CarInjector {
 
         private final String className;
         private final String signature;
+        private final InjectionMode injectionMode;
         private boolean patched;
 
-        ConstructorPatcher(final String className, final String signature, final MethodVisitor mv) {
+        ConstructorPatcher(final String className, final String signature, final MethodVisitor mv,
+                           final InjectionMode injectionMode) {
             super(Opcodes.ASM5, mv);
             this.className = className;
             this.signature = signature;
+            this.injectionMode = injectionMode;
             patched = false;
         }
 
@@ -534,11 +637,22 @@ public class CarInjector {
                 opcode == INVOKESPECIAL &&
                 "<init>".equals(name) &&
                 !className.equals(owner)) {
-                Syslog.debug("Patching constructor invocation %s.%s in %s%n", owner, name,
-                        className);
+                Syslog.debug("Patching constructor invocation %s.%s in %s (mode: %s)", owner, name,
+                        className, injectionMode.name());
+                switch (injectionMode) {
+                    case DIRECT:
                 mv.visitIntInsn(ALOAD, 0);
-                mv.visitMethodInsn(INVOKESTATIC, "com/coradec/corajet/cldr/CarInjector", "finish",
-                        "(Ljava/lang/Object;)V", intf);
+                        mv.visitMethodInsn(INVOKESTATIC, "com/coradec/corajet/cldr/CarInjector",
+                                "finish", "(Ljava/lang/Object;)V", intf);
+                        break;
+                    case TYPE_ARG:
+                        throw new IllegalArgumentException(
+                                "Injection Mode TYPE_ARG not yet implemented!");
+                    default:
+                        Syslog.error("Unknown injection mode: " + injectionMode.name());
+                        throw new IllegalArgumentException(
+                                "Unknown injection mode: " + injectionMode.name());
+                }
                 final String parameters = ClassUtil.fromSignature(signature)[1];
                 Syslog.debug("Patched constructor %s(%s).", className.replace('/', '.'),
                         parameters == null ? "" : parameters);

@@ -20,8 +20,10 @@
 
 package com.coradec.coratext.ctrl.impl;
 
+import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.Nullable;
+import com.coradec.coracore.ctrl.Factory;
 import com.coradec.coracore.util.ClassUtil;
 import com.coradec.coratext.ctrl.TextResolver;
 import com.coradec.coratext.model.TextBase;
@@ -34,9 +36,11 @@ import java.util.stream.Stream;
  * ​​Basic implementation of a text resolver.
  */
 @SuppressWarnings("ClassHasNoToStringMethod")
+@Implementation
 public class BasicTextResolver implements TextResolver {
 
-    @Inject private TextBaseFactory textBases;
+    @Inject
+    private Factory<TextBase> textBases;
 
     @Override
     public String resolve(final @Nullable String context, final String name, final Object... args) {

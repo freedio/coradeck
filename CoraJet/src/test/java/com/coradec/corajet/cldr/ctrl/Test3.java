@@ -18,32 +18,32 @@
  *
  */
 
-package com.coradec.coratype.trouble;
+package com.coradec.corajet.cldr.ctrl;
 
-import com.coradec.coracore.annotation.ToString;
+import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.MatcherAssert.*;
+
+import com.coradec.coracore.annotation.Inject;
+import com.coradec.corajet.cldr.data.MultiGenericInterface;
 
 /**
- * ​​Indicates a failure to cast, decode or convert a type.
+ * ​​CarClassLoader and injector test with generic class injection with several type parameters.
  */
-public class TypeConversionException extends TypeException {
+@SuppressWarnings("ClassHasNoToStringMethod")
+public class Test3 {
 
-    private final Class<?> fromType;
+    @Inject
+    private MultiGenericInterface<Integer, String> cis;
+    @Inject
+    private MultiGenericInterface<String, Double> csi;
 
-    public TypeConversionException(final Class<?> fromType) {
-        this.fromType = fromType;
+    public static void main(String... args) {
+        new Test3().launch();
     }
 
-    public TypeConversionException(final Class<?> fromType, final Throwable problem) {
-        super(problem);
-        this.fromType = fromType;
+    private void launch() {
+        assertThat(cis.value(13), is(equalTo("13")));
+        assertThat(csi.value("3.141592654"), is(equalTo(3.141592654)));
     }
 
-    public TypeConversionException(final Class<?> fromType, final String explanation) {
-        super(explanation);
-        this.fromType = fromType;
-    }
-
-    @ToString public Class<?> getFromType() {
-        return this.fromType;
-    }
 }

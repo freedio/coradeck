@@ -27,14 +27,18 @@ import com.coradec.coracore.model.Tuple;
 import com.coradec.coracore.trouble.UnexpectedEndOfDataException;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.net.URL;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -289,7 +293,7 @@ public class ClassUtil {
                 case '>':
                     if (collector.charAt(collector.length() - 1) == ',')
                         collector.setLength(collector.length() - 1);
-                    collector.append(c).append(suffices);
+                    collector.append(suffices).append(c);
                     return offset;
                 case 'B':
                     collector.append("byte");
@@ -354,6 +358,29 @@ public class ClassUtil {
         return type.getName().replace('.', '/');
     }
 
+    public static Type typeForDescriptor(final String desc) throws ClassNotFoundException {
+        final String typeName = toExternal(desc);
+        switch (typeName) {
+            case "boolean":
+                return Boolean.TYPE;
+            case "byte":
+                return Byte.TYPE;
+            case "short":
+                return Short.TYPE;
+            case "int":
+                return Integer.TYPE;
+            case "long":
+                return Long.TYPE;
+            case "float":
+                return Float.TYPE;
+            case "double":
+                return Double.TYPE;
+            default:
+                if (typeName.matches(".+<.*>.*")) return new GenericTypeImpl(typeName);
+                else return Class.forName(typeName);
+        }
+    }
+
     public static Class<?> classForDescriptor(final String desc) throws ClassNotFoundException {
         final String className = toExternal(desc);
         switch (className) {
@@ -383,5 +410,50 @@ public class ClassUtil {
     public static String internalNameOf(final String signature) {
         final String result = removeTypeParameters(signature);
         return result.substring(1, result.length() - 1);
+    }
+
+    @SuppressWarnings("ClassHasNoToStringMethod")
+    private static class GenericTypeImpl implements ParameterizedType {
+
+        private final Class<?> rawType;
+        private final List<Type> typeArgs;
+
+        GenericTypeImpl(final String typeName) throws ClassNotFoundException {
+            int i = typeName.indexOf('<');
+            String rawTypeName;
+            List<String> typeArgNames;
+            if (i == -1) {
+                rawTypeName = typeName;
+                typeArgNames = new ArrayList<>();
+            } else {
+                rawTypeName = typeName.substring(0, i);
+                typeArgNames = Arrays.asList(
+                        typeName.substring(i + 1, typeName.length() - 1).split("\\s*,\\s*"));
+            }
+            this.rawType = Class.forName(rawTypeName);
+            final List<Type> args = new ArrayList<>(typeArgNames.size());
+            for (final String name : typeArgNames) {
+                final Type type =
+                        name.matches(".+<.*>.*") ? new GenericTypeImpl(name) : Class.forName(name);
+                args.add(type);
+            }
+            this.typeArgs = args;
+        }
+
+        @Override public Type[] getActualTypeArguments() {
+            return typeArgs.toArray(new Type[typeArgs.size()]);
+        }
+
+        @Override public Type getRawType() {
+            return rawType;
+        }
+
+        @Nullable @Override public Type getOwnerType() {
+            return null;
+        }
+
+        @Nullable @Override public String getTypeName() {
+            return null;
+        }
     }
 }

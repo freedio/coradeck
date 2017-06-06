@@ -20,6 +20,8 @@
 
 package com.coradec.coracore.model;
 
+import static com.coradec.coracore.model.InjectionMode.*;
+
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.ctrl.Factory;
 
@@ -29,9 +31,12 @@ import com.coradec.coracore.ctrl.Factory;
 @SuppressWarnings("ClassHasNoToStringMethod")
 public class GenericFactory<G> implements Factory<G> {
 
-    @Inject private Factory<G> delegate;
+    private final Class<? super G> klass;
+    @Inject(TYPE_ARG)
+    private Factory<G> delegate;
 
-    public GenericFactory(final Class<? super G> textClass) {
+    public GenericFactory(final Class<? super G> klass) {
+        this.klass = klass;
     }
 
     @Override public G get(final Object... args) {

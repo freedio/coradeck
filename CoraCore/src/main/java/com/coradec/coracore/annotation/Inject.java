@@ -20,7 +20,10 @@
 
 package com.coradec.coracore.annotation;
 
+import static com.coradec.coracore.model.InjectionMode.*;
 import static java.lang.annotation.ElementType.*;
+
+import com.coradec.coracore.model.InjectionMode;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -39,4 +42,5 @@ import java.lang.annotation.Target;
 @Target({FIELD, PARAMETER})
 public @interface Inject {
 
+    InjectionMode value() default DIRECT;
 }

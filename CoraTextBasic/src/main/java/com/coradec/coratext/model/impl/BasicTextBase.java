@@ -24,6 +24,7 @@ import com.coradec.coraconf.ctrl.ConfigurationReaderFactory;
 import com.coradec.coraconf.model.AnnotatedProperty;
 import com.coradec.coraconf.model.Configuration;
 import com.coradec.coraconf.trouble.ConfigurationException;
+import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.NonNull;
 import com.coradec.coracore.annotation.Nullable;
@@ -42,6 +43,7 @@ import java.util.Set;
 /**
  * ​​Basic implementation of a text base.
  */
+@Implementation
 public class BasicTextBase implements TextBase {
 
     @Inject private static Factory<ApplicationTextBase> APPLICATION_TEXT_BASE;

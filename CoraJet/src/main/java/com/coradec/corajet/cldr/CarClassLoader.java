@@ -20,6 +20,8 @@
 
 package com.coradec.corajet.cldr;
 
+import static java.nio.file.StandardOpenOption.*;
+
 import com.coradec.coracore.annotation.Nullable;
 
 import java.io.File;
@@ -30,6 +32,8 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -70,7 +74,7 @@ public class CarClassLoader extends ClassLoader {
     private final Map<String, Class<?>> classes = new HashMap<>();
     private final List<String> fileList = new LinkedList<>();
 
-    CarClassLoader() {
+    public CarClassLoader() {
         this(Thread.currentThread().getContextClassLoader());
     }
 
@@ -178,8 +182,8 @@ public class CarClassLoader extends ClassLoader {
                     } else if (path.endsWith(PROP_ZIP_EXT)) {
                         searchZipFile(resourceMap, "car:" + file.toURI(), (ZipInputStream)(in =
                                 new ZipInputStream(new FileInputStream(file))));
-                    } else {
-                        final String name = file.getPath().substring(fprefix);
+                    } else if (path.endsWith(".class")) {
+                        final String name = path.substring(fprefix);
                         final URL location = file.toURI().toURL();
                         fileList.add(name);
                         addResource(resourceMap, name, location);
@@ -217,7 +221,8 @@ public class CarClassLoader extends ClassLoader {
         }
     }
 
-    private void searchJarFile(final Map<String, List<URL>> resourceMap, final String prefix, final JarInputStream jarFile, final boolean flat)
+    private void searchJarFile(final Map<String, List<URL>> resourceMap, final String prefix,
+                               final JarInputStream jarFile, final boolean flat)
             throws IOException {
         final Manifest manifest = jarFile.getManifest();
         Set<String> classPath = null;
@@ -419,12 +424,23 @@ public class CarClassLoader extends ClassLoader {
                 }
             }
         }
+        Files.write(Paths.get("/tmp/", name + ".class"), data, CREATE, TRUNCATE_EXISTING);
         return data;
-//        Files.write(Paths.get("/tmp/", name + ".class"), data, CREATE, TRUNCATE_EXISTING);
     }
 
     private static String toResourceName(final String name) {
         return name.replace('.', '/') + ".class";
     }
 
+    public Class<?> load(final Class<?> klass) {
+        Class<?> result;
+        try {
+            result = findClass(klass.getName());
+        }
+        catch (ClassNotFoundException e) {
+            Syslog.error("Class not found: %s", klass.getName());
+            result = klass;
+        }
+        return result;
+    }
 }

@@ -18,19 +18,14 @@
  *
  */
 
-package com.coradec.coracore.annotation;
+package com.coradec.corajet.cldr.data;
 
-import static java.lang.annotation.ElementType.*;
-import static java.lang.annotation.RetentionPolicy.*;
-
-import java.lang.annotation.Retention;
-import java.lang.annotation.Target;
+import com.coradec.coracore.model.Scope;
 
 /**
- * ​Annotates a field or parameter whose concrete type depends on the
+ * A s​Singleton implementation.
  */
-@Retention(RUNTIME)
-@Target({PARAMETER, FIELD})
-public @interface Generic {
-    String value();
+@com.coradec.coracore.annotation.Implementation(Scope.SINGLETON)
+public class SingletonImplementation implements SingletonInterface {
+
 }

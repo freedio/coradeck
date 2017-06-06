@@ -33,14 +33,15 @@ import java.util.concurrent.ConcurrentHashMap;
  * Manages different text bases.
  */
 @SuppressWarnings({"ClassHasNoToStringMethod", "WeakerAccess"})
-public class TextBaseFactory {
+public class TextBaseProvider {
 
-    @Inject private static Factory<TextBase> TEXT_BASE;
+    @Inject
+    private static Factory<TextBase> TEXTBASE_FACTORY;
 
     private TextBase dflt;
     private final Map<String, TextBase> textBases;
 
-    protected TextBaseFactory() {
+    protected TextBaseProvider() {
         textBases = createTextBaseMap();
     }
 
@@ -62,8 +63,8 @@ public class TextBaseFactory {
     public TextBase get(final @Nullable String context) throws TextBaseNotFoundException {
         TextBase result = context == null ? dflt : textBases.get(context);
         if (result == null) {
-            if (context == null) result = dflt = TEXT_BASE.get(TextBase.class);
-            else textBases.put(context, result = TEXT_BASE.get(TextBase.class, context));
+            if (context == null) result = dflt = TEXTBASE_FACTORY.get(TextBase.class);
+            else textBases.put(context, result = TEXTBASE_FACTORY.get(TextBase.class, context));
         }
         if (result == null) throw new TextBaseNotFoundException(context);
         return result;

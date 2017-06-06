@@ -23,6 +23,7 @@ package com.coradec.corajet.cldr;
 import org.junit.FixMethodOrder;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.runners.MethodSorters;
 
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
@@ -33,12 +34,12 @@ import java.lang.reflect.Method;
  * <p>
  * Assumptions: the class path is already set up to include the entire test directory.
  */
-@FixMethodOrder
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class CarClassLoaderTest {
 
     private static final String PROP_CLASS_PATH = "java.class.path";
 
-    @Ignore @Test public void showClassPath() {
+    @Ignore @Test public void aa_showClassPath() {
 //        System.getProperties().forEach((key, value) -> System.out.printf("%s: %s%n", key, value));
         final String classPath = System.getProperty(PROP_CLASS_PATH);
         System.out.println("ClassPath:");
@@ -47,11 +48,11 @@ public class CarClassLoaderTest {
         }
     }
 
-    @Test public void testLoader1()
+    @Test public void ab_testImplementationInjector()
             throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException,
                    IllegalAccessException {
         // Arrange:
-        System.setProperty("syslog.level", "INFORMATION");
+        System.setProperty("syslog.level", "DEBUG");
         final CarClassLoader classLoader = new CarClassLoader();
         // Act:
         final Class<?> test1 = classLoader.findClass("com.coradec.corajet.cldr.ctrl.Test1");
@@ -61,16 +62,44 @@ public class CarClassLoaderTest {
         // no exception being thrown means success
     }
 
-    @Test public void testLoader2()
+    @Test public void ac_testGenericInjector()
             throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException,
                    IllegalAccessException {
         // Arrange:
-        System.setProperty("syslog.level", "TRACE");
+        System.setProperty("syslog.level", "INFORMATION");
         final CarClassLoader classLoader = new CarClassLoader();
         // Act:
-        final Class<?> test1 = classLoader.findClass("com.coradec.corajet.cldr.ctrl.Test2");
-        final Method main = test1.getMethod("main", String[].class);
-        main.invoke(test1, (Object)new String[0]);
+        final Class<?> test = classLoader.findClass("com.coradec.corajet.cldr.ctrl.Test2");
+        final Method main = test.getMethod("main", String[].class);
+        main.invoke(test, (Object)new String[0]);
+        // Assert:
+        // no exception being thrown means success
+    }
+
+    @Test public void ad_testMultiGenericInjector()
+            throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException,
+                   IllegalAccessException {
+        // Arrange:
+        System.setProperty("syslog.level", "INFORMATION");
+        final CarClassLoader classLoader = new CarClassLoader();
+        // Act:
+        final Class<?> test = classLoader.findClass("com.coradec.corajet.cldr.ctrl.Test3");
+        final Method main = test.getMethod("main", String[].class);
+        main.invoke(test, (Object)new String[0]);
+        // Assert:
+        // no exception being thrown means success
+    }
+
+    @Test public void ae_testFactoryInjector()
+            throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException,
+                   IllegalAccessException {
+        // Arrange:
+        System.setProperty("syslog.level", "INFORMATION");
+        final CarClassLoader classLoader = new CarClassLoader();
+        // Act:
+        final Class<?> test = classLoader.findClass("com.coradec.corajet.cldr.ctrl.Test4");
+        final Method main = test.getMethod("main", String[].class);
+        main.invoke(test, (Object)new String[0]);
         // Assert:
         // no exception being thrown means success
     }

@@ -28,4 +28,14 @@ import com.coradec.coracore.trouble.BasicException;
 @SuppressWarnings("WeakerAccess")
 public class TypeException extends BasicException {
 
+    public TypeException() {
+    }
+
+    public TypeException(final Throwable problem) {
+        super(problem);
+    }
+
+    public TypeException(final String explanation) {
+        super(explanation);
+    }
 }

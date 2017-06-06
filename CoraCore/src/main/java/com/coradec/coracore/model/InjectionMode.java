@@ -18,19 +18,12 @@
  *
  */
 
-package com.coradec.coracore.annotation;
-
-import static java.lang.annotation.ElementType.*;
-import static java.lang.annotation.RetentionPolicy.*;
-
-import java.lang.annotation.Retention;
-import java.lang.annotation.Target;
+package com.coradec.coracore.model;
 
 /**
- * ​Annotates a field or parameter whose concrete type depends on the
+ * ​Injection mode.
  */
-@Retention(RUNTIME)
-@Target({PARAMETER, FIELD})
-public @interface Generic {
-    String value();
+public enum InjectionMode {
+    DIRECT,
+    TYPE_ARG
 }

@@ -36,7 +36,12 @@ public class ObjectInstantiationFailure extends BasicException {
     }
 
     public ObjectInstantiationFailure(final Class<?> type) {
-        this(type, null);
+        this.type = type;
+    }
+
+    public ObjectInstantiationFailure(final Class<?> type, final String explanation) {
+        super(explanation);
+        this.type = type;
     }
 
     @ToString public Class<?> getType() {

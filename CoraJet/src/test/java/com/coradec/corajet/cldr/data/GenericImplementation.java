@@ -22,12 +22,15 @@ package com.coradec.corajet.cldr.data;
 
 import com.coradec.coracore.util.ClassUtil;
 
+import java.util.Random;
+
 /**
  * ​​Implementation of the simple generic interface.
  */
 @com.coradec.coracore.annotation.Implementation
 public class GenericImplementation<Q> implements GenericInterface<Q> {
 
+    private static final Random random = new Random();
     private final Class<Q> type;
 
     public GenericImplementation(final Class<Q> type) {
@@ -35,8 +38,9 @@ public class GenericImplementation<Q> implements GenericInterface<Q> {
     }
 
     @Override public Q value() {
-        if (type == Integer.TYPE || type == Integer.class) return type.cast(42);
-        if (type == Long.TYPE || type == Long.class) return type.cast(4711L);
+        if (type == Byte.TYPE || type == Byte.class) return type.cast((byte)42);
+        if (type == Short.TYPE || type == Short.class) return type.cast((short)4711);
+        if (type == Integer.TYPE || type == Integer.class) return type.cast(random.nextInt());
         if (type == Float.TYPE || type == Float.class) return type.cast(2.71828184f);
         if (type == Double.TYPE || type == Double.class) return type.cast(Math.PI);
         if (type == String.class) {

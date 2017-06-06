@@ -76,7 +76,8 @@ public class ClassUtilTest {
                 is("(Date 2009-02-14T00:31:30.123000000)"));
         assertThat(ClassUtil.toString(123.456), is("(Double 123.456)"));
         assertThat(ClassUtil.toString(new StringBuffer()), is("(StringBuffer \"\")"));
-        assertThat(ClassUtil.toString(new RuntimeException("Something went bad", new NoSuchElementException())),
+        assertThat(ClassUtil.toString(
+                new RuntimeException("Something went bad", new NoSuchElementException())),
                 is("(RuntimeException java.lang.RuntimeException: Something went bad)"));
         assertThat(ClassUtil.toString(new ResourceFileNotFoundException("a.context")),
                 is("(com.coradec.coracore.trouble.ResourceFileNotFoundException com.coradec" +
@@ -85,15 +86,14 @@ public class ClassUtilTest {
         assertThat(ClassUtil.toString(Boolean.TRUE), is("(Boolean true)"));
         assertThat(ClassUtil.toString('ö'), is("(Character '\\u00f6')"));
         assertThat(ClassUtil.toString("abc.def".split("\\.")), is("(String[\"abc\", \"def\"])"));
-        assertThat(ClassUtil.toString(new byte[] {0, 1, 2}), is("(byte[0, 1, 2])"));
+        assertThat(ClassUtil.toString(new byte[] {0, 1, 2}), is("(byte[00, 01, 02])"));
         assertThat(ClassUtil.toString(new char[] {'a', '\n', '\20'}),
                 is("(char['a', '\\n', '\\20'])"));
         assertThat(ClassUtil.toString(Arrays.asList("x", "y", "z")),
-                is("(com.google.common" + ".collect.RegularImmutableList [\"x\", \"y\", \"z\"])"));
+                is("(Arrays.ArrayList [\"x\", \"y\", \"z\"])"));
         assertThat(ClassUtil.toString(rmap),
-                is("(com.google.common.collect.RegularImmutableMap {\"died\": " +
-                   "2009-02-14T00:31:30.123000000, \"born\": 1977-06-07T22:44:50.123000000, " +
-                   "\"operated\": 1980-12-14T22:55:01.234000000})"));
+                is("(HashMap {\"born\": 1977-06-07T22:44:50.123000000, \"operated\": " +
+                   "1980-12-14T22:55:01.234000000, \"died\": 2009-02-14T00:31:30.123000000})"));
     }
 
     private class EmptyObject {

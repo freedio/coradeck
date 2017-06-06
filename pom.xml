@@ -48,7 +48,6 @@
     </modules>
 
     <properties>
-        <maven.test.skip>true</maven.test.skip>
     </properties>
 
     <dependencies>
@@ -248,6 +247,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
+                <version>2.20</version>
                 <executions>
                     <execution>
                         <id>integration-tests</id>
@@ -271,45 +271,6 @@
                 <artifactId>maven-site-plugin</artifactId>
                 <version>3.6</version>
             </plugin>
-<!--            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>unpack</id>
-                        <phase>prepare-package</phase>
-                        <goals>
-                            <goal>unpack</goal>
-                        </goals>
-                        <configuration>
-                            <artifactItems>
-                                <artifactItem>
-                                    <groupId>com.coradec.coradeck</groupId>
-                                    <artifactId>corajet</artifactId>
-                                    <version>0.1</version>
-                                    <outputDirectory>${project.build.directory}/classes
-                                    </outputDirectory>
-                                    <includes>com/coradec/corajet/cldr/**</includes>
-                                </artifactItem>
-                            </artifactItems>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>copy-dependencies</id>
-                        <phase>prepare-package</phase>
-                        <goals>
-                            <goal>copy-dependencies</goal>
-                        </goals>
-                        <configuration>
-                            <outputDirectory>${project.build.directory}/classes</outputDirectory>
-                            <overWriteReleases>false</overWriteReleases>
-                            <overWriteSnapshots>false</overWriteSnapshots>
-                            <overWriteIfNewer>true</overWriteIfNewer>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            -->
         </plugins>
     </build>
 
@@ -322,7 +283,18 @@
             <properties>
                 <build-profile-id>dev</build-profile-id>
                 <skip-integration-tests>true</skip-integration-tests>
-                <skip-unit-tests>${maven.test.skip}</skip-unit-tests>
+                <skip-unit-tests>true</skip-unit-tests>
+            </properties>
+        </profile>
+        <profile>
+            <id>UT</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <build-profile-id>UT</build-profile-id>
+                <skip-integration-tests>true</skip-integration-tests>
+                <skip-unit-tests>false</skip-unit-tests>
             </properties>
         </profile>
         <profile>
