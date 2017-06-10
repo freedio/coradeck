@@ -18,7 +18,7 @@
  *
  */
 
-package com.coradec.coratext.ctrl.impl;
+package com.coradec.coratext.ctrl;
 
 import com.coradec.coraconf.model.Configuration;
 

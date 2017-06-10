@@ -25,4 +25,6 @@ package com.coradec.corajet.cldr.data;
  */
 public interface Interface {
 
+    String testMe();
+
 }

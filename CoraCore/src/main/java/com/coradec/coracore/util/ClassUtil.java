@@ -29,6 +29,7 @@ import com.coradec.coracore.trouble.UnexpectedEndOfDataException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.net.URL;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
@@ -109,9 +110,7 @@ public class ClassUtil {
             else result = String.format("(%s%s)", nameOf(klass),
                     attributes.isEmpty() ? StringUtil.EMPTY : " " + attributes);
         }
-        finally
-
-        {
+        finally {
             registry.remove(o);
         }
         return result;
@@ -135,12 +134,22 @@ public class ClassUtil {
         return String.format("(%s %s)", nameOf(type), StringUtil.toString(value));
     }
 
-    public static String nameOf(final Class<?> type) {
-        if (type.isMemberClass())
-            return String.format("%s.%s", nameOf(type.getEnclosingClass()), type.getSimpleName());
-        if (type.isArray()) return String.format("%s[]", nameOf(type.getComponentType()));
-        String result = type.getName();
-        if (result.matches("^java\\.(lang|util)\\.[^a-z].+")) result = result.substring(10);
+    public static String nameOf(final Type type) {
+        String result;
+        if (type instanceof Class) {
+            Class<?> klass = (Class<?>)type;
+            if (klass.isMemberClass()) {
+                return String.format("%s.%s", nameOf(klass.getEnclosingClass()),
+                        klass.getSimpleName());
+            }
+            if (klass.isArray()) return String.format("%s[]", nameOf(klass.getComponentType()));
+            result = klass.getName();
+            if (result.matches("^java\\.(lang|util)\\.[^a-z].+")) result = result.substring(10);
+        } else if (type instanceof ParameterizedType) {
+            result = type.getTypeName();
+        } else if (type instanceof TypeVariable) {
+            result = type.getTypeName();
+        } else result = type.toString();
         return result;
     }
 
@@ -326,7 +335,10 @@ public class ClassUtil {
                 case 'S':
                     collector.append("short");
                     break;
-                case 'T':
+                case '-':
+                    if (signature.charAt(offset++) != 'T') throw new IllegalArgumentException(
+                            String.format("Unrecognized letter at position %d in \"%s\"",
+                                    offset - 1, signature));
                     while ((c = signature.charAt(offset++)) != ';') {
                         collector.append(c);
                     }

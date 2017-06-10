@@ -22,7 +22,7 @@ package com.coradec.coraconf.model;
 
 import com.coradec.coracore.ctrl.Factory;
 import com.coradec.coracore.model.GenericFactory;
-import com.coradec.coracore.model.Type;
+import com.coradec.coracore.model.GenericType;
 import com.coradec.coracore.util.ExecUtil;
 
 /**
@@ -50,7 +50,7 @@ public interface Property<T> {
      *
      * @return the property type.
      */
-    Type<T> getType();
+    GenericType<T> getType();
 
     /**
      * Returns the value of the property, converted from the raw value after fitting the latter one

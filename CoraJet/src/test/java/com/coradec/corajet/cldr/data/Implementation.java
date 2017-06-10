@@ -24,6 +24,9 @@ package com.coradec.corajet.cldr.data;
  * ​​An implementation.
  */
 @com.coradec.coracore.annotation.Implementation
-public class Implementation {
+public class Implementation implements Interface {
 
+    @Override public String testMe() {
+        return "Hello, U!";
+    }
 }

@@ -20,21 +20,24 @@
 
 package com.coradec.coracore.model;
 
+import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.util.ClassUtil;
 
 import java.lang.reflect.Array;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
  * ​​Representation of a parametrized type.
  */
-public final class Type<T> implements Representable {
+public final class GenericType<T> implements Representable, ParameterizedType {
 
     private final Class<T> type;
-    private final Class<?>[] parameters;
+    private final Type[] parameters;
 
-    private Type(final Class<T> type, final Class<?>... parameters) {
+    private GenericType(final Class<T> type, final Type... parameters) {
         this.type = type;
         this.parameters = parameters;
     }
@@ -48,9 +51,9 @@ public final class Type<T> implements Representable {
      * @param parameters the parameter types.
      * @return a new parametrized type.
      */
-    @SuppressWarnings("unchecked") public static <X> Type<X> of(final Class<X> type,
-                                                                Class<?>... parameters) {
-        return new Type(type, parameters);
+    @SuppressWarnings("unchecked") public static <X> GenericType<X> of(final Class<X> type,
+                                                                       Class<?>... parameters) {
+        return new GenericType(type, parameters);
     }
 
     @Override public String represent() {
@@ -69,4 +72,15 @@ public final class Type<T> implements Representable {
         return (T[])Array.newInstance(type, size);
     }
 
+    @Override public Type[] getActualTypeArguments() {
+        return parameters;
+    }
+
+    @Override public Type getRawType() {
+        return type;
+    }
+
+    @Override public @Nullable Type getOwnerType() {
+        return null;
+    }
 }

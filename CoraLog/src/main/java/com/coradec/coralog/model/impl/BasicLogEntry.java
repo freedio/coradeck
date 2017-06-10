@@ -30,14 +30,17 @@ import java.time.LocalDateTime;
 
 /**
  * ​​Basic implementation of a log entry.
+ *
+ * @param <C> the principal content type.
  */
-public class BasicLogEntry implements LogEntry {
+public abstract class BasicLogEntry<C> implements LogEntry<C> {
 
     private final LocalDateTime timestamp;
     private final Origin origin;
     private final LogLevel level;
 
-    public BasicLogEntry(final Origin origin, final LogLevel level) {
+    @SuppressWarnings("WeakerAccess")
+    protected BasicLogEntry(final Origin origin, final LogLevel level) {
         this.timestamp = LocalDateTime.now();
         this.origin = origin;
         this.level = level;

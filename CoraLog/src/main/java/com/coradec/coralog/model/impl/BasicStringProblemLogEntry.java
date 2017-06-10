@@ -31,14 +31,15 @@ import java.util.Optional;
  * ​​Basic implementation of a string log entry.
  */
 @SuppressWarnings("ClassHasNoToStringMethod")
-public class BasicStringProblemLogEntry extends BasicLogEntry implements StringProblemLogEntry {
+public class BasicStringProblemLogEntry extends BasicLogEntry<String>
+        implements StringProblemLogEntry {
 
     private final Throwable problem;
     private final @Nullable String text;
     private final @Nullable Object[] textArgs;
 
-    public BasicStringProblemLogEntry(final Origin origin, final LogLevel level, final Throwable
-            problem, final @Nullable String text,
+    public BasicStringProblemLogEntry(final Origin origin, final LogLevel level,
+                                      final Throwable problem, final @Nullable String text,
                                       final @Nullable Object... textArgs) {
         super(origin, level);
         this.problem = problem;
@@ -55,6 +56,13 @@ public class BasicStringProblemLogEntry extends BasicLogEntry implements StringP
     }
 
     @Override public Optional<String> getExplanation() {
-        return getTemplate().map(t -> String.format(t, Optional.ofNullable(textArgs).orElse(new Object[0])));
+        return getTemplate().map(
+                t -> String.format(t, Optional.ofNullable(textArgs).orElse(new Object[0])));
     }
+
+    @Override public String getContent() {
+        return getExplanation().map(s -> getProblem().getLocalizedMessage() + ": " + s)
+                               .orElse(String.valueOf(getProblem()));
+    }
+
 }

@@ -46,18 +46,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * ​​The central message queue.
  */
-@SuppressWarnings("ClassHasNoToStringMethod")
+@SuppressWarnings({"ClassHasNoToStringMethod", "WeakerAccess", "PackageVisibleField"})
 @Implementation(SINGLETON)
 public class CentralMessageQueue extends Logger implements MessageQueue {
 
-    private static final Text TEXT_FAILED_TO_DELIVER = LocalizedText.define("FailedToDeliver");
-    private final LinkedList<Message> queue;
-    private final LinkedList<Message> prioq;
-    private final Semaphore items, lock;
-    private final Map<Recipient, MessageProcessor> qmap;
-    private final Thread queueRunner = new Thread(new QueueRunner(), "MessageQueueProcessor");
-    private final ExecutorService immediateExecutor;
-    private final List<Recipient> preProcessors, postProcessors;
+    static final Text TEXT_FAILED_TO_DELIVER = LocalizedText.define("FailedToDeliver");
+    final LinkedList<Message> queue;
+    final LinkedList<Message> prioq;
+    final Semaphore items, lock;
+    final Map<Recipient, MessageProcessor> qmap;
+    final Thread queueRunner = new Thread(new QueueRunner(), "MessageQueueProcessor");
+    final ExecutorService immediateExecutor;
+    final List<Recipient> preProcessors, postProcessors;
 
     @Override public void schedule(final Runnable code) {
         immediateExecutor.execute(code);
@@ -84,6 +84,7 @@ public class CentralMessageQueue extends Logger implements MessageQueue {
             } else {
                 queue.addLast(message);
             }
+            debug("CMQ: Enqueued message %s", message);
             message.onEnqueue();
             items.release();
         }
@@ -92,9 +93,9 @@ public class CentralMessageQueue extends Logger implements MessageQueue {
         }
     }
 
-    private void deliver(final Recipient recipient, final Message message) {
+    void deliver(final Recipient recipient, final Message message) {
         try {
-//                debug("CMQ: Delivering message %s to %s", message, recipient);
+            debug("CMQ: Delivering message %s to %s", message, recipient);
             message.onDeliver();
             lock.acquire();
             qmap.computeIfAbsent(recipient, MessageProcessor::new).add(message);
@@ -122,14 +123,14 @@ public class CentralMessageQueue extends Logger implements MessageQueue {
             immediateExecutor.execute(this);
         }
 
-        private void add(final Message message) {
+        void add(final Message message) {
             messages.add(message);
         }
 
         @Override public void run() {
             try {
                 lock.acquire();
-                while(!messages.isEmpty()) {
+                while (!messages.isEmpty()) {
                     final Message message = messages.remove();
                     lock.release();
                     try {
@@ -161,8 +162,7 @@ public class CentralMessageQueue extends Logger implements MessageQueue {
     private class QueueRunner implements Runnable {
 
         @Override public void run() {
-            while (!Thread.currentThread().isInterrupted() ||
-                   !queue.isEmpty() && !prioq.isEmpty()) {
+            while (!Thread.currentThread().isInterrupted() || !queue.isEmpty() && !prioq.isEmpty())
                 try {
                     items.acquire();
                     final Message message;
@@ -192,7 +192,6 @@ public class CentralMessageQueue extends Logger implements MessageQueue {
                 catch (InterruptedException e) {
                     break;
                 }
-            }
 //            System.out.printf("QueueRunner died%n");
         }
 

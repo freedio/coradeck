@@ -23,7 +23,6 @@ package com.coradec.coracore.util;
 import static java.util.stream.Collectors.*;
 
 import com.coradec.coracore.annotation.Nullable;
-import com.coradec.coracore.ctrl.RecursiveObjects;
 import com.coradec.coracore.model.Representable;
 
 import java.lang.reflect.AnnotatedType;
@@ -48,7 +47,6 @@ import java.util.stream.Stream;
 @SuppressWarnings({"UseOfObsoleteDateTimeApi", "WeakerAccess"})
 public final class StringUtil {
 
-    private static final RecursiveObjects registry = RecursiveObjects.getInstance();
     public static final String EMPTY = "";
     public static final String NEWLINE = System.getProperty("line.separator");
     public static final String NULL_REPR = "NIL";

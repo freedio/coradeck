@@ -26,8 +26,10 @@ import java.time.LocalDateTime;
 
 /**
  * ​An entry that can be written to a log.
+ *
+ * @param <C> the principal content type.
  */
-public interface LogEntry {
+public interface LogEntry<C> {
 
     /**
      * Returns the origin of the log entry.
@@ -49,4 +51,12 @@ public interface LogEntry {
      * @return the timestamp.
      */
     LocalDateTime getTimestamp();
+
+    /**
+     * Returns the principal content of the entry.
+     *
+     * @return the principal content of the entry.
+     */
+    C getContent();
+
 }

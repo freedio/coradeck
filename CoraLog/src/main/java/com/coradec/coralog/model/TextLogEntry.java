@@ -25,7 +25,7 @@ import com.coradec.coratext.model.Text;
 /**
  * ​​​A log entry containing a text literal.
  */
-public interface TextLogEntry extends LogEntry {
+public interface TextLogEntry extends LogEntry<String> {
 
     /**
      * Returns the text literal.

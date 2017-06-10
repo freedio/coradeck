@@ -22,7 +22,7 @@ package com.coradec.coratype.ctrl;
 
 import com.coradec.coracore.ctrl.Factory;
 import com.coradec.coracore.model.GenericFactory;
-import com.coradec.coracore.model.Type;
+import com.coradec.coracore.model.GenericType;
 import com.coradec.coratype.trouble.TypeConversionException;
 
 /**
@@ -32,7 +32,7 @@ public interface TypeConverter<V> {
 
     Factory<TypeConverter<?>> FACTORY = new GenericFactory<>(TypeConverter.class);
 
-    @SuppressWarnings("unchecked") static <T> TypeConverter<T> to(Type<T> type) {
+    @SuppressWarnings("unchecked") static <T> TypeConverter<T> to(GenericType<T> type) {
         return (TypeConverter<T>)FACTORY.get(type);
     }
 

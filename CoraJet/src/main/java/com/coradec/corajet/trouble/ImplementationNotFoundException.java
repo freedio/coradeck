@@ -23,20 +23,46 @@ package com.coradec.corajet.trouble;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
 
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 /**
  * ​​Indicates an attempt to inject an instance for an interface for which no implementation is
  * known.
  */
 public class ImplementationNotFoundException extends CoraJetException {
 
-    private final @Nullable String iface;
+    private final @Nullable String interfaceName;
+    private final List<Type> typeArguments;
+    private final Object[] constructorArguments;
 
-    public ImplementationNotFoundException(@Nullable final String iface) {
-        this.iface = iface;
+    public ImplementationNotFoundException(@Nullable final String interfaceName) {
+        this.interfaceName = interfaceName;
+        this.typeArguments = Collections.emptyList();
+        this.constructorArguments = new Object[0];
+    }
+
+    public ImplementationNotFoundException(@Nullable final String interfaceName,
+                                           final List<Type> typeArguments,
+                                           final Object... constructorArguments) {
+
+        this.interfaceName = interfaceName;
+        this.typeArguments = new ArrayList<>(typeArguments);
+        this.constructorArguments = constructorArguments.clone();
     }
 
     @ToString public @Nullable String getInterface() {
-        return this.iface;
+        return this.interfaceName;
     }
 
+    @ToString public List<Type> getTypeArguments() {
+        return this.typeArguments;
+    }
+
+    @ToString public List<Object> getConstructorArguments() {
+        return Arrays.asList(this.constructorArguments);
+    }
 }

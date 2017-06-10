@@ -22,7 +22,7 @@ package com.coradec.coraconf.model;
 
 import com.coradec.coracore.ctrl.Factory;
 import com.coradec.coracore.model.GenericFactory;
-import com.coradec.coracore.model.Type;
+import com.coradec.coracore.model.GenericType;
 
 import java.util.Collection;
 import java.util.Optional;
@@ -37,7 +37,8 @@ public interface Configuration<V> {
     Factory<Configuration<?>> CONFIGURATION = new GenericFactory<>(Configuration.class);
 
     @SuppressWarnings("unchecked") static <X> Configuration<X> of(Class<X> type, Class<?>... parameters) {
-        return (Configuration<X>)CONFIGURATION.get(Configuration.class, Type.of(type, parameters));
+        return (Configuration<X>)CONFIGURATION.get(Configuration.class,
+                GenericType.of(type, parameters));
     }
 
     /**

@@ -23,7 +23,7 @@ package com.coradec.coralog.model;
 /**
  * ​​​A log entry containing a text literal.
  */
-public interface StringLogEntry extends LogEntry {
+public interface StringLogEntry extends LogEntry<String> {
 
     /**
      * Returns the text template.

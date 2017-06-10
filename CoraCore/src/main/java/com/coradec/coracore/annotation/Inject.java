@@ -39,7 +39,7 @@ import java.lang.annotation.Target;
  * annotated with @Inject and the first constructor appears BEFORE the first injection point.
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target({FIELD, PARAMETER})
+@Target({FIELD, PARAMETER, TYPE})
 public @interface Inject {
 
     InjectionMode value() default DIRECT;

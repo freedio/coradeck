@@ -30,7 +30,7 @@ import com.coradec.coracore.model.GenericFactory;
  */
 public interface LocalizedText extends Text {
 
-    Factory<Text> text = new GenericFactory<>(Text.class);
+    Factory<LocalizedText> text = new GenericFactory<>(LocalizedText.class);
 
     /**
      * Defines a new text literal in the caller context.
@@ -39,7 +39,7 @@ public interface LocalizedText extends Text {
      * @return a new localized text literal.
      */
     static Text define(final String name) {
-        return text.get(LocalizedText.class, getCallerStackFrame().getClassFileName(), name);
+        return text.get(getCallerStackFrame().getClassFileName(), name);
     }
 
 }

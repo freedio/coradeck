@@ -30,7 +30,6 @@ import com.coradec.coracore.model.Origin;
 import com.coradec.coracore.trouble.BasicException;
 import com.coradec.coralog.ctrl.ClassLog;
 import com.coradec.coralog.model.LogLevel;
-import com.coradec.coralog.model.impl.BasicLogEntry;
 import com.coradec.coralog.model.impl.BasicProblemLogEntry;
 import com.coradec.coralog.model.impl.BasicStringLogEntry;
 import com.coradec.coralog.model.impl.BasicStringProblemLogEntry;
@@ -42,16 +41,22 @@ import com.coradec.coratext.model.Text;
  * ​​A class template providing logging.
  */
 @SuppressWarnings("ClassHasNoToStringMethod")
+@Inject
 public class Logger extends AutoOrigin {
 
-    @Inject private static Factory<ClassLog> CLASSLOG;
+    @Inject
+    private static Factory<ClassLog> CLASSLOG;
 
     private static Text ENTERING;
     private static Text LEAVING;
     private static Text FAILING;
 
-    @SuppressWarnings("ConstantConditions")
-    private final ClassLog log = CLASSLOG.create(getClass());
+    @SuppressWarnings({"ConstantConditions", "PackageVisibleField", "WeakerAccess"})
+    final ClassLog log;
+
+    protected Logger() {
+        log = CLASSLOG.create(getClass());
+    }
 
     /**
      * Logs a method entry at log level CHAT.
@@ -151,7 +156,7 @@ public class Logger extends AutoOrigin {
             log.log((problem != null) //
                     ? new BasicProblemLogEntry(origin, WARNING, problem, text, textArgs)
                     : text != null ? new BasicTextLogEntry(origin, WARNING, text, textArgs)
-                                   : new BasicLogEntry(origin, WARNING));
+                                   : new BasicStringLogEntry(origin, WARNING, ""));
         }
     }
 
@@ -168,7 +173,7 @@ public class Logger extends AutoOrigin {
             log.log((problem != null) //
                     ? new BasicProblemLogEntry(there(), WARNING, problem, text, textArgs)
                     : text != null ? new BasicTextLogEntry(there(), WARNING, text, textArgs)
-                                   : new BasicLogEntry(there(), WARNING));
+                                   : new BasicStringLogEntry(there(), WARNING, ""));
         }
     }
 
@@ -232,9 +237,10 @@ public class Logger extends AutoOrigin {
     protected void error(final Origin origin, final @Nullable Throwable problem,
                          final @Nullable Text text, final Object... textArgs) {
         if (log.logsAt(LogLevel.ERROR)) {
-            log.log((problem != null) ? new BasicProblemLogEntry(origin, ERROR, problem, text)
-                                      : text != null ? new BasicTextLogEntry(origin, ERROR, text,
-                                              textArgs) : new BasicLogEntry(origin, ERROR));
+            log.log((problem != null) //
+                    ? new BasicProblemLogEntry(origin, ERROR, problem, text)
+                    : text != null ? new BasicTextLogEntry(origin, ERROR, text, textArgs)
+                                   : new BasicStringLogEntry(origin, ERROR, ""));
         }
     }
 
@@ -251,7 +257,7 @@ public class Logger extends AutoOrigin {
             log.log((problem != null) //
                     ? new BasicProblemLogEntry(there(), ERROR, problem, text, textArgs)
                     : text != null ? new BasicTextLogEntry(there(), ERROR, text, textArgs)
-                                   : new BasicLogEntry(there(), ERROR));
+                                   : new BasicStringLogEntry(there(), ERROR, ""));
         }
     }
 

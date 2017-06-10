@@ -60,18 +60,20 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * ​​The injector of the CarClassLoader.
  */
-@SuppressWarnings("unchecked")
+@SuppressWarnings({"unchecked", "WeakerAccess"})
 public class CarInjector {
 
-    private static final String INJECT_DESC = ClassUtil.descriptorOf(Inject.class);
-    private static final Map<String, Scope> implementations = new HashMap<>();
+    static final String INJECT_DESC = ClassUtil.descriptorOf(Inject.class);
+    static final Map<String, Scope> implementations = new HashMap<>();
     private static final Map<Class<?>, Object> singletons = new HashMap<>();
-    private static final Set<String> components = new HashSet<>();
+    static final Set<String> components = new HashSet<>();
     private static Set<ImplementationClass<?>> implementationClasses;
 
     @SuppressWarnings("unchecked")
@@ -129,15 +131,10 @@ public class CarInjector {
         return classAnalyzer.getState();
     }
 
-    /**
-     * Finishes the construction of the specified instance by resolving all injection points.  The
-     * method is invoked from the patched constructor &lt;init&gt; immediately after the call to the
-     * superclass constructor.
-     *
-     * @param instance the instance to finish.
-     */
-    public static void finish(Object instance) {
-//        Syslog.debug("Known implementations: %s", implementations);
+    public static void finishG(final Object instance, final Class<?>... types) {
+        final TypeVariable<? extends Class<?>>[] typeVars = instance.getClass().getTypeParameters();
+        Syslog.debug("Resolving instance %s with %s for type parameters %s", instance,
+                StringUtil.toString(types), StringUtil.toString(typeVars));
         try {
             AccessController.doPrivileged((PrivilegedExceptionAction<Object>)() -> {
                 final Class<?> targetClass = instance.getClass();
@@ -152,10 +149,70 @@ public class CarInjector {
                         List<Type> typeArgs = Collections.EMPTY_LIST;
                         if (genericType instanceof ParameterizedType) typeArgs = Arrays.asList(
                                 ((ParameterizedType)genericType).getActualTypeArguments());
+                        typeArgs = typeArgs.stream().map(type -> {
+                            if (type instanceof TypeVariable) {
+                                for (int i = 0, is = typeVars.length; i < is; ++i) {
+                                    if (((TypeVariable)type).getName()
+                                                            .equals(typeVars[i].getName())) {
+                                        return i < types.length ? types[i] : null;
+                                    }
+                                }
+                            }
+                            return type;
+                        }).collect(Collectors.toList());
                         field.setAccessible(true);
                         field.set(instance, implementationFor(fieldType, typeArgs));
                         Syslog.debug("Field %s of %s set to %s", name, instance,
                                 StringUtil.toString(field.get(instance)));
+                    }
+                }
+                return null;
+            });
+        }
+        catch (PrivilegedActionException e) {
+            Syslog.error(e.getException());
+        }
+    }
+
+    /**
+     * Finishes the construction of the specified instance by resolving all injection points.  The
+     * method is invoked from the patched constructor &lt;init&gt; immediately after the call to the
+     * superclass constructor.
+     *
+     * @param instance the instance to finish.
+     */
+    public static void finish(Object instance) {
+        Syslog.debug(">>> %s.finish()", instance);
+        try {
+            AccessController.doPrivileged((PrivilegedExceptionAction<Object>)() -> {
+                for (Class<?> targetClass = instance.getClass();
+                     targetClass != null;
+                     targetClass = targetClass.getSuperclass()) {
+                    for (Field field : targetClass.getDeclaredFields()) {
+                        if (!Modifier.isStatic(field.getModifiers()) &&
+                            field.isAnnotationPresent(Inject.class)) {
+                            try {
+                                final String name = field.getName();
+                                final Class<?> fieldType = field.getType();
+                                final Type genericType = field.getGenericType();
+                                Syslog.debug(">>> inject: %s.%s", instance.getClass().getName(),
+                                        name);
+                                Syslog.trace("Field %s.%s has generic type parameters %s",
+                                        instance.getClass().getName(), name, genericType);
+                                List<Type> typeArgs = Collections.EMPTY_LIST;
+                                if (genericType instanceof ParameterizedType) typeArgs =
+                                        Arrays.asList(
+                                                ((ParameterizedType)genericType)
+                                                        .getActualTypeArguments());
+                                field.setAccessible(true);
+                                field.set(instance, implementationFor(fieldType, typeArgs));
+                                Syslog.debug("Field %s of %s set to %s", name, instance,
+                                        StringUtil.toString(field.get(instance)));
+                            }
+                            catch (Exception e) {
+                                Syslog.error(e);
+                            }
+                        }
                     }
                 }
                 return null;
@@ -187,16 +244,38 @@ public class CarInjector {
         return implementationFor(interfaceClass, typeArgs);
     }
 
-    private static Object implementationFor(final Class<?> interfaceClass, final List<Type> types,
-                                            Object... args) throws ImplementationNotFoundException {
-        if (interfaceClass == Factory.class) {
+    static Object implementationFor(final Class<?> interfaceClass, final List<Type> types,
+                                    Object... args) throws ObjectInstantiationFailure {
+        if (Factory.class.isAssignableFrom(interfaceClass)) {
             return new ObjectFactory(types);
         }
-        return getImplementationClasses().stream()
-                                         .filter(ic -> ic.matches(interfaceClass, types))
-                                         .findAny().map(ic -> ic.instantiate(types, args))
-                                         .orElseThrow(() -> new ImplementationNotFoundException(
-                                                 interfaceClass.getName()));
+        Exception[] failed = new Exception[1];
+        try {
+            return getImplementationClasses().stream()
+                                             .filter(ic -> ic.matches(interfaceClass, types))
+                                             .findAny()
+                                             .map(ic -> {
+                                                 try {
+                                                     return ic.instantiate(types, args);
+                                                 }
+                                                 catch (ObjectInstantiationFailure e) {
+                                                     failed[0] = e;
+                                                     return null;
+                                                 }
+                                             })
+                                             .filter(Objects::nonNull)
+                                             .orElseThrow(() -> failed[0] != null //
+                                                                ? failed[0]
+                                                                : new ImplementationNotFoundException(
+                                                                        interfaceClass.getName(),
+                                                                        types, args));
+        }
+        catch (ObjectInstantiationFailure e) {
+            throw e;
+        }
+        catch (Exception e) {
+            throw new ObjectInstantiationFailure(interfaceClass, e);
+        }
     }
 
     /**
@@ -242,6 +321,24 @@ public class CarInjector {
             parametrizedInstances = new HashMap<>();
         }
 
+        private Class<? super T> getEmbeddedClass() {
+            return this.klass;
+        }
+
+        private Scope getScope() {
+            return this.scope;
+        }
+
+        @Override public boolean equals(final Object obj) {
+            return obj instanceof ImplementationClass &&
+                   getEmbeddedClass() == ((ImplementationClass)obj).getEmbeddedClass() &&
+                   getScope() == ((ImplementationClass)obj).getScope();
+        }
+
+        @Override public int hashCode() {
+            return 13 * getEmbeddedClass().hashCode() + 7 * getScope().hashCode();
+        }
+
         /**
          * Checks if the this implementation class is assignable to the specified interface class,
          * including a match of type arguments vs. parameters.
@@ -258,7 +355,7 @@ public class CarInjector {
          * Returns an instance of this implementation class using the specified type arguments for
          * the type parameters of the class.
          *
-         * @param types the type arguments.
+         * @param types  the type arguments.
          * @param extras additional arguments.
          * @return an instance of the class.
          * @throws ObjectInstantiationFailure if the class could not be instantiated due to one or
@@ -266,7 +363,7 @@ public class CarInjector {
          */
         @SuppressWarnings("unchecked") T instantiate(final List<Type> types, final Object[] extras)
                 throws ObjectInstantiationFailure {
-            Syslog.info("Instantiating %s%s", //
+            Syslog.debug("Instantiating %s%s", //
                     klass.getName(), StringUtil.toString(typeParameters)
                                                .replaceFirst("^\\[", "<")
                                                .replaceFirst("]$", ">"));
@@ -276,6 +373,7 @@ public class CarInjector {
             List<ParameterizedType> parametrized, conPara = null;
             outer:
             for (final Constructor<?> constr : klass.getConstructors()) {
+                Syslog.debug("Examining constructor %s", constr);
                 scope = this.scope;
                 parametrized = new ArrayList<>();
                 final Type[] paras = constr.getGenericParameterTypes();
@@ -284,6 +382,8 @@ public class CarInjector {
                     final Type para = paras[i];
                     if (para instanceof ParameterizedType) {
                         ParameterizedType paraType = (ParameterizedType)para;
+                        Syslog.debug("Parameter %d is parametrized type (%s)", i,
+                                StringUtil.toString(para));
                         if (scope == SINGLETON) scope = PARAMETRIZED;
                         parametrized.add(paraType);
                         final Type[] typeArgs = paraType.getActualTypeArguments();
@@ -296,22 +396,29 @@ public class CarInjector {
                                     arguments[i] = types.get(i);
                                 }
                             }
+                            if (arguments[i] == null) {
+                                Syslog.debug("Found class argument %s",
+                                        StringUtil.toString(typeArgs), StringUtil.toString(extras));
+                                if (extras.length > i && extras[i] instanceof Class)
+                                    arguments[i] = extras[i];
+                                else continue outer;
+                            }
                         } else {
                             Syslog.warn("Found parametrized type %s with type args %s → skipping " +
                                         "constructor", para, StringUtil.toString(typeArgs));
                             continue outer;
                         }
                     } else if (para instanceof Class<?>) {
+                        Syslog.debug("Parameter %d is %s", i, para);
                         Class<?> klass = (Class<?>)para;
-                        Object value = UNASSIGNED;
-                        for (final Object extra : extras) {
-                            if (klass.isInstance(extra)) {
-                                value = extra;
-                                break;
-                            }
-                        }
-                        if (value == UNASSIGNED)
+                        Object value;
+                        if (extras.length > i) value = extras[i];
+                        else try {
                             value = implementationFor((Class<?>)para, Collections.EMPTY_LIST);
+                        }
+                        catch (ImplementationNotFoundException | ObjectInstantiationFailure e) {
+                            continue outer;
+                        }
                         arguments[i] = value;
                     } else {
                         Syslog.warn("Found unrecognizable parameter type %s",
@@ -319,17 +426,25 @@ public class CarInjector {
                         continue outer;
                     }
                 }
-                constructor = constr;
-                conPara = parametrized;
-                args = arguments;
-                conScope = scope;
+                if (args == null || arguments.length > args.length) {
+                    // override best choice so far (if any) only if new one has more arguments.
+                    constructor = constr;
+                    conPara = parametrized;
+                    args = arguments;
+                    conScope = scope;
+                }
             }
             if (constructor == null)
                 throw new ObjectInstantiationFailure(klass, "No suitable public constructor found");
             try {
+                Syslog.debug("Using %s with %s in scope %s", constructor, StringUtil.toString(args),
+                        conScope);
                 switch (conScope) {
                     case SINGLETON:
-                        if (singleton == null) singleton = (T)constructor.newInstance(args);
+                        if (singleton == null) {
+                            Syslog.debug("No singleton so far in %s → instantiating it.", this);
+                            singleton = (T)constructor.newInstance(args);
+                        }
                         return singleton;
                     case TEMPLATE:
                         return (T)constructor.newInstance(args);
@@ -362,7 +477,7 @@ public class CarInjector {
         ObjectFactory(final List<Type> types) {
             if (types.isEmpty())
                 throw new IllegalArgumentException("Factory without type parameters!");
-            Syslog.info("Creating object factory for %s", StringUtil.toString(types));
+            Syslog.debug("Creating object factory for %s", StringUtil.toString(types));
             final Type primaryType = types.get(0);
             if (primaryType instanceof Class<?>) {
                 rawType = (Class<? super T>)primaryType;
@@ -384,11 +499,33 @@ public class CarInjector {
         }
 
         @Override public T get(final Object... args) {
-            return (T)implementationFor(rawType, typeArgs, args);
+            T result;
+            try {
+                result = (T)implementationFor(rawType, typeArgs, args);
+                Syslog.debug("ObjectFactory(%s%s).get(%s) → %s", ClassUtil.nameOf(getRawType()),
+                        typeArgs.isEmpty() ? "" : typeArgs, ClassUtil.toString(args, args),
+                        StringUtil.toString(result));
+                return result;
+            }
+            catch (ImplementationNotFoundException | ObjectInstantiationFailure e) {
+                Syslog.error(e);
+                throw e;
+            }
         }
 
         @Override public T create(final Object... args) {
-            return (T)implementationFor(rawType, typeArgs, args);
+            T result;
+            try {
+                result = (T)implementationFor(rawType, typeArgs, args);
+                Syslog.debug("ObjectFactory(%s%s).create(%s) → %s", ClassUtil.nameOf(getRawType()),
+                        typeArgs.isEmpty() ? "" : typeArgs, ClassUtil.toString(args, args),
+                        StringUtil.toString(result));
+                return result;
+            }
+            catch (ImplementationNotFoundException | ObjectInstantiationFailure e) {
+                Syslog.error(e);
+                throw e;
+            }
         }
 
         @Override public String toString() {
@@ -396,20 +533,20 @@ public class CarInjector {
         }
     }
 
-    @SuppressWarnings("ClassHasNoToStringMethod")
+    @SuppressWarnings({"ClassHasNoToStringMethod", "PackageVisibleField"})
     private class ClassModeler extends ClassVisitor {
 
         private String currentClassName;
-        private final Map<String, String> fieldInjections = new HashMap<>();
-        private boolean patch = false;
-        private InjectionMode injectionMode = DIRECT; // default
+        final Map<String, String> fieldInjections = new HashMap<>();
+        boolean patch = false;
+        InjectionMode injectionMode = DIRECT; // default
 
         ClassModeler(final ClassWriter writer) {
             super(Opcodes.ASM5, writer);
         }
 
-        @Override public void visit(final int version, final int access, final String name, final
-        String signature, final String superName,
+        @Override public void visit(final int version, final int access, final String name,
+                                    final String signature, final String superName,
                                     final String[] interfaces) {
             currentClassName = name.replace('/', '.');
             super.visit(version, access, name, signature, superName, interfaces);
@@ -429,7 +566,8 @@ public class CarInjector {
         }
 
         @Override
-        public FieldVisitor visitField(final int access, final String name, final String desc, final String signature, final Object value) {
+        public FieldVisitor visitField(final int access, final String name, final String desc,
+                                       final String signature, final Object value) {
             return new ClassModeler.FieldPatcher(
                     cv.visitField(access, name, desc, signature, value), name,
                     signature != null ? signature : desc, Modifier.isStatic(access));
@@ -455,7 +593,7 @@ public class CarInjector {
             return super.visitMethod(access, name, desc, signature, exceptions);
         }
 
-        private void processStaticFieldInjections(MethodVisitor mv) {
+        void processStaticFieldInjections(MethodVisitor mv) {
             fieldInjections.forEach((field, type) -> {
                 Syslog.debug("Inserting patch code for (%s)%s.%s.", type, currentClassName, field);
 //  LDC Lcom/coradec/corajet/test/Interface;.class
@@ -511,6 +649,7 @@ public class CarInjector {
                 if (desc.equals(INJECT_DESC) && visible) {
                     if (isStatic) fieldInjections.put(name, this.type);
                     patch = true;
+                    //noinspection ConstantConditions
                     return new InjectionVisitor(fv.visitAnnotation(desc, visible));
                 }
                 return super.visitAnnotation(desc, visible);
@@ -560,7 +699,7 @@ public class CarInjector {
 
     }
 
-    private String internalNameOf(final String type) {
+    String internalNameOf(final String type) {
         String result = type.replaceFirst("<.*>", "");
         Syslog.trace("Internal name of \"%s\" → \"%s\"", type, result);
         try {
@@ -619,6 +758,7 @@ public class CarInjector {
         private final String signature;
         private final InjectionMode injectionMode;
         private boolean patched;
+        private int minStack;
 
         ConstructorPatcher(final String className, final String signature, final MethodVisitor mv,
                            final InjectionMode injectionMode) {
@@ -627,6 +767,10 @@ public class CarInjector {
             this.signature = signature;
             this.injectionMode = injectionMode;
             patched = false;
+        }
+
+        @Override public void visitMaxs(final int maxStack, final int maxLocals) {
+            super.visitMaxs(Math.max(maxStack, minStack), maxLocals);
         }
 
         @Override
@@ -641,13 +785,61 @@ public class CarInjector {
                         className, injectionMode.name());
                 switch (injectionMode) {
                     case DIRECT:
-                mv.visitIntInsn(ALOAD, 0);
+                        mv.visitIntInsn(ALOAD, 0);
                         mv.visitMethodInsn(INVOKESTATIC, "com/coradec/corajet/cldr/CarInjector",
                                 "finish", "(Ljava/lang/Object;)V", intf);
+                        minStack = 1;
                         break;
                     case TYPE_ARG:
-                        throw new IllegalArgumentException(
-                                "Injection Mode TYPE_ARG not yet implemented!");
+                        Syslog.debug("Constructor signature: %s", signature);
+                        /*
+    CarInjector.finishG(this, type1, type2, type1, type2);
+
+    ALOAD 0
+
+    ICONST_4
+    ANEWARRAY java/lang/Class
+
+    DUP
+    ICONST_0
+    ALOAD 1
+    AASTORE
+
+    DUP
+    ICONST_1
+    ALOAD 2
+    AASTORE
+
+    DUP
+    ICONST_2
+    ALOAD 1
+    AASTORE
+
+    DUP
+    ICONST_3
+    ALOAD 2
+    AASTORE
+
+    INVOKESTATIC com/coradec/corajet/cldr/CarInjector.finishG (Ljava/lang/Object;
+    [Ljava/lang/Class;)V
+
+    MAXSTACK = 5
+
+                         */
+                        int nargs = ClassUtil.fromSignature(signature)[1].split(", ").length;
+                        mv.visitIntInsn(ALOAD, 0);
+                        mv.visitInsn(ICONST_0 + nargs);
+                        mv.visitTypeInsn(ANEWARRAY, "java/lang/Class");
+                        for (int i = 0; i < nargs; ++i) {
+                            mv.visitInsn(DUP);
+                            mv.visitInsn(ICONST_0 + i);
+                            mv.visitIntInsn(ALOAD, i + 1);
+                            mv.visitInsn(AASTORE);
+                        }
+                        mv.visitMethodInsn(INVOKESTATIC, "com/coradec/corajet/cldr/CarInjector",
+                                "finishG", "(Ljava/lang/Object;[Ljava/lang/Class;)V", intf);
+                        minStack = 5;
+                        break;
                     default:
                         Syslog.error("Unknown injection mode: " + injectionMode.name());
                         throw new IllegalArgumentException(
@@ -658,6 +850,7 @@ public class CarInjector {
                         parameters == null ? "" : parameters);
                 patched = true;
             }
+
         }
 
     }
@@ -696,7 +889,7 @@ public class CarInjector {
             return null;
         }
 
-        private void setComponent() {
+        void setComponent() {
             state |= 1;
         }
 

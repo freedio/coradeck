@@ -22,16 +22,17 @@ package com.coradec.coralog.ctrl.impl;
 
 import static com.coradec.coralog.model.LogLevel.*;
 
+import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.model.Origin;
+import com.coradec.coracore.util.ClassUtil;
 import com.coradec.coralog.ctrl.Log;
 import com.coradec.coralog.ctrl.LogFacility;
 import com.coradec.coralog.ctrl.LogWithStringExtensions;
 import com.coradec.coralog.model.LogEntry;
 import com.coradec.coralog.model.LogLevel;
-import com.coradec.coralog.model.impl.BasicLogEntry;
 import com.coradec.coralog.model.impl.BasicProblemLogEntry;
 import com.coradec.coralog.model.impl.BasicStringLogEntry;
 import com.coradec.coralog.model.impl.BasicStringProblemLogEntry;
@@ -41,13 +42,13 @@ import com.coradec.coratext.model.Text;
 /**
  * ​​Basic implementation of a log.
  */
-@SuppressWarnings("WeakerAccess")
-public abstract class BasicLog implements Log {
+@Implementation
+public class BasicLog implements Log {
 
     private LogLevel level;
     @Inject private LogFacility logging;
 
-    public BasicLog(final LogLevel level) {
+    @SuppressWarnings("WeakerAccess") public BasicLog(final LogLevel level) {
         this.level = level;
     }
 
@@ -73,7 +74,7 @@ public abstract class BasicLog implements Log {
             log((problem != null) //
                 ? new BasicProblemLogEntry(origin, WARNING, problem, text, textArgs)
                 : text != null ? new BasicTextLogEntry(origin, WARNING, text, textArgs)
-                               : new BasicLogEntry(origin, WARNING));
+                               : new BasicStringLogEntry(origin, WARNING, ""));
         }
     }
 
@@ -89,7 +90,7 @@ public abstract class BasicLog implements Log {
             log((problem != null) //
                 ? new BasicProblemLogEntry(origin, ERROR, problem, text, textArgs)
                 : text != null ? new BasicTextLogEntry(origin, ERROR, text, textArgs)
-                               : new BasicLogEntry(origin, ERROR));
+                               : new BasicStringLogEntry(origin, ERROR, ""));
         }
     }
 
@@ -168,4 +169,7 @@ public abstract class BasicLog implements Log {
 
     }
 
+    @Override public String toString() {
+        return ClassUtil.toString(this);
+    }
 }

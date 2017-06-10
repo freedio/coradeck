@@ -31,7 +31,7 @@ import com.coradec.coratext.model.Text;
  * Basic implementation of a text log entry.
  */
 @SuppressWarnings("ClassHasNoToStringMethod")
-public class BasicTextLogEntry extends BasicLogEntry implements TextLogEntry {
+public class BasicTextLogEntry extends BasicLogEntry<String> implements TextLogEntry {
 
     private final Text text;
     private final Object[] textArgs;
@@ -58,6 +58,10 @@ public class BasicTextLogEntry extends BasicLogEntry implements TextLogEntry {
 
     @Override @ToString public String getText() {
         return text.resolve(textArgs);
+    }
+
+    @Override public String getContent() {
+        return getText();
     }
 
 }

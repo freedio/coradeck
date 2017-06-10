@@ -22,6 +22,7 @@ package com.coradec.coracore.model.impl;
 
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Nullable;
+import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.model.StackFrame;
 
 import java.net.URI;
@@ -55,7 +56,7 @@ public class BasicStackFrame extends BasicOrigin implements StackFrame {
         this.realClassName = realClassName;
     }
 
-    @Override public String getClassName() {
+    @Override @ToString public String getClassName() {
         return className;
     }
 
@@ -63,15 +64,15 @@ public class BasicStackFrame extends BasicOrigin implements StackFrame {
         return getClassName().replace('.', '/');
     }
 
-    private String getMethodName() {
+    @ToString public String getMethodName() {
         return this.methodName;
     }
 
-    private String getFileName() {
+    @ToString public String getFileName() {
         return this.fileName;
     }
 
-    private int getLineNumber() {
+    @ToString public int getLineNumber() {
         return this.lineNumber;
     }
 

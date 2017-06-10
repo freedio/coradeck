@@ -29,7 +29,7 @@ import com.coradec.coralog.model.StringLogEntry;
  * Basic implementation of a string log entry.
  */
 @SuppressWarnings("ClassHasNoToStringMethod")
-public class BasicStringLogEntry extends BasicLogEntry implements StringLogEntry {
+public class BasicStringLogEntry extends BasicLogEntry<String> implements StringLogEntry {
 
     private final String text;
     private final Object[] textArgs;
@@ -58,4 +58,7 @@ public class BasicStringLogEntry extends BasicLogEntry implements StringLogEntry
         return String.format(text, textArgs);
     }
 
+    @Override public String getContent() {
+        return getText();
+    }
 }

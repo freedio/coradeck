@@ -1,0 +1,5 @@
+# Localized text base for default locale of class ConsoleLogFacility
+
+Date: "On %s:"
+Line1: "time[%-13s]level[%-5s] origin[%s]"
+Line2: "none[%-13s]none[%-5s] content[%s]"

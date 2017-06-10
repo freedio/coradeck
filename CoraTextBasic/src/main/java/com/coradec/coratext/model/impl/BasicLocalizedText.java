@@ -20,12 +20,14 @@
 
 package com.coradec.coratext.model.impl;
 
+import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coratext.model.LocalizedText;
 
 /**
  * ​​Basic implementation of a localized text.
  */
 @SuppressWarnings("ClassHasNoToStringMethod")
+@Implementation
 public class BasicLocalizedText extends BasicText implements LocalizedText {
 
     private final String context;

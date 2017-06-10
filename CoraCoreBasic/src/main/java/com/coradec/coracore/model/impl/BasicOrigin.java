@@ -21,6 +21,7 @@
 package com.coradec.coracore.model.impl;
 
 import com.coradec.coracore.model.Origin;
+import com.coradec.coracore.util.ClassUtil;
 
 /**
  * ​​Basic implementation of an origin.
@@ -28,4 +29,7 @@ import com.coradec.coracore.model.Origin;
 @SuppressWarnings("WeakerAccess")
 public abstract class BasicOrigin implements Origin {
 
+    @Override public String toString() {
+        return ClassUtil.toString(this);
+    }
 }

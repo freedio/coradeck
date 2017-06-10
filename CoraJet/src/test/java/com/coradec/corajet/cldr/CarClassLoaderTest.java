@@ -52,7 +52,7 @@ public class CarClassLoaderTest {
             throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException,
                    IllegalAccessException {
         // Arrange:
-        System.setProperty("syslog.level", "DEBUG");
+        System.setProperty("syslog.level", "INFORMATION");
         final CarClassLoader classLoader = new CarClassLoader();
         // Act:
         final Class<?> test1 = classLoader.findClass("com.coradec.corajet.cldr.ctrl.Test1");
@@ -94,7 +94,7 @@ public class CarClassLoaderTest {
             throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException,
                    IllegalAccessException {
         // Arrange:
-        System.setProperty("syslog.level", "INFORMATION");
+        System.setProperty("syslog.level", "DEBUG");
         final CarClassLoader classLoader = new CarClassLoader();
         // Act:
         final Class<?> test = classLoader.findClass("com.coradec.corajet.cldr.ctrl.Test4");

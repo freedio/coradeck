@@ -33,7 +33,7 @@ import java.util.Optional;
 /**
  * ​​Basic implementation of a problem log entry.
  */
-public class BasicProblemLogEntry extends BasicLogEntry implements ProblemLogEntry {
+public class BasicProblemLogEntry extends BasicLogEntry<String> implements ProblemLogEntry {
 
     private final @Nullable Text text;
     private final Throwable problem;
@@ -74,4 +74,8 @@ public class BasicProblemLogEntry extends BasicLogEntry implements ProblemLogEnt
         return ClassUtil.toString(this);
     }
 
+    @Override public String getContent() {
+        return getExplanation().map(s -> getProblem().getLocalizedMessage() + ": " + s)
+                               .orElse(String.valueOf(getProblem()));
+    }
 }

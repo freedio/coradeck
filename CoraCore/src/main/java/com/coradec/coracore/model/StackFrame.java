@@ -39,4 +39,25 @@ public interface StackFrame extends Origin {
      * @return the class file name.
      */
     String getClassFileName();
+
+    /**
+     * Returns the method name.
+     *
+     * @return the method name.
+     */
+    String getMethodName();
+
+    /**
+     * Returns the name of the file containing the code location.
+     *
+     * @return the name of the source file.
+     */
+    String getFileName();
+
+    /**
+     * Returns the line number of the code.
+     *
+     * @return the source line number.
+     */
+    int getLineNumber();
 }

@@ -25,7 +25,7 @@ import java.util.Optional;
 /**
  * ​A log entry conveying a problem and an optional explanation for the problem.
  */
-public interface StringProblemLogEntry {
+public interface StringProblemLogEntry extends LogEntry<String> {
 
     /**
      * Returns the text template.

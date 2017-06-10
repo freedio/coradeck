@@ -30,7 +30,6 @@ import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.model.State;
 import com.coradec.coracore.util.ClassUtil;
 import com.coradec.coracore.util.CollectionUtil;
-import com.coradec.coralog.ctrl.impl.Logger;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -39,7 +38,7 @@ import java.util.Set;
  * ​​Basic implementation of a message.
  */
 @Implementation
-public class BasicMessage extends Logger implements Message {
+public class BasicMessage implements Message {
 
     private final Sender sender;
     private final Set<Recipient> recipients;

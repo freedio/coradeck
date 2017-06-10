@@ -19,15 +19,15 @@
   ~
   -->
 
+<!--suppress CheckTagEmptyBody -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
     <groupId>com.coradec.coradeck</groupId>
     <artifactId>coradeck</artifactId>
     <packaging>pom</packaging>
-    <version>0.1</version>
+    <version>0.2</version>
     <modules>
         <module>CoraCore</module>
         <module>CoraCoreBasic</module>
@@ -45,9 +45,12 @@
         <module>CoraBusBasic</module>
         <module>CoraType</module>
         <module>CoraTypeBasic</module>
+        <module>CoraTest</module>
     </modules>
 
     <properties>
+        <surefireArgLine></surefireArgLine>
+        <failsafeArgLine></failsafeArgLine>
     </properties>
 
     <dependencies>
@@ -75,27 +78,27 @@
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coracore</artifactId>
-                <version>0.1</version>
+                <version>0.2</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coracore-basic</artifactId>
-                <version>0.1</version>
+                <version>0.2</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coracom</artifactId>
-                <version>0.1</version>
+                <version>0.2</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coracom-basic</artifactId>
-                <version>0.1</version>
+                <version>0.2</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coractrl</artifactId>
-                <version>0.1</version>
+                <version>0.2</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
@@ -105,22 +108,22 @@
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>corabus</artifactId>
-                <version>0.1</version>
+                <version>0.2</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>corabus-basic</artifactId>
-                <version>0.1</version>
+                <version>0.2</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coralog</artifactId>
-                <version>0.1</version>
+                <version>0.2</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coralog-basic</artifactId>
-                <version>0.1</version>
+                <version>0.2</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
@@ -130,12 +133,12 @@
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coratext</artifactId>
-                <version>0.1</version>
+                <version>0.2</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coratext-basic</artifactId>
-                <version>0.1</version>
+                <version>0.2</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
@@ -150,7 +153,7 @@
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coraconf</artifactId>
-                <version>0.1</version>
+                <version>0.2</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
@@ -161,6 +164,11 @@
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coranet</artifactId>
                 <version>0.1</version>
+            </dependency>
+            <dependency>
+                <groupId>com.coradec.coradeck</groupId>
+                <artifactId>corajet</artifactId>
+                <version>0.2</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -239,15 +247,23 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.12.4</version>
+                <version>2.20</version>
                 <configuration>
                     <skipTests>${skip-unit-tests}</skipTests>
+                    <forkCount>3</forkCount>
+                    <reuseForks>true</reuseForks>
+                    <argLine>${surefireArgLine}</argLine>
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <version>2.20</version>
+                <configuration>
+                    <forkCount>3</forkCount>
+                    <reuseForks>true</reuseForks>
+                    <argLine>-Xms512M -Xmx1G</argLine>
+                </configuration>
                 <executions>
                     <execution>
                         <id>integration-tests</id>
@@ -257,6 +273,7 @@
                         </goals>
                         <configuration>
                             <skipTests>${skip-integration-tests}</skipTests>
+                            <argLine>${failsafeArgLine}</argLine>
                         </configuration>
                     </execution>
                 </executions>
@@ -270,6 +287,70 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-site-plugin</artifactId>
                 <version>3.6</version>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.7.9</version>
+                <executions>
+                    <execution>
+                        <id>pre-unit-tests</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                        <configuration>
+                            <!--destFile>${project.build.directory}/coverage-reports/jacoco-ut.exec
+                            </destFile-->
+                            <destFile>/tmp/coradeck/coverage-reports/jacoco-ut.exec</destFile>
+                            <append>true</append>
+                            <propertyName>surefireArgLine</propertyName>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>post-unit-tests</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                        <configuration>
+                            <!--dataFile>${project.build.directory}/coverage-reports/jacoco-ut.exec
+                            </dataFile>
+                            <outputDirectory>${project.reporting.outputDirectory}/jacoco-ut
+                            </outputDirectory-->
+                            <dataFile>/tmp/coradeck/coverage-reports/jacoco-ut.exec</dataFile>
+                            <outputDirectory>/tmp/coradeck/jacoco-ut</outputDirectory>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>pre-integration-test</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                        <configuration>
+                            <!--destFile>${project.build.directory}/../../coverage-reports/jacoco-it.exec
+                            </destFile-->
+                            <destFile>/tmp/coradeck/coverage-reports/jacoco-it.exec</destFile>
+                            <append>true</append>
+                            <propertyName>failsafeArgLine</propertyName>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>post-integration-test</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                        <configuration>
+                            <!--dataFile>${project.build.directory}/coverage-reports/jacoco-it.exec
+                            </dataFile>
+                            <outputDirectory>${project.reporting.outputDirectory}/jacoco-it
+                            </outputDirectory-->
+                            <dataFile>/tmp/coradeck/coverage-reports/jacoco-it.exec</dataFile>
+                            <outputDirectory>/tmp/coradeck/jacoco-it</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

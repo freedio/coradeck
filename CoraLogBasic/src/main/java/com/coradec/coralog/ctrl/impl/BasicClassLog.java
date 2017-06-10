@@ -22,6 +22,7 @@ package com.coradec.coralog.ctrl.impl;
 
 import static com.coradec.coralog.model.LogLevel.*;
 
+import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coralog.annotate.Production;
 import com.coradec.coralog.annotate.Staging;
 import com.coradec.coralog.ctrl.ClassLog;
@@ -31,6 +32,7 @@ import com.coradec.coralog.model.LogLevel;
  * ​​Basic implementation of a class log.
  */
 @SuppressWarnings("ClassHasNoToStringMethod")
+@Implementation
 public class BasicClassLog extends BasicLog implements ClassLog {
 
     private static LogLevel getInitialLevel(Class<?> klass) {
@@ -41,7 +43,7 @@ public class BasicClassLog extends BasicLog implements ClassLog {
 
     @SuppressWarnings("FieldCanBeLocal") private final Class<?> klass;
 
-    public BasicClassLog(Class<?> klass) {
+    public BasicClassLog(final Class<?> klass) {
         super(getInitialLevel(klass));
         this.klass = klass;
     }

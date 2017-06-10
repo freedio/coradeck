@@ -31,7 +31,7 @@ import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.ctrl.Factory;
 import com.coradec.coracore.util.ClassUtil;
-import com.coradec.coratext.ctrl.impl.ApplicationTextBase;
+import com.coradec.coratext.ctrl.ApplicationTextBase;
 import com.coradec.coratext.model.TextBase;
 import com.coradec.coratext.trouble.TextBaseNotFoundException;
 

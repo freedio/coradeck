@@ -27,7 +27,7 @@ import java.util.Optional;
 /**
  * ​A log entry conveying a problem and an optional explanation for the problem.
  */
-public interface ProblemLogEntry extends LogEntry {
+public interface ProblemLogEntry extends LogEntry<String> {
 
     /**
      * Returns the explanatory text literal.
