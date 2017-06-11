@@ -21,6 +21,7 @@
 package com.coradec.corajet.test;
 
 import com.coradec.corajet.cldr.CarClassLoader;
+import com.coradec.corajet.cldr.Syslog;
 import org.junit.runners.BlockJUnit4ClassRunner;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.InitializationError;
@@ -32,6 +33,10 @@ import java.util.List;
  * ​​A JUnit 4 test runner for coradeck modules.
  */
 public class CoradeckJUnit4TestRunner extends BlockJUnit4ClassRunner {
+
+    static {
+        Syslog.setLevel("DEBUG");
+    }
 
     private static final CarClassLoader CLASS_LOADER = new CarClassLoader();
     private static final Class<? extends Annotation> testing;

@@ -115,6 +115,7 @@ public class CarClassLoader extends ClassLoader {
     private Map<String, List<URL>> createResourceMap() {
         final Map<String, List<URL>> result = new HashMap<>();
         final String classPath = File.pathSeparator + System.getProperty(PROP_ENV_CLASSPATH);
+        Syslog.debug("ClassPath: %s", classPath);
         try {
             collectResources(result, classPath.split(File.pathSeparator));
         }
@@ -443,4 +444,5 @@ public class CarClassLoader extends ClassLoader {
         }
         return result;
     }
+
 }

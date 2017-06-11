@@ -37,6 +37,17 @@ public final class Syslog {
     private static final PrintStream NORMAL = System.out;
     private static final PrintStream ALERT = System.err;
 
+    /**
+     * Sets the syslog level.
+     *
+     * @param level the new level.
+     * @throws IllegalArgumentException if the log level is invalid.
+     */
+    public static void setLevel(final String level) throws IllegalArgumentException {
+        SYSLOG_LEVEL = LogLevel.valueOf(level);
+        System.out.printf("syslog.level is now %s%n", SYSLOG_LEVEL);
+    }
+
     @SuppressWarnings("ClassHasNoToStringMethod")
     private enum LogLevel {
         TRACE("TRACE"),
