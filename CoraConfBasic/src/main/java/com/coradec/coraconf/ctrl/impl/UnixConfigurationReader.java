@@ -18,35 +18,17 @@
  *
  */
 
-package com.coradec.coratext.model;
+package com.coradec.coraconf.ctrl.impl;
 
-import static com.coradec.coracore.util.ExecUtil.*;
-
-import com.coradec.coracore.ctrl.Factory;
-import com.coradec.coracore.model.GenericFactory;
+import java.net.URL;
 
 /**
- * ​​A text literal to be resolved in a specific locale.
+ * ​​Inplementation of a configuration file reader for UNIX-style configuration files.
  */
-public interface LocalizedText extends Text {
+@SuppressWarnings("ClassHasNoToStringMethod")
+public class UnixConfigurationReader extends AnnotatedConfigurationReader {
 
-    Factory<LocalizedText> text = new GenericFactory<>(LocalizedText.class);
-
-    /**
-     * Defines a new text literal in the caller context.
-     *
-     * @param name the name of the literal.
-     * @return a new localized text literal.
-     */
-    static Text define(final String name) {
-        return text.get(getCallerStackFrame().getClassFileName(), name);
+    public UnixConfigurationReader(final String context, final URL resource) {
+        super(context, resource);
     }
-
-    /**
-     * Returns the context.
-     *
-     * @return the context.
-     */
-    String getContext();
-
 }

@@ -24,6 +24,7 @@ import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.ctrl.Factory;
+import com.coradec.coracore.model.HashCache;
 import com.coradec.coracore.util.ClassUtil;
 import com.coradec.coratext.ctrl.TextResolver;
 import com.coradec.coratext.model.TextBase;
@@ -40,12 +41,25 @@ import java.util.stream.Stream;
 public class BasicTextResolver implements TextResolver {
 
     @Inject
-    private Factory<TextBase> textBases;
+    private Factory<TextBase> textBaseFactory;
+    @Inject
+    private HashCache<String, TextBase> textBases;
+
+    @Override public String lookup(@Nullable final String context, final String name) {
+        try {
+            TextBase textBase = getTextBase(context);
+            return textBase.lookup(name);
+        }
+        catch (TextBaseNotFoundException e) {
+            return String.format("Missing text literal %s",
+                    context != null ? context.replace('.', '/') + "." + name : name);
+        }
+    }
 
     @Override
     public String resolve(final @Nullable String context, final String name, final Object... args) {
         try {
-            final TextBase textBase = textBases.get(context);
+            TextBase textBase = getTextBase(context);
             return textBase.resolve(name, args);
         }
         catch (TextBaseNotFoundException e) {
@@ -60,6 +74,11 @@ public class BasicTextResolver implements TextResolver {
             }
             return collector.toString();
         }
+    }
+
+    private TextBase getTextBase(final @Nullable String context) {
+        return context != null ? textBases.computeIfAbsent(context, ctx -> textBaseFactory.get(ctx))
+                               : textBases.computeIfAbsent("", ctx -> textBaseFactory.get());
     }
 
 }

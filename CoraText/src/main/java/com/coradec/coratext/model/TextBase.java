@@ -46,4 +46,12 @@ public interface TextBase {
      */
     String resolve(String name, Object... args);
 
+    /**
+     * Looks up the text literal with the specified name.
+     *
+     * @param name the text literal name.
+     * @return the unresolved text literal.
+     */
+    String lookup(String name);
+
 }

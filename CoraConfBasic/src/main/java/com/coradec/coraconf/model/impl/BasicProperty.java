@@ -18,51 +18,54 @@
  *
  */
 
-package com.coradec.coratext.model.impl;
+package com.coradec.coraconf.model.impl;
 
+import com.coradec.coraconf.model.Property;
 import com.coradec.coracore.annotation.Implementation;
-import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
+import com.coradec.coracore.model.GenericType;
 import com.coradec.coracore.util.ClassUtil;
-import com.coradec.coratext.ctrl.TextResolver;
-import com.coradec.coratext.model.Text;
+
+import java.util.Optional;
 
 /**
- * ​​Basic implementation of a text literal.
+ * ​​Basic implementation of a property.
  */
 @Implementation
-public class BasicText implements Text {
+public class BasicProperty<R> implements Property<R> {
 
-    @SuppressWarnings("PackageVisibleField")
-    @Inject
-    static TextResolver RESOLVER;
-
+    private final @Nullable String context;
     private final String name;
+    private final GenericType<R> type;
+    private final R dflt;
 
-    /**
-     * Initializes a new instance of BasicText with the specified literal name.
-     *
-     * @param name the literal name.
-     */
-    @SuppressWarnings("WeakerAccess") public BasicText(final String name) {
+    private <D extends R> BasicProperty(final @Nullable String context, final String name,
+                                        final Class<R> type, final D dflt) {
+        this.context = context;
         this.name = name;
+        this.type = GenericType.of(type);
+        this.dflt = dflt;
+    }
+
+    <D extends R> BasicProperty(final String name, final Class<R> type, final D dflt) {
+        this(null, name, type, dflt);
     }
 
     @Override @ToString public String getName() {
         return this.name;
     }
 
-    @Nullable protected String getContext() {
-        return null;
+    @Override @ToString public GenericType<R> getType() {
+        return this.type;
     }
 
-    @Override public String resolve(final Object... args) {
-        return RESOLVER.resolve(getContext(), getName(), args);
+    @Override public R value(final Object... args) {
+        return resolve().orElse(dflt);
     }
 
-    @Override public String get() {
-        return RESOLVER.lookup(getContext(), getName());
+    private Optional<R> resolve() {
+        return Optional.empty();
     }
 
     @Override public String toString() {

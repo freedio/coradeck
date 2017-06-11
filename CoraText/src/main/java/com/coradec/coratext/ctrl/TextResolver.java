@@ -36,6 +36,15 @@ public interface TextResolver {
      * @param args    arguments to fit into the template text.
      * @return the resolved text.
      */
-    String resolve(final @Nullable String context, final String name, final Object[] args);
+    String resolve(@Nullable String context, String name, Object[] args);
+
+    /**
+     * Returns the unresolved text literal.
+     *
+     * @param context the context (optional).
+     * @param name    the full literal name.
+     * @return the unresolved text.
+     */
+    String lookup(@Nullable String context, String name);
 
 }

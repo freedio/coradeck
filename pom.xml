@@ -46,6 +46,7 @@
         <module>CoraType</module>
         <module>CoraTypeBasic</module>
         <module>CoraTest</module>
+        <module>CoraConfBasic</module>
     </modules>
 
     <properties>
@@ -158,12 +159,12 @@
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coraconf-basic</artifactId>
-                <version>0.1</version>
+                <version>0.2</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coranet</artifactId>
-                <version>0.1</version>
+                <version>0.2</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>

@@ -35,7 +35,7 @@ public class ConfigurationException extends BasicException {
      * @param explanation the explanation.
      * @param problem     the underlying problem.
      */
-    protected ConfigurationException(final String explanation, final Throwable problem) {
+    public ConfigurationException(final String explanation, final Throwable problem) {
         super(explanation, problem);
     }
 

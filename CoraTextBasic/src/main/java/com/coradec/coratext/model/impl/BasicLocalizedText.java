@@ -40,11 +40,15 @@ public class BasicLocalizedText extends BasicText implements LocalizedText {
     }
 
     @Override public String getName() {
-        return context + "." + localName;
+        return localName;
     }
 
     @Override public String resolve(final Object... args) {
         return RESOLVER.resolve(context, localName, args);
+    }
+
+    @Override public String getContext() {
+        return context;
     }
 
 }

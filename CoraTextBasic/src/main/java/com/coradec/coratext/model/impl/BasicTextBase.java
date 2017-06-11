@@ -46,7 +46,8 @@ import java.util.Set;
 @Implementation
 public class BasicTextBase implements TextBase {
 
-    @Inject private static Factory<ApplicationTextBase> APPLICATION_TEXT_BASE;
+    @Inject
+    private static Factory<ApplicationTextBase> APPLICATION_TEXT_BASE;
 
     private static final String TEXT_FILE_PATTERN =
             System.getProperty("com.coradec.infra.text.model.TextBase.FileTemplate", "%s.text");
@@ -61,7 +62,7 @@ public class BasicTextBase implements TextBase {
      * @param context the context.
      * @throws TextBaseNotFoundException if no text base was found for the specified context.
      */
-    public BasicTextBase(final @NonNull String context) throws TextBaseNotFoundException {
+    public BasicTextBase(@NonNull final String context) throws TextBaseNotFoundException {
         this.context = context;
         final String contxt = String.format(TEXT_FILE_PATTERN, context.replace('.', '/'));
         baseFile = getClass().getClassLoader().getResource(contxt);
@@ -106,10 +107,13 @@ public class BasicTextBase implements TextBase {
     }
 
     @Override public String resolve(final String name, final Object... args) {
-        final String result = getLiterals().lookup(name).orElse(//
+        return String.format(lookup(name), args);
+    }
+
+    @Override public String lookup(final String name) {
+        return getLiterals().lookup(name).orElse(//
                 (context == null) ? String.format("<Unknown text literal %s>", name)
                                   : String.format("<Unknown text literal %s.%s>", context, name));
-        return String.format(result, args);
     }
 
     @Override public String toString() {

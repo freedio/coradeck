@@ -18,35 +18,20 @@
  *
  */
 
-package com.coradec.coratext.model;
+package com.coradec.coraconf.model.impl;
 
-import static com.coradec.coracore.util.ExecUtil.*;
-
-import com.coradec.coracore.ctrl.Factory;
-import com.coradec.coracore.model.GenericFactory;
+import com.coradec.coraconf.model.AnnotatedProperty;
+import com.coradec.coracore.annotation.Nullable;
 
 /**
- * ​​A text literal to be resolved in a specific locale.
+ * ​​Basic implementation of an annotated property.
  */
-public interface LocalizedText extends Text {
+//@Component
+//@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
+public class BasicAnnotatedProperty extends BasicProperty<String> implements AnnotatedProperty {
 
-    Factory<LocalizedText> text = new GenericFactory<>(LocalizedText.class);
-
-    /**
-     * Defines a new text literal in the caller context.
-     *
-     * @param name the name of the literal.
-     * @return a new localized text literal.
-     */
-    static Text define(final String name) {
-        return text.get(getCallerStackFrame().getClassFileName(), name);
+    public BasicAnnotatedProperty(final String name, final @Nullable String type,
+                                  final String value, final @Nullable String annotation) {
+        super(name, String.class, value);
     }
-
-    /**
-     * Returns the context.
-     *
-     * @return the context.
-     */
-    String getContext();
-
 }

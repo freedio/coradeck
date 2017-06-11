@@ -41,4 +41,10 @@ public interface Text {
      */
     String resolve(@Nullable Object... args);
 
+    /**
+     * Returns the raw form of the text.
+     *
+     * @return the raw text.
+     */
+    String get();
 }

@@ -18,35 +18,26 @@
  *
  */
 
-package com.coradec.coratext.model;
+package com.coradec.coraconf.ctrl.impl;
 
-import static com.coradec.coracore.util.ExecUtil.*;
-
-import com.coradec.coracore.ctrl.Factory;
-import com.coradec.coracore.model.GenericFactory;
+import java.net.URL;
 
 /**
- * ​​A text literal to be resolved in a specific locale.
+ * ​​A configuration file reader for Java .properties files.
  */
-public interface LocalizedText extends Text {
+@SuppressWarnings("ClassHasNoToStringMethod")
+public class JavaConfigurationReader extends AnnotatedConfigurationReader {
 
-    Factory<LocalizedText> text = new GenericFactory<>(LocalizedText.class);
-
-    /**
-     * Defines a new text literal in the caller context.
-     *
-     * @param name the name of the literal.
-     * @return a new localized text literal.
-     */
-    static Text define(final String name) {
-        return text.get(getCallerStackFrame().getClassFileName(), name);
+    @Override protected String SEPARATORS() {
+        return ":= \t";
     }
 
-    /**
-     * Returns the context.
-     *
-     * @return the context.
-     */
-    String getContext();
+    public JavaConfigurationReader(final String context, final URL resource) {
+        super(context, resource);
+    }
+
+    @Override protected String trimValue(final String value) {
+        return value.replaceFirst("\\s+", "");
+    }
 
 }
