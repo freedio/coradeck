@@ -52,7 +52,7 @@ public class ConsoleLogFacility implements LogFacility {
             new Extractor("time", logEntry -> logEntry.getTimestamp().toLocalTime()),
             new Extractor("level", LogEntry::getLevel),
             new Extractor("origin", LogEntry::getOrigin),
-            new Extractor("none", logEntry -> StringUtil.EMPTY)
+            new Extractor("none", logEntry -> StringUtil.BLANK)
     };
 
     private LocalDate lastDate;
@@ -66,8 +66,8 @@ public class ConsoleLogFacility implements LogFacility {
             out.println(TEXT_DATE.resolve(localDate));
             lastDate = localDate;
         }
-        out.println(format(TEXT_LINE1.resolve(), entry));
-        out.println(format(TEXT_LINE2.resolve(), entry));
+        out.println(format(TEXT_LINE1.get(), entry));
+        out.println(format(TEXT_LINE2.get(), entry));
         if (entry instanceof ProblemLogEntry) {
             ((ProblemLogEntry)entry).getProblem().printStackTrace(out);
         }
@@ -78,12 +78,13 @@ public class ConsoleLogFacility implements LogFacility {
         String form = format;
         for (final Extractor extractor : EXTRACTORS) {
             String tag = extractor.getTag() + '[';
-            int i = form.indexOf(tag);
-            if (i != -1) {
+            for (int i = form.indexOf(tag); i != -1; i = form.indexOf(tag)) {
                 int k = i + tag.length();
                 int j = form.indexOf(']', k + 1);
                 String fmt = form.substring(k, j);
-                form = form.replaceAll(tag + ".*?]", String.valueOf(extractor.apply(entry)));
+                final String formatted =
+                        String.format(fmt, StringUtil.represent(extractor.apply(entry)));
+                form = form.substring(0, i) + formatted + form.substring(j + 1);
             }
         }
         return form;

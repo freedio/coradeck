@@ -23,6 +23,7 @@ package com.coradec.coralog.model;
 import static com.coradec.coralog.model.LogSeverity.*;
 
 import com.coradec.coracore.annotation.ToString;
+import com.coradec.coracore.model.Representable;
 import com.coradec.coracore.util.ClassUtil;
 
 import java.util.stream.Collectors;
@@ -32,7 +33,7 @@ import java.util.stream.Stream;
  * ​Enumeration of log levels.
  */
 @SuppressWarnings("HardCodedStringLiteral")
-public enum LogLevel {
+public enum LogLevel implements Representable {
     ALL(SUBLIMINAL, 'A', "ANY"),
     CHAT(SUBLIMINAL, 'C', "CHAT"),
     DEBUG(SUBLIMINAL, 'D', "DEBUG"),
@@ -116,4 +117,7 @@ public enum LogLevel {
         return ClassUtil.toString(this);
     }
 
+    @Override public String represent() {
+        return getShortHand();
+    }
 }
