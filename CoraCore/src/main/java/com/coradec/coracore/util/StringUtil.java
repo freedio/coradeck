@@ -62,12 +62,19 @@ public final class StringUtil {
             return "<fails>";
         }
     };
+    public static final Object BLANK = new Object() {
+
+        @Override public String toString() {
+            return "";
+        }
+    };
 
     private StringUtil() {
     }
 
     public static String represent(final @Nullable Object o) {
         if (o == null) return NULL_REPR;
+        if (o instanceof Representable) return ((Representable)o).represent();
         if (o instanceof byte[]) return ppByteArray((byte[])o);
         if (o.getClass().isArray()) return arrayRepr(o);
         if (o instanceof CharSequence) return "\"" + o + '"';
@@ -92,9 +99,6 @@ public final class StringUtil {
                                                represent(entry.getValue()))
                                  .collect(joining(", ", "{", "}"));
         if (o instanceof Date) return String.format(Locale.UK, "%tFT%<tT.%<tN", (Date)o);
-        if (o instanceof Representable)
-            return String.format("<%s %s>", ClassUtil.nameOf(o.getClass()),
-                    ((Representable)o).represent());
         return o.toString();
     }
 
