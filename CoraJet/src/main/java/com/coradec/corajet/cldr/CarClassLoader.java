@@ -23,6 +23,7 @@ package com.coradec.corajet.cldr;
 import static java.nio.file.StandardOpenOption.*;
 
 import com.coradec.coracore.annotation.Nullable;
+import com.coradec.coracore.trouble.ObjectInstantiationFailure;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -30,6 +31,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.URL;
 import java.nio.file.Files;
@@ -67,7 +69,7 @@ public class CarClassLoader extends ClassLoader {
     private static final String NAME_INJECTOR = "com.coradec.corajet.cldr.CarInjector";
 
     private final Object injector;
-    private final Method embed, analyze;
+    private final Method embed, analyze, implement;
     private final Map<String, List<URL>> resourceMap;
     private final Set<String> components = new HashSet<>();
     private final Set<String> implementations = new HashSet<>();
@@ -89,6 +91,8 @@ public class CarClassLoader extends ClassLoader {
                     Integer.TYPE);
             analyze = injectorClass.getMethod("analyzeClass", String.class, byte[].class,
                     Integer.TYPE, Integer.TYPE);
+            implement = injectorClass.getMethod("implementationFor", Class.class, List.class,
+                    Object[].class);
             injector = injectorConstructor.newInstance();
             Syslog.info("Analyzing naked resources ...");
             for (final String file : fileList) {
@@ -371,6 +375,27 @@ public class CarClassLoader extends ClassLoader {
     }
 
     /**
+     * Returns an implementation of the specified interface with the specified type and construction
+     * arguments.
+     *
+     * @param <T>   the base type.
+     * @param type  the base type selector.
+     * @param types type arguments to match with type parameters of a suitable implementation
+     *              class.
+     * @param args  constructor arguments.
+     * @return a suitable instance of an implementation class..
+     */
+    @SuppressWarnings("unchecked") public <T> T implement(final Class<? super T> type,
+                                                          final List<Type> types, Object... args) {
+        if (injector == null) throw new IllegalStateException("No injector!");
+        try {
+            return (T)implement.invoke(injector, type, types, args);
+        } catch (final Exception e) {
+            throw new ObjectInstantiationFailure(type, e);
+        }
+    }
+
+    /**
      * Loads the closs with the specified name from the specified location.
      *
      * @param name     the name of the class.
@@ -403,8 +428,7 @@ public class CarClassLoader extends ClassLoader {
                 Syslog.debug(">> Injector.embed(%s)", name);
                 try {
                     data = (byte[])embed.invoke(injector, name, buffer, 0, buflen);
-                }
-                catch (Throwable e) {
+                } catch (final Exception e) {
                     Syslog.error(e);
                 }
             } else if (doAnalyze) {
@@ -419,8 +443,7 @@ public class CarClassLoader extends ClassLoader {
                         Syslog.debug("-> Adding as implementation");
                         implementations.add(name);
                     }
-                }
-                catch (Throwable e) {
+                } catch (final Exception e) {
                     Syslog.error(e);
                 }
             }
@@ -445,4 +468,7 @@ public class CarClassLoader extends ClassLoader {
         return result;
     }
 
+    public void showImpplementations() {
+        Syslog.info("Collected implementations: %s", implementations);
+    }
 }
