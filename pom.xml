@@ -171,6 +171,16 @@
                 <artifactId>corajet</artifactId>
                 <version>0.2</version>
             </dependency>
+            <dependency>
+                <groupId>com.coradec.coradeck</groupId>
+                <artifactId>coratype</artifactId>
+                <version>0.2</version>
+            </dependency>
+            <dependency>
+                <groupId>com.coradec.coradeck</groupId>
+                <artifactId>coratype-basic</artifactId>
+                <version>0.2</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
