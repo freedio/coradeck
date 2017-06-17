@@ -20,6 +20,9 @@
 
 package com.coradec.coractrl.ctrl;
 
+import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.MatcherAssert.*;
+
 import com.coradec.coracom.model.Message;
 import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Sender;
@@ -29,44 +32,60 @@ import com.coradec.coracore.ctrl.AutoOrigin;
 import com.coradec.coractrl.model.MessageQueue;
 import com.coradec.corajet.cldr.Syslog;
 import com.coradec.corajet.test.CoradeckJUnit4TestRunner;
-import org.junit.BeforeClass;
+import org.junit.AfterClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.net.URI;
-import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-@SuppressWarnings("WeakerAccess")
+@SuppressWarnings({"WeakerAccess", "PackageVisibleField"})
 @RunWith(CoradeckJUnit4TestRunner.class)
 public class CentralMessageQueueTest {
 
+    public static final String SYSLOG_LEVEL = "INFORMATION";
+
+    static {
+        Syslog.setLevel(SYSLOG_LEVEL);
+    }
+
     static final AtomicInteger ID = new AtomicInteger(0);
     static final Semaphore termLock = new Semaphore(0);
+    static AtomicInteger APPROVED = new AtomicInteger(0);
+    static AtomicInteger GENERATED = new AtomicInteger(0);
+    static AtomicInteger DISPATCHED = new AtomicInteger(0);
 
     @SuppressWarnings("PackageVisibleField")
     @Inject
     MessageQueue CMQ;
 
-    @BeforeClass public static void setupSuite() {
-        Syslog.setLevel("INFORMATION");
-
+    @AfterClass public static void teardownSuite() {
+        SysControl.terminate();
     }
 
     /**
      * Runs 100 test agents in parallel, each sending 10..1000 messages to itself.
      */
     @Test public void testCMQ() throws InterruptedException {
-        final int nAgents = 1;
+        long elapsed = System.currentTimeMillis();
+        final int nAgents = 100;
         for (int i = 0; i < nAgents; ++i) {
             CMQ.schedule(new TestAgent());
         }
-        termLock.acquire(nAgents);
-        Syslog.info("Terminated");
+        termLock.tryAcquire(nAgents, 20, TimeUnit.SECONDS);
+        elapsed = System.currentTimeMillis() - elapsed;
+        final int approved = APPROVED.get();
+        final int generated = GENERATED.get();
+        final int dispatched = DISPATCHED.get();
+        Syslog.info("Terminated, %d messages approved, %d generated, %d dispatched in %d ms",
+                approved, generated, dispatched, elapsed);
+        assertThat(generated, is(approved));
+        assertThat(dispatched, is(approved));
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")
@@ -75,13 +94,14 @@ public class CentralMessageQueueTest {
         private final int id;
         private final int genSize;
         private final Random random = new Random();
-        private final Map<Message, Message> messages;
+        private final ConcurrentLinkedQueue<Message> messages;
         private final AtomicBoolean sent;
 
         TestAgent() {
             id = ID.incrementAndGet();
             genSize = random.nextInt(990) + 10;
-            messages = new ConcurrentHashMap<>();
+            APPROVED.addAndGet(genSize);
+            messages = new ConcurrentLinkedQueue<>();
             sent = new AtomicBoolean();
         }
 
@@ -95,21 +115,21 @@ public class CentralMessageQueueTest {
 
         @Override public void onMessage(final Message message) {
             messages.remove(message);
-//            Syslog.info("%d messages to go...", messages.size());
+            DISPATCHED.incrementAndGet();
             if (sent.get() && messages.isEmpty()) termLock.release();
         }
 
         @Override public void run() {
             for (int i = 0; i < genSize; ++i) {
-//                Syslog.info("Sending message %d", i);
                 sendMessage();
             }
             sent.set(true);
         }
 
         private void sendMessage() {
+            GENERATED.incrementAndGet();
             final BasicMessage message = new BasicMessage(this, this);
-            messages.put(message, message);
+            messages.add(message);
             CMQ.inject(message);
         }
     }

@@ -28,5 +28,6 @@ import com.coradec.coracore.model.State;
 public enum QueueState implements State {
     NEW,
     ENQUEUED,
+    DISPATCHED,
     DELIVERED
 }

@@ -81,6 +81,16 @@
             <artifactId>coraconf-basic</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.coradec.coradeck</groupId>
+            <artifactId>coratype</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.coradec.coradeck</groupId>
+            <artifactId>coratype-basic</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
 

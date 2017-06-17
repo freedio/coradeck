@@ -33,6 +33,7 @@ import com.coradec.coracore.util.CollectionUtil;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * ​​Basic implementation of a message.
@@ -42,6 +43,7 @@ public class BasicMessage implements Message {
 
     private final Sender sender;
     private final Set<Recipient> recipients;
+    private final UUID id;
     private State state;
 
     /**
@@ -54,6 +56,7 @@ public class BasicMessage implements Message {
         this.sender = sender;
         this.recipients = recipients;
         this.state = NEW;
+        this.id = UUID.randomUUID();
     }
 
     /**
@@ -86,9 +89,18 @@ public class BasicMessage implements Message {
         return sender;
     }
 
+    @Override @ToString public UUID getId() {
+        return this.id;
+    }
+
     @Override public void onEnqueue() throws IllegalStateException {
         if (state != NEW) throw new IllegalStateException(state.name());
         state = ENQUEUED;
+    }
+
+    @Override public void onDispatch() throws IllegalStateException {
+        if (state != ENQUEUED) throw new IllegalStateException(state.name());
+        state = DISPATCHED;
     }
 
     @Override public void onDeliver() throws IllegalStateException {

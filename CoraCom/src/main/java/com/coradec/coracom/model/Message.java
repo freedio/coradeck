@@ -24,6 +24,7 @@ import com.coradec.coracom.state.QueueState;
 import com.coradec.coracore.model.State;
 
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * ​​Basic interface for all exchanged messages.
@@ -59,11 +60,25 @@ public interface Message {
     Sender getSender();
 
     /**
+     * Returns the message ID.
+     *
+     * @return the message ID.
+     */
+    UUID getId();
+
+    /**
      * Callback invoked when the message gets enqueued.
      *
      * @throws IllegalStateException if the current state is not {@link QueueState#NEW}.
      */
     void onEnqueue() throws IllegalStateException;
+
+    /**
+     * Callback invoked when the message is dispatched from the queue.
+     *
+     * @throws IllegalStateException if the current state is not {@link QueueState#NEW}.
+     */
+    void onDispatch() throws IllegalStateException;
 
     /**
      * Callback invoked when the message gets delivered.
