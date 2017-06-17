@@ -62,6 +62,7 @@ public class ConsoleLogFacility implements LogFacility {
         final LocalDateTime timestamp = entry.getTimestamp();
         final LocalDate localDate = timestamp.toLocalDate();
         final LocalTime localTime = timestamp.toLocalTime();
+        out.flush();
         if (!localDate.equals(lastDate)) {
             out.println(TEXT_DATE.resolve(localDate));
             lastDate = localDate;
