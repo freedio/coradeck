@@ -28,9 +28,10 @@ import com.coradec.coratype.trouble.TypeConversionException;
 /**
  * ​A type converter for a particular target class.
  */
+@SuppressWarnings("unchecked")
 public interface TypeConverter<V> {
 
-    Factory<TypeConverter<?>> FACTORY = new GenericFactory<>(TypeConverter.class);
+    Factory<TypeConverter<?>> FACTORY = new GenericFactory(TypeConverter.class);
 
     @SuppressWarnings("unchecked") static <T> TypeConverter<T> to(GenericType<T> type) {
         return (TypeConverter<T>)FACTORY.get(type);
