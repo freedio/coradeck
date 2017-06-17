@@ -1,0 +1,4 @@
+# Test dataset for first testee; the other dataset has no file comment on purpose.
+
+property1: value1
+property2: \x3b\xCa\21\u1234
