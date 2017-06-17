@@ -25,6 +25,6 @@ import com.coradec.coraconf.model.Configuration;
 /**
  * ​A general, context-less textbase for an application.
  */
-public interface ApplicationTextBase extends Configuration<String> {
+public interface ApplicationTextBase extends Configuration {
 
 }

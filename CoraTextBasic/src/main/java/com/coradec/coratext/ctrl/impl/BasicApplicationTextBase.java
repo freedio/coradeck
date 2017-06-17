@@ -23,6 +23,7 @@ package com.coradec.coratext.ctrl.impl;
 import com.coradec.coraconf.model.Configuration;
 import com.coradec.coraconf.model.Property;
 import com.coradec.coracore.annotation.Implementation;
+import com.coradec.coracore.model.GenericType;
 import com.coradec.coracore.model.Scope;
 import com.coradec.coratext.ctrl.ApplicationTextBase;
 
@@ -40,13 +41,26 @@ public class BasicApplicationTextBase implements ApplicationTextBase {
 
     private final Map<String, String> applicationTextBase = new ConcurrentHashMap<>();
 
-    @Override public Optional<String> lookup(final String name) {
-        return Optional.ofNullable(applicationTextBase.get(name));
+    @Override public Optional<String> getContext() {
+        return Optional.empty();
     }
 
-    @Override public Configuration<String> add(
-            final Collection<? extends Property<? extends String>> properties) {
-        properties.forEach(prop -> applicationTextBase.put(prop.getName(), prop.value()));
+    @Override public Optional<String> lookup(final String name, final Object... args) {
+        return Optional.ofNullable(String.format(applicationTextBase.get(name), args));
+    }
+
+    @Override public <T> Optional<T> lookup(final Class<? super T> type, final String name,
+                                            final Object... args) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override public <T> Optional<T> lookup(final GenericType<T> type, final String name,
+                                            final Object... args) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override public Configuration add(final Collection<? extends Property<?>> properties) {
+        properties.forEach(prop -> applicationTextBase.put(prop.getName(), (String)prop.value()));
         return this;
     }
 

@@ -28,7 +28,7 @@ import java.util.Optional;
 public interface TextBase {
 
     /**
-     * Returns the context.
+     * Returns the context, if present.
      * <p>
      * If no context is defined, the text base is called the default text base.
      *

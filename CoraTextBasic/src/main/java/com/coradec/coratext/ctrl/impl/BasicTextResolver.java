@@ -20,11 +20,13 @@
 
 package com.coradec.coratext.ctrl.impl;
 
+import static com.coradec.coracore.model.Scope.*;
+
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.Nullable;
+import com.coradec.coracore.collections.HashCache;
 import com.coradec.coracore.ctrl.Factory;
-import com.coradec.coracore.model.HashCache;
 import com.coradec.coracore.util.ClassUtil;
 import com.coradec.coratext.ctrl.TextResolver;
 import com.coradec.coratext.model.TextBase;
@@ -37,7 +39,7 @@ import java.util.stream.Stream;
  * ​​Basic implementation of a text resolver.
  */
 @SuppressWarnings("ClassHasNoToStringMethod")
-@Implementation
+@Implementation(SINGLETON)
 public class BasicTextResolver implements TextResolver {
 
     @Inject
@@ -49,8 +51,7 @@ public class BasicTextResolver implements TextResolver {
         try {
             TextBase textBase = getTextBase(context);
             return textBase.lookup(name);
-        }
-        catch (TextBaseNotFoundException e) {
+        } catch (TextBaseNotFoundException e) {
             return String.format("Missing text literal %s",
                     context != null ? context.replace('.', '/') + "." + name : name);
         }
@@ -61,8 +62,7 @@ public class BasicTextResolver implements TextResolver {
         try {
             TextBase textBase = getTextBase(context);
             return textBase.resolve(name, args);
-        }
-        catch (TextBaseNotFoundException e) {
+        } catch (TextBaseNotFoundException e) {
             StringBuilder collector = new StringBuilder(256);
             collector.append(String.format("Missing text literal %s",
                     context != null ? context.replace('.', '/') + "." + name : name));

@@ -47,14 +47,16 @@ import java.util.Set;
 public class BasicTextBase implements TextBase {
 
     @Inject
-    private static Factory<ApplicationTextBase> APPLICATION_TEXT_BASE;
+    private static ApplicationTextBase APPLICATION_TEXT_BASE;
+    @Inject
+    private static Factory<Configuration> CONFIGURATION_FACTORY;
 
     private static final String TEXT_FILE_PATTERN =
-            System.getProperty("com.coradec.infra.text.model.TextBase.FileTemplate", "%s.text");
+            System.getProperty("com.coradec.coratext.model.TextBase.FileTemplate", "%s.text");
 
     private final @Nullable String context;
     private final @Nullable URL baseFile;
-    private @Nullable Configuration<String> literals;
+    private @Nullable Configuration literals;
 
     /**
      * Initializes a new instance of BasicTextBase with the specified context.
@@ -85,22 +87,21 @@ public class BasicTextBase implements TextBase {
         return Optional.ofNullable(this.baseFile);
     }
 
-    private Configuration<String> getLiterals() {
+    private Configuration getLiterals() {
         if (literals == null) literals = loadLiterals();
         return this.literals;
     }
 
-    private Configuration<String> loadLiterals() {
+    private Configuration loadLiterals() {
         if (baseFile == null || context == null) {
-            return APPLICATION_TEXT_BASE.get();
+            return APPLICATION_TEXT_BASE;
         } else {
             try {
                 final Set<AnnotatedProperty> properties =
                         ConfigurationReaderFactory.createParser(context, baseFile, ".text")
                                                   .getProperties();
-                return Configuration.of(String.class).add(properties);
-            }
-            catch (IOException e) {
+                return CONFIGURATION_FACTORY.create().add(properties);
+            } catch (IOException e) {
                 throw new ConfigurationException(e);
             }
         }
@@ -111,7 +112,7 @@ public class BasicTextBase implements TextBase {
     }
 
     @Override public String lookup(final String name) {
-        return getLiterals().lookup(name).orElse(//
+        return getLiterals().lookup(name).map(String.class::cast).orElse(//
                 (context == null) ? String.format("<Unknown text literal %s>", name)
                                   : String.format("<Unknown text literal %s.%s>", context, name));
     }
