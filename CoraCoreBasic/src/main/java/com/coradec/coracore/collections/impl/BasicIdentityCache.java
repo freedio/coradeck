@@ -18,10 +18,10 @@
  *
  */
 
-package com.coradec.coracore.model.impl;
+package com.coradec.coracore.collections.impl;
 
 import com.coradec.coracore.annotation.Implementation;
-import com.coradec.coracore.model.IdentityCache;
+import com.coradec.coracore.collections.IdentityCache;
 
 /**
  * ​​Implementation of a cache using object identity.

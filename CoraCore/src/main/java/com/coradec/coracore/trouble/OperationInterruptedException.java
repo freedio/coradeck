@@ -18,11 +18,15 @@
  *
  */
 
-package com.coradec.coracore.model;
+package com.coradec.coracore.trouble;
 
 /**
- * ​A cache based on object equality.
+ * ​​Indicates the interruption of a threading waiting for a resource to become available.
  */
-public interface HashCache<K, V> extends Cache<K, V> {
+public class OperationInterruptedException extends BasicException {
+
+    public OperationInterruptedException(final String explanation) {
+        super(explanation);
+    }
 
 }

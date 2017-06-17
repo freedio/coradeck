@@ -18,13 +18,13 @@
  *
  */
 
-package com.coradec.coracore.model.impl;
+package com.coradec.coracore.collections.impl;
 
 import static java.lang.Math.*;
 
 import com.coradec.coracore.annotation.NonNull;
 import com.coradec.coracore.annotation.Nullable;
-import com.coradec.coracore.model.Cache;
+import com.coradec.coracore.collections.Cache;
 import com.coradec.coracore.util.ClassUtil;
 
 import java.lang.ref.ReferenceQueue;
