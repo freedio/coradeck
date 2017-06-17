@@ -22,16 +22,36 @@ package com.coradec.coraconf.model.impl;
 
 import com.coradec.coraconf.model.AnnotatedProperty;
 import com.coradec.coracore.annotation.Nullable;
+import com.coradec.coracore.annotation.ToString;
 
 /**
  * ​​Basic implementation of an annotated property.
  */
 //@Component
 //@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
+@SuppressWarnings("ClassHasNoToStringMethod")
 public class BasicAnnotatedProperty extends BasicProperty<String> implements AnnotatedProperty {
+
+    private final String type;
+    private final String annotation;
 
     public BasicAnnotatedProperty(final String name, final @Nullable String type,
                                   final String value, final @Nullable String annotation) {
-        super(name, String.class, value);
+        super(String.class, name, value);
+        this.type = type;
+        this.annotation = annotation;
     }
+
+    @Override @ToString public @Nullable String getRawType() {
+        return this.type;
+    }
+
+    @Override @ToString public @Nullable String getAnnotation() {
+        return this.annotation;
+    }
+
+    @Override @ToString public String getRawValue() {
+        return getDefaultValue();
+    }
+
 }

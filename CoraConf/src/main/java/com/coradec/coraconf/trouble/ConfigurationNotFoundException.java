@@ -18,34 +18,23 @@
  *
  */
 
-package com.coradec.coraconf.model;
+package com.coradec.coraconf.trouble;
 
 import com.coradec.coracore.annotation.ToString;
 
 /**
- * ​A property with an annotation (usually a comment).
+ * ​​Indicates an attempt to retrieve a configuration that does not exist or is otherwise
+ * unavailable.
  */
-public interface AnnotatedProperty extends Property<String> {
+public class ConfigurationNotFoundException extends ConfigurationException {
 
-    /**
-     * Returns the type as specified in the configuration file.
-     *
-     * @return the raw type.
-     */
-    @ToString String getRawType();
+    private final String context;
 
-    /**
-     * Returns the property annotation.
-     *
-     * @return the property annotation.
-     */
-    @ToString String getAnnotation();
+    public ConfigurationNotFoundException(final String context) {
+        this.context = context;
+    }
 
-    /**
-     * Returns the raw value as specified in the configuration file.
-     *
-     * @return the raw value.
-     */
-    @ToString String getRawValue();
-
+    @ToString public String getContext() {
+        return this.context;
+    }
 }

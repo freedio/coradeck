@@ -28,26 +28,57 @@ import java.util.Collection;
 import java.util.Optional;
 
 /**
- * ​Representation of a key-value-pairing.
- *
- * @param <V> the value type.
+ * ​Representation of a key-value-map.
+ * <p>
+ * Property values may have parameters in the form of formatting arguments as used in printf.  All
+ * lookup methods allow to pass in the arguments to fit into the parameters, before they are cast to
+ * their final type.
  */
-public interface Configuration<V> {
+public interface Configuration {
 
-    Factory<Configuration<?>> CONFIGURATION = new GenericFactory<>(Configuration.class);
-
-    @SuppressWarnings("unchecked") static <X> Configuration<X> of(Class<X> type, Class<?>... parameters) {
-        return (Configuration<X>)CONFIGURATION.get(Configuration.class,
-                GenericType.of(type, parameters));
-    }
+    @SuppressWarnings("unchecked")
+    Factory<Configuration> CONFIGURATION = new GenericFactory(Configuration.class);
 
     /**
-     * Looks up the property with the specified name.
+     * Returns the context, if present.
+     * <p>
+     * If no context is defined, the text base is called the default text base.
+     *
+     * @return the context, if defined.
+     */
+    Optional<String> getContext();
+
+    /**
+     * Looks up the property with the specified name and arguments.
      *
      * @param name the property name.
+     * @param args the arguments.
      * @return the property value, if available.
      */
-    Optional<V> lookup(String name);
+    Optional<?> lookup(String name, Object... args);
+
+    /**
+     * Looks up the property with the specified name and arguments, cast to the specified type.
+     *
+     * @param <T>  the property type.
+     * @param type the property type selector.
+     * @param name the property name.
+     * @param args the arguments.
+     * @return the property value, if available.
+     */
+    <T> Optional<T> lookup(Class<? super T> type, String name, Object... args);
+
+    /**
+     * Looks up the property with the specified name and arguments, cast to the specified generic
+     * type.
+     *
+     * @param <T>  the property type.
+     * @param type the property type selector.
+     * @param name the property name.
+     * @param args the arguments.
+     * @return the property value, if available.
+     */
+    <T> Optional<T> lookup(GenericType<T> type, String name, Object... args);
 
     /**
      * Adds the specified properties to the configuration.
@@ -55,6 +86,6 @@ public interface Configuration<V> {
      * @param properties the properties to add.
      * @return this configuration, for method chaining.
      */
-    Configuration<V> add(Collection<? extends Property<? extends V>> properties);
+    Configuration add(Collection<? extends Property<?>> properties);
 
 }

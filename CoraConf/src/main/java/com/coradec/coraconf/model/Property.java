@@ -20,8 +20,7 @@
 
 package com.coradec.coraconf.model;
 
-import com.coradec.coracore.ctrl.Factory;
-import com.coradec.coracore.model.GenericFactory;
+import com.coradec.coracore.model.DynamicFactory;
 import com.coradec.coracore.model.GenericType;
 import com.coradec.coracore.util.ExecUtil;
 
@@ -30,12 +29,22 @@ import com.coradec.coracore.util.ExecUtil;
  */
 public interface Property<T> {
 
-    Factory<Property<?>> property = new GenericFactory<>(Property.class);
+    DynamicFactory<Property<?>> FACTORY = new DynamicFactory<>();
 
     @SuppressWarnings("unchecked")
-    static <X, D extends X> Property<X> define(String name, Class<? super X> type, D dflt) {
-        return (Property<X>)property.get(Property.class,
-                ExecUtil.getCallerStackFrame().getClassFileName(), name, type, dflt);
+    static <X, D extends X> Property<X> define(final String name, final Class<X> type,
+                                               final D dflt) {
+        return (Property<X>)FACTORY.of(Property.class, type)
+                                   .get(type, ExecUtil.getCallerStackFrame().getClassFileName(),
+                                           name, dflt);
+    }
+
+    @SuppressWarnings("unchecked")
+    static <X, D extends X> Property<X> define(final String name, final GenericType<X> type,
+                                               final D dflt) {
+        return (Property<X>)FACTORY.of(Property.class, type)
+                                   .get(type, ExecUtil.getCallerStackFrame().getClassFileName(),
+                                           name, dflt);
     }
 
     /**
