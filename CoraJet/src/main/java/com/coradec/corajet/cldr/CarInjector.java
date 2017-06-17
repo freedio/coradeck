@@ -55,6 +55,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -85,8 +86,7 @@ public class CarInjector {
                 try {
                     final Class<?> klass = Class.forName(entry.getKey());
                     implementationClasses.add(new ImplementationClass(klass, entry.getValue()));
-                }
-                catch (ClassNotFoundException e) {
+                } catch (ClassNotFoundException e) {
                     // Log this incident and don't add the class
                     Syslog.error(e);
                 }
@@ -168,8 +168,7 @@ public class CarInjector {
                 }
                 return null;
             });
-        }
-        catch (PrivilegedActionException e) {
+        } catch (PrivilegedActionException e) {
             Syslog.error(e.getException());
         }
     }
@@ -208,8 +207,7 @@ public class CarInjector {
                                 field.set(instance, implementationFor(fieldType, typeArgs));
                                 Syslog.debug("Field %s of %s set to %s", name, instance,
                                         StringUtil.toString(field.get(instance)));
-                            }
-                            catch (Exception e) {
+                            } catch (Exception e) {
                                 Syslog.error(e);
                             }
                         }
@@ -217,8 +215,7 @@ public class CarInjector {
                 }
                 return null;
             });
-        }
-        catch (PrivilegedActionException e) {
+        } catch (PrivilegedActionException e) {
             Syslog.error(e.getException());
         }
     }
@@ -244,36 +241,33 @@ public class CarInjector {
         return implementationFor(interfaceClass, typeArgs);
     }
 
-    static Object implementationFor(final Class<?> interfaceClass, final List<Type> types,
-                                    Object... args) throws ObjectInstantiationFailure {
+    public static Object implementationFor(final Class<?> interfaceClass, final List<Type> types,
+                                           Object... args) throws ObjectInstantiationFailure {
         if (Factory.class.isAssignableFrom(interfaceClass)) {
             return new ObjectFactory(types);
         }
         Exception[] failed = new Exception[1];
         try {
-            return getImplementationClasses().stream()
-                                             .filter(ic -> ic.matches(interfaceClass, types))
-                                             .findAny()
-                                             .map(ic -> {
-                                                 try {
-                                                     return ic.instantiate(types, args);
-                                                 }
-                                                 catch (ObjectInstantiationFailure e) {
-                                                     failed[0] = e;
-                                                     return null;
-                                                 }
-                                             })
-                                             .filter(Objects::nonNull)
-                                             .orElseThrow(() -> failed[0] != null //
-                                                                ? failed[0]
-                                                                : new ImplementationNotFoundException(
-                                                                        interfaceClass.getName(),
-                                                                        types, args));
-        }
-        catch (ObjectInstantiationFailure e) {
+            final Set<ImplementationClass<?>> ics = getImplementationClasses();
+            return ics.stream()
+                      .filter(ic -> ic.matches(interfaceClass, types))
+                      .sorted(Comparator.comparingInt(ic -> ic.relevanceFor(interfaceClass, types)))
+                      .findFirst()
+                      .map(ic -> {
+                          try {
+                              return ic.instantiate(types, args);
+                          } catch (ObjectInstantiationFailure e) {
+                              failed[0] = e;
+                              return null;
+                          }
+                      })
+                      .filter(Objects::nonNull)
+                      .orElseThrow(() -> failed[0] != null //
+                                         ? failed[0] : new ImplementationNotFoundException(
+                              interfaceClass.getName(), types, args));
+        } catch (ObjectInstantiationFailure e) {
             throw e;
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new ObjectInstantiationFailure(interfaceClass, e);
         }
     }
@@ -348,7 +342,27 @@ public class CarInjector {
          * @return {@code true} if this class matches the interface class.
          */
         boolean matches(final Class<?> interfaceClass, final List<Type> types) {
-            return interfaceClass.isAssignableFrom(klass) && types.size() == typeParameters.length;
+            return interfaceClass.isAssignableFrom(klass) &&
+                   (types.size() == typeParameters.length || typeArgsMatch(types));
+        }
+
+        private boolean typeArgsMatch(final List<Type> types) {
+            final Type genericSuperclass = klass.getGenericSuperclass();
+            if (genericSuperclass instanceof ParameterizedType) {
+                final Type[] typeArgs =
+                        ((ParameterizedType)genericSuperclass).getActualTypeArguments();
+                if (types.size() == typeArgs.length) {
+                    for (int i = 0, is = typeArgs.length; i < is; ++i) {
+                        if (!sameType(types.get(i), typeArgs[i])) return false;
+                    }
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private boolean sameType(final Type type, final Type typeArg) {
+            return type.getTypeName().equals(typeArg.getTypeName());
         }
 
         /**
@@ -373,7 +387,7 @@ public class CarInjector {
             List<ParameterizedType> parametrized, conPara = null;
             outer:
             for (final Constructor<?> constr : klass.getConstructors()) {
-                Syslog.debug("Examining constructor %s", constr);
+                Syslog.trace("Examining constructor %s", constr);
                 scope = this.scope;
                 parametrized = new ArrayList<>();
                 final Type[] paras = constr.getGenericParameterTypes();
@@ -382,13 +396,13 @@ public class CarInjector {
                     final Type para = paras[i];
                     if (para instanceof ParameterizedType) {
                         ParameterizedType paraType = (ParameterizedType)para;
-                        Syslog.debug("Parameter %d is parametrized type (%s)", i,
+                        Syslog.trace("Parameter %d is parametrized type (%s)", i,
                                 StringUtil.toString(para));
                         if (scope == SINGLETON) scope = PARAMETRIZED;
                         parametrized.add(paraType);
                         final Type[] typeArgs = paraType.getActualTypeArguments();
                         if (paraType.getRawType() == Class.class && typeArgs.length == 1) {
-                            Syslog.debug("Found class argument with type args %s and types %s",
+                            Syslog.trace("Found class argument with type args %s and types %s",
                                     StringUtil.toString(typeArgs), StringUtil.toString(types));
                             for (final TypeVariable<? extends Class<? super T>> typeParameter :
                                     typeParameters) {
@@ -397,7 +411,7 @@ public class CarInjector {
                                 }
                             }
                             if (arguments[i] == null) {
-                                Syslog.debug("Found class argument %s",
+                                Syslog.trace("Found class argument %s",
                                         StringUtil.toString(typeArgs), StringUtil.toString(extras));
                                 if (extras.length > i && extras[i] instanceof Class)
                                     arguments[i] = extras[i];
@@ -409,16 +423,34 @@ public class CarInjector {
                             continue outer;
                         }
                     } else if (para instanceof Class<?>) {
-                        Syslog.debug("Parameter %d is %s", i, para);
+                        Syslog.trace("Parameter %d is %s", i, para);
                         Class<?> klass = (Class<?>)para;
                         Object value;
                         if (extras.length > i) value = extras[i];
                         else try {
                             value = implementationFor((Class<?>)para, Collections.EMPTY_LIST);
-                        }
-                        catch (ImplementationNotFoundException | ObjectInstantiationFailure e) {
+                        } catch (ImplementationNotFoundException | ObjectInstantiationFailure e) {
                             continue outer;
                         }
+                        arguments[i] = value;
+                    } else if (para instanceof TypeVariable) {
+                        TypeVariable<?> typeVar = (TypeVariable<?>)para;
+                        Syslog.trace("Parameter %d is %s", i, ClassUtil.toString(typeVar, typeVar));
+                        // For the time being we assume any object argument will do;
+                        // TODO check the next argument against the bounds of this type variable;
+                        // if the argument is not assignment compatible, continue outer.
+                        // The following code fragments represent an approach:
+//                        typeVar.getBounds();
+//                        for (final TypeVariable<? extends Class<? super T>> typeParameter :
+//                                typeParameters) {
+//                            if (typeArgs[0].getTypeName().equals(typeParameter.getTypeName())) {
+//                                arguments[i] = types.get(i);
+//                            }
+//                        }
+//                        continue outer;
+                        Object value;
+                        if (extras.length > i) value = extras[i];
+                        else continue outer;
                         arguments[i] = value;
                     } else {
                         Syslog.warn("Found unrecognizable parameter type %s",
@@ -434,15 +466,15 @@ public class CarInjector {
                     conScope = scope;
                 }
             }
-            if (constructor == null)
-                throw new ObjectInstantiationFailure(klass, "No suitable public constructor found");
+            if (constructor == null) throw new ObjectInstantiationFailure(klass,
+                    "No suitable public constructor found!");
             try {
-                Syslog.debug("Using %s with %s in scope %s", constructor, StringUtil.toString(args),
+                Syslog.trace("Using %s with %s in scope %s", constructor, StringUtil.toString(args),
                         conScope);
                 switch (conScope) {
                     case SINGLETON:
                         if (singleton == null) {
-                            Syslog.debug("No singleton so far in %s → instantiating it.", this);
+                            Syslog.trace("No singleton so far in %s → instantiating it.", this);
                             singleton = (T)constructor.newInstance(args);
                         }
                         return singleton;
@@ -459,11 +491,15 @@ public class CarInjector {
                         throw new IllegalArgumentException(
                                 String.format("Unknown scope: %s", conScope.name()));
                 }
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 throw new ObjectInstantiationFailure(klass, e);
             }
         }
+
+        int relevanceFor(final Class<?> interfaceClass, final List<Type> types) {
+            return ClassUtil.distance(klass, interfaceClass, types);
+        }
+
     }
 
     /**
@@ -506,8 +542,7 @@ public class CarInjector {
                         typeArgs.isEmpty() ? "" : typeArgs, ClassUtil.toString(args, args),
                         StringUtil.toString(result));
                 return result;
-            }
-            catch (ImplementationNotFoundException | ObjectInstantiationFailure e) {
+            } catch (ImplementationNotFoundException | ObjectInstantiationFailure e) {
                 Syslog.error(e);
                 throw e;
             }
@@ -521,8 +556,7 @@ public class CarInjector {
                         typeArgs.isEmpty() ? "" : typeArgs, ClassUtil.toString(args, args),
                         StringUtil.toString(result));
                 return result;
-            }
-            catch (ImplementationNotFoundException | ObjectInstantiationFailure e) {
+            } catch (ImplementationNotFoundException | ObjectInstantiationFailure e) {
                 Syslog.error(e);
                 throw e;
             }
@@ -688,8 +722,7 @@ public class CarInjector {
                         injectionMode = InjectionMode.valueOf(value);
                     } else Syslog.error("Unrecognized combination: name=%s, desc=%s, scope=\"%s\"",
                             name, desc, value);
-                }
-                catch (ClassNotFoundException e) {
+                } catch (ClassNotFoundException e) {
                     Syslog.error(e);
                 }
                 super.visitEnum(name, desc, value);
@@ -712,8 +745,7 @@ public class CarInjector {
                     return "Character";
             }
             return result.substring(1, result.length() - 1);
-        }
-        catch (StringIndexOutOfBoundsException e) {
+        } catch (StringIndexOutOfBoundsException e) {
             Syslog.warn("Fishy class name: \"%s\"", type);
             return result;
         }
@@ -742,8 +774,7 @@ public class CarInjector {
                 } else
                     Syslog.error("Unrecognized combination: name=%s, desc=%s, scope=\"%s\"", name,
                             desc, value);
-            }
-            catch (ClassNotFoundException e) {
+            } catch (ClassNotFoundException e) {
                 Syslog.error(e);
             }
             super.visitEnum(name, desc, value);

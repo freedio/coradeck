@@ -140,9 +140,11 @@ public final class StringUtil {
             TypeVariable<?> typeVar = (TypeVariable<?>)o;
             final String name = typeVar.getName();
             final GenericDeclaration genericDeclaration = typeVar.getGenericDeclaration();
+            final Type[] bounds = typeVar.getBounds();
             final AnnotatedType[] annotatedBounds = typeVar.getAnnotatedBounds();
-            return String.format("name=%s, genericDeclaration=%s, annotatedBounds=%s",
+            return String.format("name=%s, genericDeclaration=%s, bounds=%s, annotatedBounds=%s",
                     toString(name), ClassUtil.toString(genericDeclaration, genericDeclaration),
+                    ClassUtil.toString(bounds, bounds),
                     ClassUtil.toString(annotatedBounds, annotatedBounds));
         }
         if (o instanceof ParameterizedType) {

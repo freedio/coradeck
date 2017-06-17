@@ -20,31 +20,30 @@
 
 package com.coradec.coracore.model;
 
-import static com.coradec.coracore.model.InjectionMode.*;
-
-import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.ctrl.Factory;
 
+import java.lang.reflect.Type;
+
 /**
- * ​​Generic implementation of a factory.
+ * ​A factory creating factories.
  */
-@SuppressWarnings("ClassHasNoToStringMethod")
-public class GenericFactory<G> implements Factory<G> {
+public interface MetaFactory<G> {
 
-    private final Class<? super G> klass;
-    @Inject(TYPE_ARG)
-    private Factory<G> delegate;
+    /**
+     * Returns a factory for objects of the specified base type with the specified type arguments..
+     *
+     * @param baseType the base type selector.
+     * @param typeArgs additional type arguments as needed.
+     * @return a factory for instances of G.
+     */
+    Factory<G> get(Class<? super G> baseType, Type... typeArgs);
 
-    public GenericFactory(final Class<? super G> klass) {
-        this.klass = klass;
-    }
-
-    @Override public G get(final Object... args) {
-        return delegate.get(args);
-    }
-
-    @Override public G create(final Object... args) {
-        return delegate.create(args);
-    }
+    /**
+     * Returns a factory for objects of the specified generic type.
+     *
+     * @param genericType the generic type.
+     * @return a factory for instances of G.
+     */
+    Factory<G> get(GenericType<? super G> genericType);
 
 }

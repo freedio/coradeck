@@ -51,7 +51,7 @@ public final class GenericType<T> implements Representable, ParameterizedType {
      * @param parameters the parameter types.
      * @return a new parametrized type.
      */
-    @SuppressWarnings("unchecked") public static <X> GenericType<X> of(final Class<X> type,
+    @SuppressWarnings("unchecked") public static <X> GenericType<X> of(final Class<? super X> type,
                                                                        Class<?>... parameters) {
         return new GenericType(type, parameters);
     }
@@ -82,5 +82,18 @@ public final class GenericType<T> implements Representable, ParameterizedType {
 
     @Override public @Nullable Type getOwnerType() {
         return null;
+    }
+
+    @Override public String getTypeName() {
+        final StringBuilder result = new StringBuilder(getRawType().getTypeName());
+        final String typeArgs = Stream.of(getActualTypeArguments())
+                                      .map(String::valueOf)
+                                      .collect(Collectors.joining(", "));
+        if (!typeArgs.isEmpty()) result.append('<').append(typeArgs).append('>');
+        return result.toString();
+    }
+
+    public boolean isInstance(final @Nullable Object value) {
+        return type.isInstance(value);
     }
 }

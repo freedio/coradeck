@@ -37,6 +37,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -85,19 +86,15 @@ public class ClassUtil {
                                                   method.setAccessible(true);
                                                   return method.invoke(o);
                                               });
-                                  }
-                                  catch (PrivilegedActionException e) {
+                                  } catch (PrivilegedActionException e) {
                                       throw e.getException();
                                   }
-                              }
-                              catch (IllegalArgumentException e) {
+                              } catch (IllegalArgumentException e) {
                                   value = StringUtil.INACCESSIBLE;
                                   System.err.printf("%n>>> Strange getter: %s%n%n", p.get(1));
-                              }
-                              catch (IllegalAccessException e) {
+                              } catch (IllegalAccessException e) {
                                   value = StringUtil.INACCESSIBLE;
-                              }
-                              catch (Exception e) {
+                              } catch (Exception e) {
                                   value = StringUtil.FAILS;
                               }
                               return String.format("%s", classNameObject(name, value));
@@ -109,8 +106,7 @@ public class ClassUtil {
                             attributes.isEmpty() ? StringUtil.EMPTY : " " + attributes);
             else result = String.format("(%s%s)", nameOf(klass),
                     attributes.isEmpty() ? StringUtil.EMPTY : " " + attributes);
-        }
-        finally {
+        } finally {
             registry.remove(o);
         }
         return result;
@@ -422,6 +418,26 @@ public class ClassUtil {
     public static String internalNameOf(final String signature) {
         final String result = removeTypeParameters(signature);
         return result.substring(1, result.length() - 1);
+    }
+
+    public static int distance(final Class<?> subclass, final Class<?> reference,
+                               final List<Type> types) {
+        final Class<?>[] interfaces = subclass.getInterfaces();
+        if (reference.isInterface() && interfaces.length > 0) {
+            return idistance(interfaces, reference, types);
+        }
+        final Class<?> superclass = subclass.getSuperclass();
+        return superclass == reference //
+               ? 0 : superclass == null ? 1000 : 1 + distance(superclass, reference, types);
+    }
+
+    private static int idistance(final Class<?>[] subclasses, final Class<?> reference,
+                                 final List<Type> types) {
+        return Stream.of(subclasses)
+                     .filter(reference::isAssignableFrom)
+                     .map(sc -> 1 + idistance(sc.getInterfaces(), reference, types))
+                     .min(Comparator.comparingInt(o -> o))
+                     .orElse(1000);
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")

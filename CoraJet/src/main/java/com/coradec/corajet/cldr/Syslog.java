@@ -46,6 +46,7 @@ public final class Syslog {
     public static void setLevel(final String level) throws IllegalArgumentException {
         SYSLOG_LEVEL = LogLevel.valueOf(level);
         System.out.printf("syslog.level is now %s%n", SYSLOG_LEVEL);
+        System.out.flush();
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")
@@ -66,7 +67,7 @@ public final class Syslog {
             return this.tag;
         }
 
-        private boolean below(final LogLevel level) {
+        boolean below(final LogLevel level) {
             return ordinal() < level.ordinal();
         }
     }
@@ -85,6 +86,7 @@ public final class Syslog {
             System.err.printf("Invalid syslog.level system property: %s!%n", SYSLOG_LEVEL$);
         }
         System.out.printf("syslog.level is %s%n", SYSLOG_LEVEL);
+        System.out.flush();
     }
 
     private static void log(final PrintStream out, final LogLevel level,

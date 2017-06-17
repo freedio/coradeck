@@ -20,31 +20,29 @@
 
 package com.coradec.coracore.model;
 
-import static com.coradec.coracore.model.InjectionMode.*;
-
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.ctrl.Factory;
 
+import java.lang.reflect.Type;
+
 /**
- * ​​Generic implementation of a factory.
+ * ​​Dynamic implementation of a generic factory.
  */
 @SuppressWarnings("ClassHasNoToStringMethod")
-public class GenericFactory<G> implements Factory<G> {
+public class DynamicFactory<T> {
 
-    private final Class<? super G> klass;
-    @Inject(TYPE_ARG)
-    private Factory<G> delegate;
+    @Inject
+    private MetaFactory<T> META_FACTORY;
 
-    public GenericFactory(final Class<? super G> klass) {
-        this.klass = klass;
+    public DynamicFactory() {
     }
 
-    @Override public G get(final Object... args) {
-        return delegate.get(args);
+    public Factory<T> of(final Class<? super T> baseType, final Type... typeArgs) {
+        return META_FACTORY.get(baseType, typeArgs);
     }
 
-    @Override public G create(final Object... args) {
-        return delegate.create(args);
+    public Factory<T> of(final GenericType<? super T> genericType) {
+        return META_FACTORY.get(genericType);
     }
 
 }

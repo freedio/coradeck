@@ -27,6 +27,8 @@ import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.InitializationError;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -34,21 +36,19 @@ import java.util.List;
  */
 public class CoradeckJUnit4TestRunner extends BlockJUnit4ClassRunner {
 
-    static {
-        Syslog.setLevel("DEBUG");
+    private static CarClassLoader CLASS_LOADER;
+    private static Class<? extends Annotation> TEST_ANNOTATION;
+
+    private static CarClassLoader getClassLoader() {
+        if (CLASS_LOADER == null) CLASS_LOADER = new CarClassLoader();
+        return CLASS_LOADER;
     }
 
-    private static final CarClassLoader CLASS_LOADER = new CarClassLoader();
-    private static final Class<? extends Annotation> testing;
-
-    static {
-        try {
-            //noinspection unchecked
-            testing = (Class<? extends Annotation>)CLASS_LOADER.findClass("org.junit.Test");
-        }
-        catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        }
+    @SuppressWarnings("unchecked") private static Class<? extends Annotation> getTestAnnotation()
+            throws ClassNotFoundException {
+        if (TEST_ANNOTATION == null) TEST_ANNOTATION =
+                (Class<? extends Annotation>)getClassLoader().findClass("org.junit.Test");
+        return TEST_ANNOTATION;
     }
 
     /**
@@ -59,7 +59,16 @@ public class CoradeckJUnit4TestRunner extends BlockJUnit4ClassRunner {
      */
     public CoradeckJUnit4TestRunner(final Class<?> klass)
             throws InitializationError, ClassNotFoundException {
-        super(CLASS_LOADER.findClass(klass.getName()));
+        super(getClassLoader().findClass(klass.getName()));
+        try {
+            final Field syslog_level = klass.getField("SYSLOG_LEVEL");
+            final String level = String.valueOf(syslog_level.get(null));
+            Syslog.setLevel(level);
+            if (level.equals("DEBUG") || level.equals("TRACE"))
+                getClassLoader().showImpplementations();
+        } catch (IllegalAccessException | NoSuchFieldException e) {
+            // static field SYSLOG_LEVEL undefined/not accessible ⇒ don't change current log level
+        }
     }
 
     /**
@@ -68,7 +77,11 @@ public class CoradeckJUnit4TestRunner extends BlockJUnit4ClassRunner {
      */
 
     protected void validateTestMethods(List<Throwable> errors) {
-        validatePublicVoidNoArgMethods(testing, false, errors);
+        try {
+            validatePublicVoidNoArgMethods(getTestAnnotation(), false, errors);
+        } catch (ClassNotFoundException e) {
+            errors.add(e);
+        }
     }
 
     /**
@@ -77,7 +90,11 @@ public class CoradeckJUnit4TestRunner extends BlockJUnit4ClassRunner {
      * are not overridden.
      */
     protected List<FrameworkMethod> computeTestMethods() {
-        return getTestClass().getAnnotatedMethods(testing);
+        try {
+            return getTestClass().getAnnotatedMethods(getTestAnnotation());
+        } catch (ClassNotFoundException e) {
+            return Collections.emptyList();
+        }
     }
 
 }
