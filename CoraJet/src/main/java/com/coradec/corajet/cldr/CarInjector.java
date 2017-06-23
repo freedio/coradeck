@@ -86,9 +86,9 @@ public class CarInjector {
                 try {
                     final Class<?> klass = Class.forName(entry.getKey());
                     implementationClasses.add(new ImplementationClass(klass, entry.getValue()));
-                } catch (ClassNotFoundException e) {
+                } catch (ClassNotFoundException | Error e) {
                     // Log this incident and don't add the class
-                    Syslog.error(e);
+                    Syslog.info(e, "FYI: This is likely just a temporary problem");
                 }
             }
         }

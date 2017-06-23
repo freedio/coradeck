@@ -54,6 +54,7 @@ public final class Syslog {
         TRACE("TRACE"),
         DEBUG("DEBUG"),
         INFORMATION("INFO "),
+        ALERT("ALERT"),
         WARNING("WARN "),
         ERROR("ERROR");
 
@@ -109,6 +110,10 @@ public final class Syslog {
         log(NORMAL, LogLevel.DEBUG, null, String.format(text, args));
     }
 
+    public static void info(final Throwable problem, final String text, final Object... args) {
+        log(NORMAL, LogLevel.INFORMATION, problem, String.format(text, args));
+    }
+
     public static void info(final String text, final Object... args) {
         log(NORMAL, LogLevel.INFORMATION, null, String.format(text, args));
     }
@@ -127,6 +132,10 @@ public final class Syslog {
 
     public static void warn(final Throwable problem) {
         log(ALERT, LogLevel.WARNING, problem, null);
+    }
+
+    public static void info(final Throwable problem) {
+        log(NORMAL, LogLevel.INFORMATION, problem, null);
     }
 
     public static void trace(final String text, final Object... args) {
