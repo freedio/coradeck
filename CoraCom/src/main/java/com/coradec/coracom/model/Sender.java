@@ -27,4 +27,12 @@ import com.coradec.coracore.model.Origin;
  */
 public interface Sender extends Origin {
 
+    /**
+     * Indicates that the specified message was not delivered, because it had no recipient, or an
+     * unknown recipient.
+     *
+     * @param message the bouncing message.
+     */
+    void bounce(Message message);
+
 }

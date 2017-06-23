@@ -18,11 +18,26 @@
  *
  */
 
-package com.coradec.coracom.model;
+package com.coradec.coracom.model.impl;
+
+import com.coradec.coracom.model.Command;
+import com.coradec.coracom.model.Recipient;
+import com.coradec.coracom.model.Sender;
 
 /**
- * ​A message about something that happened (or will happen) which might be relevant to others.
+ * ​​Basic implementation of a command.
  */
-public interface Event extends Message {
+public abstract class AbstractCommand extends BasicRequest implements Command {
+
+    /**
+     * Initializes a new instance of AbstractCommand with the specified sender and list of
+     * recipients.
+     *
+     * @param sender     the sender.
+     * @param recipients the list of recipients
+     */
+    protected AbstractCommand(final Sender sender, final Recipient... recipients) {
+        super(sender, recipients);
+    }
 
 }

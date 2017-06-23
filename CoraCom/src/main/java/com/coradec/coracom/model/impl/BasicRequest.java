@@ -18,11 +18,28 @@
  *
  */
 
-package com.coradec.coracom.model;
+package com.coradec.coracom.model.impl;
+
+import com.coradec.coracom.model.Recipient;
+import com.coradec.coracom.model.Request;
+import com.coradec.coracom.model.Sender;
+import com.coradec.coracore.annotation.Implementation;
 
 /**
- * ​A message about something that happened (or will happen) which might be relevant to others.
+ * ​​Basic implementation of a request.
  */
-public interface Event extends Message {
+@SuppressWarnings("ClassHasNoToStringMethod")
+@Implementation
+public class BasicRequest extends BasicEvent implements Request {
+
+    /**
+     * Initializes a new instance of BasicRequest with the specified sender and list of recipients.
+     *
+     * @param sender     the sender.
+     * @param recipients the list of recipients
+     */
+    public BasicRequest(final Sender sender, final Recipient... recipients) {
+        super(sender, recipients);
+    }
 
 }

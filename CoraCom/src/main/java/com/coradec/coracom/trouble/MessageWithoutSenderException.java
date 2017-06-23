@@ -18,11 +18,23 @@
  *
  */
 
-package com.coradec.coracom.model;
+package com.coradec.coracom.trouble;
+
+import com.coradec.coracom.model.Message;
+import com.coradec.coracore.annotation.ToString;
 
 /**
- * ​A message about something that happened (or will happen) which might be relevant to others.
+ * ​​Indicates an attempt to dispatch a message without a sender.
  */
-public interface Event extends Message {
+public class MessageWithoutSenderException extends CoraComException {
 
+    private final Message message;
+
+    public MessageWithoutSenderException(final Message message) {
+        this.message = message;
+    }
+
+    @ToString public Message getMsg() {
+        return this.message;
+    }
 }

@@ -27,7 +27,10 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * ​​Basic interface for all exchanged messages.
+ * An object sent from a sender to a list of recipients.  If the list of recipients is empty, the
+ * message will either be delivered regularly to the sender, if it is also a recipient, or bounce to
+ * the sender.  Messages without a valid sender should and will normally be dropped with a log
+ * entry.
  */
 public interface Message {
 
@@ -102,5 +105,29 @@ public interface Message {
      * @return {@code true} if the message is urgent, {@code false} if not.
      */
     boolean isUrgent();
+
+//    /**
+//     * Sets the sender of the message.
+//     *
+//     * @param sender the sender.
+//     * @return this message, for method chaining.
+//     */
+//    Message from(Sender sender);
+//
+//    /**
+//     * Adds the specified recipients to the list of recipients.
+//     *
+//     * @param recipients the recipient(s) to add to the recipients list.
+//     * @return this message, for method chaining.
+//     */
+//    Message to(Recipient... recipients);
+//
+//    /**
+//     * Adds the specified recipients to the list of carbon-copy recipients.
+//     *
+//     * @param recipients the recipient(s) to add to the carbon copy recipients list.
+//     * @return this message, for method chaining.
+//     */
+//    Message cc(Recipient... recipients);
 
 }

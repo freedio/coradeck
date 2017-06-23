@@ -20,9 +20,17 @@
 
 package com.coradec.coracom.model;
 
-/**
- * ​A message about something that happened (or will happen) which might be relevant to others.
- */
-public interface Event extends Message {
+import com.coradec.corasession.model.Session;
 
+/**
+ * ​A request in the context of a session.
+ */
+public interface SessionRequest {
+
+    /**
+     * Returns the session context.
+     *
+     * @return the session context.
+     */
+    Session getSession();
 }

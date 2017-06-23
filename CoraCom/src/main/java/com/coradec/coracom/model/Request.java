@@ -21,8 +21,8 @@
 package com.coradec.coracom.model;
 
 /**
- * ​A message about something that happened (or will happen) which might be relevant to others.
+ * ​An event that needs permission to happen.
  */
-public interface Event extends Message {
+public interface Request extends Event {
 
 }

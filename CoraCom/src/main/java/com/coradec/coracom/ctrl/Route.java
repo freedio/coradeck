@@ -18,11 +18,28 @@
  *
  */
 
-package com.coradec.coracom.model;
+package com.coradec.coracom.ctrl;
+
+import com.coradec.coracom.model.Message;
+
+import java.util.function.Consumer;
 
 /**
- * ​A message about something that happened (or will happen) which might be relevant to others.
+ * Assignment of a message processor to a class of message.
  */
-public interface Event extends Message {
+public interface Route<R extends Message> {
 
+    /**
+     * Returns the route selector (the message class that triggers the message processor.
+     *
+     * @return the selector.
+     */
+    Class<R> getSelector();
+
+    /**
+     * Returns the message processor.
+     *
+     * @return the processor.
+     */
+    Consumer<R> getProcessor();
 }

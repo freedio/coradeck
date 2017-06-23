@@ -36,6 +36,14 @@
             <groupId>com.coradec.coradeck</groupId>
             <artifactId>coracore</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.coradec.coradeck</groupId>
+            <artifactId>corasession</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.coradec.coradeck</groupId>
+            <artifactId>coralog</artifactId>
+        </dependency>
     </dependencies>
 
 </project>

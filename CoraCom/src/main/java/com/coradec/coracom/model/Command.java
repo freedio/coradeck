@@ -21,8 +21,13 @@
 package com.coradec.coracom.model;
 
 /**
- * ​A message about something that happened (or will happen) which might be relevant to others.
+ * ​A request carrying executable contents to be executed when approved.
  */
-public interface Event extends Message {
+public interface Command extends Request {
+
+    /**
+     * Executes the contents of the command.
+     */
+    void execute();
 
 }

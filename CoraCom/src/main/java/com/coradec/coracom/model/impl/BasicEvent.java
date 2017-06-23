@@ -18,11 +18,28 @@
  *
  */
 
-package com.coradec.coracom.model;
+package com.coradec.coracom.model.impl;
+
+import com.coradec.coracom.model.Event;
+import com.coradec.coracom.model.Recipient;
+import com.coradec.coracom.model.Sender;
+import com.coradec.coracore.annotation.Implementation;
 
 /**
- * ​A message about something that happened (or will happen) which might be relevant to others.
+ * ​​Basic implementation of an event notification.
  */
-public interface Event extends Message {
+@SuppressWarnings("WeakerAccess")
+@Implementation
+public class BasicEvent extends BasicMessage implements Event {
+
+    /**
+     * Initializes a new instance of BasicEvent with the specified sender and list of recipients.
+     *
+     * @param sender     the sender.
+     * @param recipients the list of recipients
+     */
+    public BasicEvent(final Sender sender, final Recipient... recipients) {
+        super(sender, recipients);
+    }
 
 }
