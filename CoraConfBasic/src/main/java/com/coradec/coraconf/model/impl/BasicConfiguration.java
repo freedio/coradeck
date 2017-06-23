@@ -27,10 +27,8 @@ import com.coradec.coraconf.model.Property;
 import com.coradec.coraconf.trouble.ConfigurationException;
 import com.coradec.coraconf.trouble.ConfigurationNotFoundException;
 import com.coradec.coracore.annotation.Implementation;
-import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
-import com.coradec.coracore.ctrl.Factory;
 import com.coradec.coracore.model.DynamicFactory;
 import com.coradec.coracore.model.GenericType;
 import com.coradec.coracore.util.ClassUtil;
@@ -52,10 +50,7 @@ import java.util.stream.Collectors;
 @Implementation
 public class BasicConfiguration implements Configuration {
 
-    @Inject
-    private static Map<String, String> APPLICATION_CONFIOURATION;
-    @Inject
-    private static Factory<Configuration> CONFIGURATION_FACTORY;
+    private static final Map<String, String> APPLICATION_CONFIOURATION = new HashMap<>();
 
     private static final DynamicFactory<TypeConverter<?>> FACTORY = new DynamicFactory<>();
 

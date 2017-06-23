@@ -36,6 +36,7 @@ import java.util.Optional;
  */
 @SuppressWarnings({"WeakerAccess", "PackageVisibleField"})
 @Implementation
+@Inject
 public class BasicProperty<R> implements Property<R> {
 
     @Inject
