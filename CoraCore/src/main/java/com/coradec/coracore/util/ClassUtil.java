@@ -440,6 +440,17 @@ public class ClassUtil {
                      .orElse(1000);
     }
 
+    /**
+     * Checks if the specified object is an instance or implements wither of the specified types.
+     *
+     * @param obj   the object to check.
+     * @param types the list of types to check against.
+     * @return {@code true} if the object implements any of the specified types.
+     */
+    public static boolean isAnyOf(final Object obj, final Class<?>... types) {
+        return Stream.of(types).anyMatch(type -> type.isInstance(obj));
+    }
+
     @SuppressWarnings("ClassHasNoToStringMethod")
     private static class GenericTypeImpl implements ParameterizedType {
 

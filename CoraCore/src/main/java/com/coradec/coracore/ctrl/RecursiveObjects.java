@@ -59,8 +59,10 @@ public final class RecursiveObjects {
      * @param object the object to dereference.
      */
     public void remove(final Object object) {
-        if (registry.containsKey(object) && registry.get(object).decrementAndGet() == 0)
-            registry.remove(object);
+        if (registry.containsKey(object)) {
+            final AtomicInteger count = registry.get(object);
+            if (count == null || count.decrementAndGet() == 0) registry.remove(object);
+        }
     }
 
     /**

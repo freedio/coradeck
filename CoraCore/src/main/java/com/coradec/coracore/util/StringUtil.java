@@ -24,6 +24,7 @@ import static java.util.stream.Collectors.*;
 
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.model.Representable;
+import com.coradec.coracore.model.State;
 
 import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.GenericDeclaration;
@@ -135,6 +136,9 @@ public final class StringUtil {
                                               ": " +
                                               toString(entry.getValue()))
                                 .collect(joining(", ", "Mainfest{", "}"));
+        }
+        if (o instanceof State) {
+            return String.format("%s(%d)", ((State)o).name(), ((State)o).ordinal());
         }
         if (o instanceof TypeVariable) {
             TypeVariable<?> typeVar = (TypeVariable<?>)o;

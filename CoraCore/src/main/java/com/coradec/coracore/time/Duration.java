@@ -20,12 +20,27 @@
 
 package com.coradec.coracore.time;
 
+import com.coradec.coracore.ctrl.Factory;
+import com.coradec.coracore.model.GenericFactory;
+
 import java.util.concurrent.TimeUnit;
 
 /**
  * ​Representation of a duration with a time unit and an amount.
  */
 public interface Duration {
+
+    Factory<Duration> FACTORY = new GenericFactory<>(Duration.class);
+
+    /**
+     * Creates a suitable duration with the specified amount of the specified time unit.
+     *
+     * @param amount the amount.
+     * @param unit   the time unit.
+     */
+    static Duration of(int amount, TimeUnit unit) {
+        return FACTORY.create(amount, unit);
+    }
 
     /**
      * Returns the amount.
@@ -40,4 +55,5 @@ public interface Duration {
      * @return the time unit.
      */
     TimeUnit getUnit();
+
 }

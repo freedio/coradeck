@@ -25,7 +25,7 @@ import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 
-import com.coradec.coracore.trouble.CapacityExhaustedExhaustedException;
+import com.coradec.coracore.trouble.CapacityExhaustedException;
 import com.coradec.coracore.trouble.OperationInterruptedException;
 import org.junit.Test;
 
@@ -68,8 +68,8 @@ public class ArrayRingTest {
             for (int i = 0, is = 2 * CAPACITY; i < is; ++i) {
                 testee.add(ELEMENT);
             }
-            fail("Should have thrown " + CapacityExhaustedExhaustedException.class.getSimpleName());
-        } catch (CapacityExhaustedExhaustedException e) {
+            fail("Should have thrown " + CapacityExhaustedException.class.getSimpleName());
+        } catch (CapacityExhaustedException e) {
             // expected that
         }
         assertThat(testee.size(), is(CAPACITY));

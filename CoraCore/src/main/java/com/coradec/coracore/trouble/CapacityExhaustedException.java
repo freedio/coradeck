@@ -21,15 +21,8 @@
 package com.coradec.coracore.trouble;
 
 /**
- * ​​Indicates the interruption of a threading waiting for a resource to become available.
+ * ​​Indicates an attempt to load a collection beyond its capacity.
  */
-public class OperationInterruptedException extends BasicException {
+public class CapacityExhaustedException extends BasicException {
 
-    public OperationInterruptedException(final String explanation) {
-        super(explanation);
-    }
-
-    public OperationInterruptedException() {
-
-    }
 }

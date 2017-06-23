@@ -26,7 +26,7 @@ import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.NonNull;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.collections.Ring;
-import com.coradec.coracore.trouble.CapacityExhaustedExhaustedException;
+import com.coradec.coracore.trouble.CapacityExhaustedException;
 import com.coradec.coracore.trouble.OperationInterruptedException;
 import com.coradec.coracore.util.ClassUtil;
 
@@ -66,13 +66,13 @@ public class ArrayRing<T> implements Ring<T> {
         out = new AtomicInteger(-1);
     }
 
-    @Override public boolean add(final T t) throws CapacityExhaustedExhaustedException {
+    @Override public boolean add(final T t) throws CapacityExhaustedException {
         try {
             if (slots.tryAcquire(0, MILLISECONDS)) {
                 insertItem(t);
                 return true;
             }
-            throw new CapacityExhaustedExhaustedException();
+            throw new CapacityExhaustedException();
         } catch (InterruptedException e) {
             throw new OperationInterruptedException();
         }
