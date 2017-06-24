@@ -26,16 +26,16 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 
 import com.coradec.coracore.trouble.CapacityExhaustedException;
-import com.coradec.coracore.trouble.OperationInterruptedException;
 import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.BitSet;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Random;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
@@ -45,7 +45,7 @@ import java.util.concurrent.atomic.AtomicInteger;
                           "UnnecessaryLocalVariable", "ForLoopReplaceableByForEach", "WeakerAccess",
                           "PackageVisibleField"
                   })
-public class ArrayRingTest {
+public class ConcurrentBlockingQueueTest {
 
     private static final String ELEMENT = "This is a test";
     private static final int CAPACITY = 1000;
@@ -55,7 +55,7 @@ public class ArrayRingTest {
     static final AtomicInteger NUMBERS = new AtomicInteger(0);
     static Semaphore DONE = new Semaphore(0);
 
-    final ArrayRing<String> testee = new ArrayRing<>(CAPACITY);
+    final BlockingQueue<String> testee = new ArrayBlockingQueue<>(CAPACITY);
 
     @Test public void addingSingleElementShouldSucceed() {
         testee.add(ELEMENT);
@@ -83,7 +83,7 @@ public class ArrayRingTest {
                 testee.add(ELEMENT);
             }
             fail("Should have thrown " + CapacityExhaustedException.class.getSimpleName());
-        } catch (CapacityExhaustedException e) {
+        } catch (IllegalStateException e) {
             // expected that
         }
         assertThat(testee.size(), is(CAPACITY));
@@ -287,13 +287,13 @@ public class ArrayRingTest {
     }
 
     @Test public void offeringAndPollingBeyondCapacityThroughHalfFullRingShouldSucceed() {
+        final AtomicInteger idgen = new AtomicInteger(0);
         for (int i = 0, is = CAPACITY / 2; i < is; ++i) {
-            testee.add("Element " + testee.getSlotNumber());
+            testee.add(ELEMENT);
         }
         for (int i = 0, is = 2 * CAPACITY; i < is; ++i) {
-            assertThat(testee.offer("Element " + testee.getSlotNumber()), is(true));
-            final String operand = "Element " + testee.getItemNumber();
-            assertThat(testee.poll(), is(equalTo(operand)));
+            assertThat(testee.offer(ELEMENT), is(true));
+            assertThat(testee.poll(), is(equalTo(ELEMENT)));
         }
         assertThat(testee.size(), is(CAPACITY / 2));
     }
@@ -325,78 +325,6 @@ public class ArrayRingTest {
         testee.remove();
         assertThat(testee.isEmpty(), is(true));
         assertThat(testee.size(), is(0));
-    }
-
-    @Test public void interruptedAddShouldFail() {
-        Thread.currentThread().interrupt();
-        try {
-            testee.add(ELEMENT);
-            fail("Should have thrown " + OperationInterruptedException.class.getSimpleName());
-        } catch (OperationInterruptedException e) {
-            // expected that
-        } finally {
-            assertThat(testee.isEmpty(), is(true));
-        }
-    }
-
-    @Test public void interruptedOfferShouldFail() {
-        Thread.currentThread().interrupt();
-        try {
-            testee.offer(ELEMENT);
-            fail("Should have thrown " + OperationInterruptedException.class.getSimpleName());
-        } catch (OperationInterruptedException e) {
-            // expected that
-        } finally {
-            assertThat(testee.isEmpty(), is(true));
-        }
-    }
-
-    @Test public void interruptedRemoveShouldFail() {
-        Thread.currentThread().interrupt();
-        try {
-            testee.remove();
-            fail("Should have thrown " + OperationInterruptedException.class.getSimpleName());
-        } catch (OperationInterruptedException e) {
-            // expected that
-        } finally {
-            assertThat(testee.isEmpty(), is(true));
-        }
-    }
-
-    @Test public void interruptedPollShouldFail() {
-        Thread.currentThread().interrupt();
-        try {
-            testee.poll();
-            fail("Should have thrown " + OperationInterruptedException.class.getSimpleName());
-        } catch (OperationInterruptedException e) {
-            // expected that
-        } finally {
-            assertThat(testee.isEmpty(), is(true));
-        }
-    }
-
-    @Test public void interruptedElementShouldFail() {
-        Thread.currentThread().interrupt();
-        try {
-            testee.element();
-            fail("Should have thrown " + OperationInterruptedException.class.getSimpleName());
-        } catch (OperationInterruptedException e) {
-            // expected that
-        } finally {
-            assertThat(testee.isEmpty(), is(true));
-        }
-    }
-
-    @Test public void interruptedPeekShouldFail() {
-        Thread.currentThread().interrupt();
-        try {
-            testee.peek();
-            fail("Should have thrown " + OperationInterruptedException.class.getSimpleName());
-        } catch (OperationInterruptedException e) {
-            // expected that
-        } finally {
-            assertThat(testee.isEmpty(), is(true));
-        }
     }
 
     @Test public void interruptedTimedOfferAtCapacityShouldFail() {
@@ -465,60 +393,6 @@ public class ArrayRingTest {
         }
     }
 
-    @Test public void removeObjectShouldFail() {
-        testee.add(ELEMENT);
-        try {
-            testee.remove(ELEMENT);
-            fail("Should have thrown " + UnsupportedOperationException.class.getSimpleName());
-        } catch (UnsupportedOperationException e) {
-            // expected that
-        }
-        assertThat(testee.size(), is(1));
-    }
-
-    @Test public void containsAllShouldFail() {
-        testee.add(ELEMENT);
-        try {
-            testee.containsAll(Collections.singleton(ELEMENT));
-            fail("Should have thrown " + UnsupportedOperationException.class.getSimpleName());
-        } catch (UnsupportedOperationException e) {
-            // expected that
-        }
-        assertThat(testee.size(), is(1));
-    }
-
-    @Test public void addAllShouldFail() {
-        try {
-            testee.addAll(Collections.singleton(ELEMENT));
-            fail("Should have thrown " + UnsupportedOperationException.class.getSimpleName());
-        } catch (UnsupportedOperationException e) {
-            // expected that
-        }
-        assertThat(testee.size(), is(0));
-    }
-
-    @Test public void removeAllShouldFail() {
-        testee.add(ELEMENT);
-        try {
-            testee.removeAll(Collections.singleton(ELEMENT));
-            fail("Should have thrown " + UnsupportedOperationException.class.getSimpleName());
-        } catch (UnsupportedOperationException e) {
-            // expected that
-        }
-        assertThat(testee.size(), is(1));
-    }
-
-    @Test public void retainAllShouldFail() {
-        testee.add(ELEMENT);
-        try {
-            testee.retainAll(Collections.singleton(ELEMENT));
-            fail("Should have thrown " + UnsupportedOperationException.class.getSimpleName());
-        } catch (UnsupportedOperationException e) {
-            // expected that
-        }
-        assertThat(testee.size(), is(1));
-    }
-
     @Test public void containsWithContainedShouldFindIt() {
         testee.add(ELEMENT);
         assertThat(testee.contains(ELEMENT), is(true));
@@ -585,17 +459,6 @@ public class ArrayRingTest {
         testee.drainTo(sink, 15);
         assertThat(sink.size(), is(15));
         assertThat(sink.stream().allMatch(ELEMENT::equals), is(true));
-    }
-
-    @Test public void toStringShouldReturnQueueRepr() {
-        assertThat(testee.toString(),
-                is(equalTo("(com.coradec.coracore.collections.impl.ArrayRing ())")));
-        testee.add("ONE");
-        testee.add("TWO");
-        testee.add("THREEEEEEE");
-        assertThat(testee.toString(), is(equalTo(
-                "(com.coradec.coracore.collections.impl.ArrayRing (\"ONE\", \"TWO\", " +
-                "\"THREEEEEEE\"))")));
     }
 
     @Test public void testConcurrency() throws InterruptedException {

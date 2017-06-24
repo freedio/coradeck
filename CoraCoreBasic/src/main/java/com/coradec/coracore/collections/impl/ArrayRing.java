@@ -31,6 +31,7 @@ import com.coradec.coracore.trouble.OperationInterruptedException;
 import com.coradec.coracore.util.ClassUtil;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -42,7 +43,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * ​A fixed array implementation of a ring.
  * <p>
- * ArrayRing tolerates {@code null} elements and is thread safe, but supports only queue operations.
+ * ArrayRing tolerates {@code null} elements and is thread safe, but supports only queue
+ * operations.
  */
 @SuppressWarnings({
                           "PackageVisibleField", "WeakerAccess", "unchecked",
@@ -51,16 +53,18 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Implementation
 public class ArrayRing<T> implements Ring<T> {
 
+    private static final Object RETRIEVED = new Object();
     private final T[] ring;
     private final AtomicInteger in;
     private final AtomicInteger out;
-    final Semaphore items = new Semaphore(0);
-    private final Semaphore slots = new Semaphore(0);
+    final Semaphore items = new Semaphore(0, true);
+    private final Semaphore slots = new Semaphore(0, true);
     private final int capacity;
 
     public ArrayRing(int capacity) {
         this.capacity = capacity;
         ring = (T[])new Object[capacity];
+        Arrays.fill(ring, RETRIEVED);
         slots.release(capacity);
         in = new AtomicInteger(-1);
         out = new AtomicInteger(-1);
@@ -198,6 +202,7 @@ public class ArrayRing<T> implements Ring<T> {
         items.drainPermits();
         in.set(-1);
         out.set(-1);
+        Arrays.fill(ring, RETRIEVED);
         slots.release(capacity);
     }
 
@@ -249,13 +254,16 @@ public class ArrayRing<T> implements Ring<T> {
     }
 
     private void insertItem(final T t) {
-        ring[nextIn()] = t;
+        final int slot = nextIn();
+        ring[slot] = t;
         items.release();
     }
 
     private T retrieveItem() {
+        final int slot = nextOut();
+        final T result = ring[slot];
         slots.release();
-        return ring[nextOut()];
+        return result;
     }
 
     /**
