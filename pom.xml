@@ -27,7 +27,7 @@
     <groupId>com.coradec.coradeck</groupId>
     <artifactId>coradeck</artifactId>
     <packaging>pom</packaging>
-    <version>0.2</version>
+    <version>0.3</version>
     <modules>
         <module>CoraCore</module>
         <module>CoraCoreBasic</module>
@@ -50,6 +50,7 @@
         <module>CoraControlBasic</module>
         <module>CoraSession</module>
         <module>CoraSessionBasic</module>
+        <module>CoraNet</module>
     </modules>
 
     <properties>
@@ -82,107 +83,102 @@
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coracore</artifactId>
-                <version>0.2</version>
+                <version>0.3</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coracore-basic</artifactId>
-                <version>0.2</version>
+                <version>0.3</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coracom</artifactId>
-                <version>0.2</version>
+                <version>0.3</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coracom-basic</artifactId>
-                <version>0.2</version>
+                <version>0.3</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coractrl</artifactId>
-                <version>0.2</version>
+                <version>0.3</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coractrl-basic</artifactId>
-                <version>0.2</version>
+                <version>0.3</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>corabus</artifactId>
-                <version>0.2</version>
+                <version>0.3</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>corabus-basic</artifactId>
-                <version>0.2</version>
+                <version>0.3</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coralog</artifactId>
-                <version>0.2</version>
+                <version>0.3</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coralog-basic</artifactId>
-                <version>0.2</version>
-            </dependency>
-            <dependency>
-                <groupId>com.coradec.coradeck</groupId>
-                <artifactId>coralog-console</artifactId>
-                <version>0.1</version>
+                <version>0.3</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coratext</artifactId>
-                <version>0.2</version>
+                <version>0.3</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coratext-basic</artifactId>
-                <version>0.2</version>
+                <version>0.3</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>corasession</artifactId>
-                <version>0.2</version>
+                <version>0.3</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>corasession-basic</artifactId>
-                <version>0.2</version>
+                <version>0.3</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coraconf</artifactId>
-                <version>0.2</version>
+                <version>0.3</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coraconf-basic</artifactId>
-                <version>0.2</version>
+                <version>0.3</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coranet</artifactId>
-                <version>0.2</version>
+                <version>0.3</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>corajet</artifactId>
-                <version>0.2</version>
+                <version>0.3</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coratype</artifactId>
-                <version>0.2</version>
+                <version>0.3</version>
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coratype-basic</artifactId>
-                <version>0.2</version>
+                <version>0.3</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

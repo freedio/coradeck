@@ -29,18 +29,8 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>coratype-basic</artifactId>
+    <artifactId>coranet</artifactId>
 
-    <dependencies>
-        <dependency>
-            <groupId>com.coradec.coradeck</groupId>
-            <artifactId>coracore</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.coradec.coradeck</groupId>
-            <artifactId>coratype</artifactId>
-            <version>0.3</version>
-        </dependency>
-    </dependencies>
+    <dependencies></dependencies>
 
 </project>
