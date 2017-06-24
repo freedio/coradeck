@@ -22,8 +22,11 @@ package com.coradec.coralog.model.impl;
 
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.model.Origin;
+import com.coradec.coracore.trouble.FormatArgumentMismatchException;
 import com.coradec.coralog.model.LogLevel;
 import com.coradec.coralog.model.StringLogEntry;
+
+import java.util.MissingFormatArgumentException;
 
 /**
  * Basic implementation of a string log entry.
@@ -55,7 +58,11 @@ public class BasicStringLogEntry extends BasicLogEntry<String> implements String
     }
 
     @Override @ToString public String getText() {
-        return String.format(text, textArgs);
+        try {
+            return String.format(text, textArgs);
+        } catch (MissingFormatArgumentException e) {
+            throw new FormatArgumentMismatchException(text, textArgs);
+        }
     }
 
     @Override public String getContent() {
