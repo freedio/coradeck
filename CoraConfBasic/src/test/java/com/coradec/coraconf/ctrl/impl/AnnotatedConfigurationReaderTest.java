@@ -24,12 +24,8 @@ import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.*;
 
 import com.coradec.coraconf.model.AnnotatedProperty;
-import com.coradec.coracore.trouble.InitializationError;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
-import java.io.File;
-import java.net.MalformedURLException;
 
 @RunWith(com.coradec.corajet.test.CoradeckJUnit4TestRunner.class)
 public class AnnotatedConfigurationReaderTest {
@@ -38,26 +34,22 @@ public class AnnotatedConfigurationReaderTest {
     private final AnnotatedConfigurationReader testee2;
 
     {
-        try {
-            testee1 = new AnnotatedConfigurationReader( //
-                    "context", new File("target/test-classes/com/coradec/coraconf/ctrl/impl" +
-                                        "/AnnotatedConfigurationReaderTest" +
-                                        ".dataset1").toURI().toURL()) {
+        testee1 = new AnnotatedConfigurationReader( //
+                "context", Thread.currentThread()
+                                 .getContextClassLoader()
+                                 .getResource(
+                                         "com/coradec/coraconf/ctrl/impl/AnnotatedConfigurationReaderTest" +
+                                         ".dataset1")) {
 
-            };
-        } catch (MalformedURLException e) {
-            throw new InitializationError("Invalid URL");
-        }
-        try {
-            testee2 = new AnnotatedConfigurationReader( //
-                    "context", new File("target/test-classes/com/coradec/coraconf/ctrl/impl" +
-                                        "/AnnotatedConfigurationReaderTest" +
-                                        ".dataset2").toURI().toURL()) {
+        };
+        testee2 = new AnnotatedConfigurationReader( //
+                "context", Thread.currentThread()
+                                 .getContextClassLoader()
+                                 .getResource("com/coradec/coraconf/ctrl/impl" +
+                                              "/AnnotatedConfigurationReaderTest" +
+                                              ".dataset2")) {
 
-            };
-        } catch (MalformedURLException e) {
-            throw new InitializationError("Invalid URL");
-        }
+        };
     }
 
     @Test public void testSEPARATORS() throws Exception {
