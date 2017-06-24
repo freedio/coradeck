@@ -75,6 +75,7 @@ public class CarClassLoader extends ClassLoader {
     private final Set<String> implementations = new HashSet<>();
     private final Map<String, Class<?>> classes = new HashMap<>();
     private final List<String> fileList = new LinkedList<>();
+    private final boolean outputInjectedFiles;
 
     public CarClassLoader() {
         this(Thread.currentThread().getContextClassLoader());
@@ -82,6 +83,8 @@ public class CarClassLoader extends ClassLoader {
 
     CarClassLoader(final ClassLoader parent) {
         super(parent);
+        final String propOutput = System.getProperty("output.injected.files");
+        outputInjectedFiles = propOutput != null && propOutput.equals("true");
         resourceMap = createResourceMap();
         try {
             Syslog.info("Loading the injector ...");
@@ -102,15 +105,13 @@ public class CarClassLoader extends ClassLoader {
             implementations.forEach(implementation -> {
                 try {
                     findClass(implementation);
-                }
-                catch (ClassNotFoundException e) {
+                } catch (ClassNotFoundException e) {
                     Syslog.error(e);
                 }
             });
             Syslog.debug("Collected components: %s", components);
             Syslog.debug("Collected implementations: %s", implementations);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             Syslog.error(e);
             throw new InternalError("Failed to load the injector!", e);
         }
@@ -122,8 +123,7 @@ public class CarClassLoader extends ClassLoader {
         Syslog.debug("ClassPath: %s", classPath);
         try {
             collectResources(result, classPath.split(File.pathSeparator));
-        }
-        catch (final Exception e) {
+        } catch (final Exception e) {
             e.printStackTrace();
         }
         return result;
@@ -319,8 +319,7 @@ public class CarClassLoader extends ClassLoader {
             if (resources.hasMoreElements()) {
                 result = resources.nextElement();
             }
-        }
-        catch (final IOException e) {
+        } catch (final IOException e) {
             e.printStackTrace();
         }
         return result;
@@ -330,8 +329,7 @@ public class CarClassLoader extends ClassLoader {
         final List<URL> resourceList;
         try {
             resourceList = getResourceMap().get(name);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new IOException("Failed to load the injector", e);
         }
         //noinspection unchecked
@@ -344,8 +342,7 @@ public class CarClassLoader extends ClassLoader {
         Class<?> klass;
         try {
             klass = findClass(name);
-        }
-        catch (ClassNotFoundException e) {
+        } catch (ClassNotFoundException e) {
             klass = super.loadClass(name, resolve);
         }
         return klass;
@@ -360,16 +357,13 @@ public class CarClassLoader extends ClassLoader {
                 try {
                     if (location == null) return super.findClass(name);
                     else return loadClass(name, location);
-                }
-                catch (IOException e) {
+                } catch (IOException e) {
                     throw new UnsupportedOperationException(new ClassNotFoundException(name, e));
-                }
-                catch (ClassNotFoundException e) {
+                } catch (ClassNotFoundException e) {
                     throw new UnsupportedOperationException(e);
                 }
             });
-        }
-        catch (UnsupportedOperationException e) {
+        } catch (UnsupportedOperationException e) {
             throw (ClassNotFoundException)e.getCause();
         }
     }
@@ -448,7 +442,8 @@ public class CarClassLoader extends ClassLoader {
                 }
             }
         }
-        Files.write(Paths.get("/tmp/", name + ".class"), data, CREATE, TRUNCATE_EXISTING);
+        if (outputInjectedFiles)
+            Files.write(Paths.get("/tmp/", name + ".class"), data, CREATE, TRUNCATE_EXISTING);
         return data;
     }
 
@@ -460,8 +455,7 @@ public class CarClassLoader extends ClassLoader {
         Class<?> result;
         try {
             result = findClass(klass.getName());
-        }
-        catch (ClassNotFoundException e) {
+        } catch (ClassNotFoundException e) {
             Syslog.error("Class not found: %s", klass.getName());
             result = klass;
         }
