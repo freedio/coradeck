@@ -18,20 +18,11 @@
  *
  */
 
-package com.coradec.coracom.model;
-
-import com.coradec.corasession.model.Session;
+package com.coradec.coracom.ctrl;
 
 /**
- * ​A request in the context of a session.
+ * ​An object that observes (and gets notified about) state changes in another object.
  */
-public interface SessionRequest extends Request {
-
-    /**
-     * Returns the session context.
-     *
-     * @return the session context.
-     */
-    Session getSession();
+public interface Observer {
 
 }

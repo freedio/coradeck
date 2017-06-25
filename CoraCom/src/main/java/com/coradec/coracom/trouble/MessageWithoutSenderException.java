@@ -26,7 +26,7 @@ import com.coradec.coracore.annotation.ToString;
 /**
  * ​​Indicates an attempt to dispatch a message without a sender.
  */
-public class MessageWithoutSenderException extends CoraComException {
+public class MessageWithoutSenderException extends CommunicationException {
 
     private final Message message;
 

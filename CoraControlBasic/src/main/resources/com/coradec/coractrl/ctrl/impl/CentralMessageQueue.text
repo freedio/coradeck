@@ -1,0 +1,6 @@
+# Localized text base for default locale of class CentralMessageQueue
+
+QueueDispatcherStarted: Central Message Queue Dispatcher started.
+CmqInterrupted: Central Message Queue Dispatcher interrupted.
+FailedToDeliver: Failed to deliver «%s»!
+InterruptedWhileWaitingForLock: Interrupted while waiting for a lock!

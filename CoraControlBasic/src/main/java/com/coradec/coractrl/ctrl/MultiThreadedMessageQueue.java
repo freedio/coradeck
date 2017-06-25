@@ -18,20 +18,27 @@
  *
  */
 
-package com.coradec.coracom.model;
+package com.coradec.coractrl.ctrl;
 
-import com.coradec.corasession.model.Session;
+import com.coradec.coracom.ctrl.MessageQueue;
 
 /**
- * ​A request in the context of a session.
+ * ​A message queue running multiple threads to dispatch messages.
  */
-public interface SessionRequest extends Request {
+public interface MultiThreadedMessageQueue extends MessageQueue {
 
     /**
-     * Returns the session context.
+     * Returns the minimum number of threads running, a.k.a. low water mark.
      *
-     * @return the session context.
+     * @return the low water mark.
      */
-    Session getSession();
+    int getLowWaterMark();
+
+    /**
+     * Returns the maximum number of threads running, a.k.a. high water mark.
+     *
+     * @return the high water mark.
+     */
+    int getHighWaterMark();
 
 }

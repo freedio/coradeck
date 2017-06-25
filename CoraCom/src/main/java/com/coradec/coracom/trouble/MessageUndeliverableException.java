@@ -18,20 +18,23 @@
  *
  */
 
-package com.coradec.coracom.model;
+package com.coradec.coracom.trouble;
 
-import com.coradec.corasession.model.Session;
+import com.coradec.coracom.model.Message;
+import com.coradec.coracore.annotation.ToString;
 
 /**
- * ​A request in the context of a session.
+ * ​​Indicates an attempt to send a message without any indication of recipient or sender.
  */
-public interface SessionRequest extends Request {
+public class MessageUndeliverableException extends CommunicationException {
 
-    /**
-     * Returns the session context.
-     *
-     * @return the session context.
-     */
-    Session getSession();
+    private final Message message;
 
+    public MessageUndeliverableException(final Message message) {
+        this.message = message;
+    }
+
+    @ToString private Message getFaultyMessage() {
+        return message;
+    }
 }

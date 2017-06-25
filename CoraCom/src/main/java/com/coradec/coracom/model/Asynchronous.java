@@ -20,18 +20,9 @@
 
 package com.coradec.coracom.model;
 
-import com.coradec.corasession.model.Session;
-
 /**
- * ​A request in the context of a session.
+ * ​An internally asynchronous object.
  */
-public interface SessionRequest extends Request {
-
-    /**
-     * Returns the session context.
-     *
-     * @return the session context.
-     */
-    Session getSession();
+public interface Asynchronous extends Sender, Recipient {
 
 }

@@ -18,20 +18,14 @@
  *
  */
 
-package com.coradec.coracom.model;
+package com.coradec.coractrl.trouble;
 
-import com.coradec.corasession.model.Session;
+import com.coradec.coracore.trouble.BasicException;
 
 /**
- * ​A request in the context of a session.
+ * ​​Base class of all exceptions in the CoraControl module.
  */
-public interface SessionRequest extends Request {
-
-    /**
-     * Returns the session context.
-     *
-     * @return the session context.
-     */
-    Session getSession();
+@SuppressWarnings("WeakerAccess")
+public class ControlException extends BasicException {
 
 }

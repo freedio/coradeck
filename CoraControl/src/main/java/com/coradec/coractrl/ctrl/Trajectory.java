@@ -18,27 +18,32 @@
  *
  */
 
-package com.coradec.coracom.trouble;
+package com.coradec.coractrl.ctrl;
+
+import com.coradec.coractrl.model.StateTransition;
 
 /**
- * ​​Base class of all queue exceptions.
+ * ​A trajectory consisting of several state transitions.
  */
-@SuppressWarnings("WeakerAccess")
-public class QueueException extends CommunicationException {
+public interface Trajectory {
 
     /**
-     * Creates a new instance of QueueException.
-     */
-    public QueueException() {
-    }
-
-    /**
-     * Creates a new instance of QueueException with the specified underlying problem.
+     * Adds the specified state transitions to the trajectory.
      *
-     * @param problem the underlying problem.
+     * @param transitions the state transitions to add.
+     * @return this trajectory. for method chaining.
      */
-    public QueueException(final Exception problem) {
-        super(problem);
-    }
+    Trajectory add(StateTransition... transitions);
+
+    /**
+     * Removes the specified transitions from the trajectory.
+     * <p>
+     * The method silently ignores transitions which are not members of the trajectory.
+     *
+     * @param transitions the transitions to remove.
+     * @return this trajectory. for method chaining.
+     */
+    @SuppressWarnings("unchecked") Trajectory remove(
+            Class<? extends StateTransition>... transitions);
 
 }

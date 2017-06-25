@@ -29,24 +29,45 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>coracom</artifactId>
+    <artifactId>coractrl-basic</artifactId>
 
     <dependencies>
         <dependency>
             <groupId>com.coradec.coradeck</groupId>
-            <artifactId>coracore</artifactId>
+            <artifactId>coracom</artifactId>
         </dependency>
         <dependency>
             <groupId>com.coradec.coradeck</groupId>
-            <artifactId>corasession</artifactId>
+            <artifactId>coractrl</artifactId>
         </dependency>
         <dependency>
             <groupId>com.coradec.coradeck</groupId>
-            <artifactId>coralog</artifactId>
+            <artifactId>coracom-basic</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.coradec.coradeck</groupId>
+            <artifactId>coracore-basic</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.coradec.coradeck</groupId>
             <artifactId>corajet</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.coradec.coradeck</groupId>
+            <artifactId>coraconf-basic</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.coradec.coradeck</groupId>
+            <artifactId>coratype</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.coradec.coradeck</groupId>
+            <artifactId>coratype-basic</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

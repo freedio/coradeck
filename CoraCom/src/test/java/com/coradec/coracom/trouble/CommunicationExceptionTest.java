@@ -20,25 +20,31 @@
 
 package com.coradec.coracom.trouble;
 
-/**
- * ​​Base class of all queue exceptions.
- */
-@SuppressWarnings("WeakerAccess")
-public class QueueException extends CommunicationException {
+import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.MatcherAssert.*;
 
-    /**
-     * Creates a new instance of QueueException.
-     */
-    public QueueException() {
+import org.junit.Test;
+
+import java.io.IOException;
+
+public class CommunicationExceptionTest {
+
+    @Test public void throwingException1() {
+        try {
+            throw new CommunicationException();
+        } catch (Exception e) {
+            assertThat(e, is(instanceOf(CommunicationException.class)));
+            assertThat(e.getCause(), is(nullValue()));
+        }
     }
 
-    /**
-     * Creates a new instance of QueueException with the specified underlying problem.
-     *
-     * @param problem the underlying problem.
-     */
-    public QueueException(final Exception problem) {
-        super(problem);
+    @Test public void throwingException2() {
+        try {
+            throw new CommunicationException(new IOException());
+        } catch (Exception e) {
+            assertThat(e, is(instanceOf(CommunicationException.class)));
+            assertThat(e.getCause(), is(instanceOf(IOException.class)));
+        }
     }
 
 }

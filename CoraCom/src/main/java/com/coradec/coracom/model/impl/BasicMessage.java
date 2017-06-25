@@ -39,6 +39,7 @@ import java.util.UUID;
 /**
  * ​​Basic implementation of a message.
  */
+@SuppressWarnings("WeakerAccess")
 @Implementation
 public class BasicMessage extends Logger implements Message {
 
@@ -46,6 +47,7 @@ public class BasicMessage extends Logger implements Message {
     private final Set<Recipient> recipients;
     private final UUID id;
     private State state;
+    private int deliveries;  // number of remaining deliveries
 
     /**
      * Initializes a new instance of BasicMessage with the specified sender and set of recipients.
@@ -58,6 +60,7 @@ public class BasicMessage extends Logger implements Message {
         this.recipients = recipients;
         this.state = NEW;
         this.id = UUID.randomUUID();
+        deliveries = 0; // not yet dispatched
     }
 
     /**
@@ -74,8 +77,15 @@ public class BasicMessage extends Logger implements Message {
         return this.state;
     }
 
-    protected void setState(final State state) {
+    /**
+     * Sets the state of the message.
+     *
+     * @param state the new state.
+     * @return this message, for method chaining.
+     */
+    protected Message setState(final State state) {
         this.state = state;
+        return this;
     }
 
     @Override @ToString public Set<Recipient> getRecipients() {
@@ -96,25 +106,30 @@ public class BasicMessage extends Logger implements Message {
 
     @Override public void onEnqueue() throws IllegalStateException {
         if (state != NEW) throw new IllegalStateException(state.name());
-        state = ENQUEUED;
+        setState(ENQUEUED);
     }
 
     @Override public void onDispatch() throws IllegalStateException {
         if (state != ENQUEUED) throw new IllegalStateException(state.name());
-        state = DISPATCHED;
+        setState(DISPATCHED);
     }
 
     @Override public void onDeliver() throws IllegalStateException {
         if (state != ENQUEUED) throw new IllegalStateException(state.name());
-        state = DELIVERED;
+        if (--deliveries == 0) onDelivered();
     }
 
     @Override public void onDelivered() {
-        // for subclasses to override
+        if (state != ENQUEUED) throw new IllegalStateException(state.name());
+        setState(DELIVERED);
     }
 
     @Override @ToString public boolean isUrgent() {
         return false;
+    }
+
+    @Override public void setDeliveries(final int recipients) {
+        deliveries = recipients;
     }
 
     @Override public String toString() {

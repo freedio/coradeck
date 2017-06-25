@@ -2,3 +2,4 @@
 .idea
 *.iml
 /HOWTO.txt
+pom.xml.versionsBackup

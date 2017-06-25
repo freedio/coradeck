@@ -84,7 +84,7 @@ public interface Message {
     void onDispatch() throws IllegalStateException;
 
     /**
-     * Callback invoked when the message gets delivered.
+     * Callback invoked when the message gets delivered to a recipient.
      * <p>
      * This callback will be invoked for each recipient.
      *
@@ -94,8 +94,8 @@ public interface Message {
 
     /**
      * Callback invoked when the message has been delivered to all recipients.
-     * <p>
-     * This callback will be invoked only once.
+     *
+     * @throws IllegalStateException if the current state is not {@link QueueState#ENQUEUED}.
      */
     void onDelivered();
 
@@ -106,28 +106,11 @@ public interface Message {
      */
     boolean isUrgent();
 
-//    /**
-//     * Sets the sender of the message.
-//     *
-//     * @param sender the sender.
-//     * @return this message, for method chaining.
-//     */
-//    Message from(Sender sender);
-//
-//    /**
-//     * Adds the specified recipients to the list of recipients.
-//     *
-//     * @param recipients the recipient(s) to add to the recipients list.
-//     * @return this message, for method chaining.
-//     */
-//    Message to(Recipient... recipients);
-//
-//    /**
-//     * Adds the specified recipients to the list of carbon-copy recipients.
-//     *
-//     * @param recipients the recipient(s) to add to the carbon copy recipients list.
-//     * @return this message, for method chaining.
-//     */
-//    Message cc(Recipient... recipients);
+    /**
+     * Sets the number of recipients to which the message is to be delivered.
+     *
+     * @param recipients the number of recipients.
+     */
+    void setDeliveries(int recipients);
 
 }

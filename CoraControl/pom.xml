@@ -25,7 +25,7 @@
     <parent>
         <artifactId>coradeck</artifactId>
         <groupId>com.coradec.coradeck</groupId>
-        <version>0.2</version>
+        <version>0.3</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -37,26 +37,7 @@
         </dependency>
         <dependency>
             <groupId>com.coradec.coradeck</groupId>
-            <artifactId>coracore-basic</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.coradec.coradeck</groupId>
-            <artifactId>coracom</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.coradec.coradeck</groupId>
-            <artifactId>coracom-basic</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.coradec.coradeck</groupId>
             <artifactId>coralog</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.coradec.coradeck</groupId>
-            <artifactId>coralog-basic</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.coradec.coradeck</groupId>
@@ -64,32 +45,11 @@
         </dependency>
         <dependency>
             <groupId>com.coradec.coradeck</groupId>
-            <artifactId>coratext-basic</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.coradec.coradeck</groupId>
-            <artifactId>corajet</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.coradec.coradeck</groupId>
             <artifactId>coraconf</artifactId>
         </dependency>
         <dependency>
             <groupId>com.coradec.coradeck</groupId>
-            <artifactId>coraconf-basic</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.coradec.coradeck</groupId>
-            <artifactId>coratype</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.coradec.coradeck</groupId>
-            <artifactId>coratype-basic</artifactId>
-            <scope>test</scope>
+            <artifactId>coracom</artifactId>
         </dependency>
     </dependencies>
 

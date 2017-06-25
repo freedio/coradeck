@@ -18,20 +18,11 @@
  *
  */
 
-package com.coradec.coracom.model;
-
-import com.coradec.corasession.model.Session;
+package com.coradec.coractrl.trouble;
 
 /**
- * ​A request in the context of a session.
+ * ​​Indicates an attempt to inject messages when the message queue is shutting down.
  */
-public interface SessionRequest extends Request {
-
-    /**
-     * Returns the session context.
-     *
-     * @return the session context.
-     */
-    Session getSession();
+public class MessageQueueDisabledException extends ControlException {
 
 }

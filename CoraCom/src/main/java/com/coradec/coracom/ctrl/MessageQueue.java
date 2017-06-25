@@ -18,20 +18,22 @@
  *
  */
 
-package com.coradec.coracom.model;
+package com.coradec.coracom.ctrl;
 
-import com.coradec.corasession.model.Session;
+import com.coradec.coracom.model.Message;
+import com.coradec.coracom.trouble.QueueException;
 
 /**
- * ​A request in the context of a session.
+ * ​A queue for messages.
  */
-public interface SessionRequest extends Request {
+public interface MessageQueue {
 
     /**
-     * Returns the session context.
+     * Injects a message into the queue.
      *
-     * @return the session context.
+     * @param message the message to inject.
+     * @throws QueueException if the message could not be injected.
      */
-    Session getSession();
+    void inject(Message message) throws QueueException;
 
 }

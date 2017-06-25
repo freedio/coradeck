@@ -18,20 +18,11 @@
  *
  */
 
-package com.coradec.coracom.model;
-
-import com.coradec.corasession.model.Session;
+package com.coradec.coracore.trouble;
 
 /**
- * ​A request in the context of a session.
+ * ​​Indicates that an operation timed out.
  */
-public interface SessionRequest extends Request {
-
-    /**
-     * Returns the session context.
-     *
-     * @return the session context.
-     */
-    Session getSession();
+public class OperationTimedoutException extends BasicException {
 
 }

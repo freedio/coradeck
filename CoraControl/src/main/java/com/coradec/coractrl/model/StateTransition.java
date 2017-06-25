@@ -18,20 +18,35 @@
  *
  */
 
-package com.coradec.coracom.model;
+package com.coradec.coractrl.model;
 
-import com.coradec.corasession.model.Session;
+import com.coradec.coracom.model.Request;
+import com.coradec.coracore.model.State;
 
 /**
- * ​A request in the context of a session.
+ * ​Definition of an action to perform between two states of a state machine.
  */
-public interface SessionRequest extends Request {
+public interface StateTransition {
 
     /**
-     * Returns the session context.
+     * Returns the initial state of the transition..
      *
-     * @return the session context.
+     * @return the initial state.
      */
-    Session getSession();
+    State getInitialState();
+
+    /**
+     * Returns the terminal state of the transition.
+     *
+     * @return the terminal state.
+     */
+    State getTerminalState();
+
+    /**
+     * Performs the state transition.
+     *
+     * @return a request to track progress of the operation.
+     */
+    Request perform();
 
 }

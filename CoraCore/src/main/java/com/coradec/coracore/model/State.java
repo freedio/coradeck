@@ -23,7 +23,7 @@ package com.coradec.coracore.model;
 /**
  * ​Representation of a state.
  */
-public interface State {
+public interface State extends Representable {
 
     /**
      * Returns the name of the state.

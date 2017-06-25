@@ -18,20 +18,20 @@
  *
  */
 
-package com.coradec.coracom.model;
+package com.coradec.coracom.trouble;
 
-import com.coradec.corasession.model.Session;
+import com.coradec.coracore.trouble.BasicException;
 
 /**
- * ​A request in the context of a session.
+ * ​​Base class of all communication related exceptions.
  */
-public interface SessionRequest extends Request {
+@SuppressWarnings("WeakerAccess")
+public class CommunicationException extends BasicException {
 
-    /**
-     * Returns the session context.
-     *
-     * @return the session context.
-     */
-    Session getSession();
+    protected CommunicationException(final Throwable problem) {
+        super(problem);
+    }
 
+    protected CommunicationException() {
+    }
 }
