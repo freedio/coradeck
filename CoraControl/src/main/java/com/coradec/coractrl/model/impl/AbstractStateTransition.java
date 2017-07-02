@@ -21,6 +21,7 @@
 package com.coradec.coractrl.model.impl;
 
 import com.coradec.coracore.annotation.Implementation;
+import com.coradec.coracore.annotation.NonNull;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.model.State;
 import com.coradec.coracore.util.ClassUtil;
@@ -34,10 +35,24 @@ public abstract class AbstractStateTransition implements StateTransition {
 
     private final State initialState;
     private final State terminalState;
+    private int order;
 
     protected AbstractStateTransition(final State initialState, final State terminalState) {
         this.initialState = initialState;
         this.terminalState = terminalState;
+        this.order = 0;
+    }
+
+    @Override @ToString public int getOrder() {
+        return order;
+    }
+
+    @Override public boolean isViable() {
+        return true;
+    }
+
+    private void setOrder(final int order) {
+        this.order = order;
     }
 
     @Override @ToString public State getInitialState() {
@@ -50,6 +65,27 @@ public abstract class AbstractStateTransition implements StateTransition {
 
     @Override public String toString() {
         return ClassUtil.toString(this);
+    }
+
+    @Override public boolean endsWith(final State terminal) {
+        return terminalState == terminal;
+    }
+
+    @Override public boolean equals(final Object obj) {
+        if (obj instanceof StateTransition) {
+            StateTransition other = (StateTransition)obj;
+            return getInitialState() == other.getInitialState() &&
+                   getTerminalState() == other.getTerminalState();
+        }
+        return false;
+    }
+
+    @Override public int hashCode() {
+        return getInitialState().hashCode() * 7 + getTerminalState().hashCode() * 13;
+    }
+
+    @Override public int compareTo(@NonNull final StateTransition o) {
+        return getOrder() - o.getOrder();
     }
 
 }

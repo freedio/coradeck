@@ -81,8 +81,7 @@ public final class Syslog {
                 Optional.ofNullable(System.getProperty("syslog.level")).orElse("INFORMATION");
         try {
             SYSLOG_LEVEL = LogLevel.valueOf(SYSLOG_LEVEL$);
-        }
-        catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException e) {
             SYSLOG_LEVEL = LogLevel.INFORMATION;
             System.err.printf("Invalid syslog.level system property: %s!%n", SYSLOG_LEVEL$);
         }
@@ -95,8 +94,9 @@ public final class Syslog {
         if (!level.below(SYSLOG_LEVEL)) {
             LocalTime time = LocalTime.now();
             final StackTraceElement ste = Thread.currentThread().getStackTrace()[3];
-            out.printf("%-13s%-5s %s%n", time, level.getTag(),
-                    String.format("%s.%s", ste.getClassName(), ste.getMethodName()));
+            out.printf("%-13s%-5s %s(%d)%n", time, level.getTag(),
+                    String.format("%s.%s", ste.getClassName(), ste.getMethodName()),
+                    ste.getLineNumber());
             if (text != null) out.printf("                   %s%n", text);
             if (problem != null) problem.printStackTrace(out);
             out.flush();

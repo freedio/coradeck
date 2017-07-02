@@ -31,6 +31,7 @@ import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.ctrl.Factory;
 import com.coradec.coracore.model.InjectionMode;
 import com.coradec.coracore.model.Scope;
+import com.coradec.coracore.trouble.BasicException;
 import com.coradec.coracore.trouble.ObjectInstantiationFailure;
 import com.coradec.coracore.util.ClassUtil;
 import com.coradec.coracore.util.StringUtil;
@@ -43,6 +44,7 @@ import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -63,7 +65,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * ​​The injector of the CarClassLoader.
@@ -78,7 +83,8 @@ public class CarInjector {
     private static Set<ImplementationClass<?>> implementationClasses;
 
     @SuppressWarnings("unchecked")
-    private static Set<ImplementationClass<?>> getImplementationClasses() {
+    private static Set<ImplementationClass<?>> getImplementationClasses(
+            final Class<?> interfaceClass) {
         if (implementationClasses == null ||
             implementationClasses.size() != implementations.size()) {
             implementationClasses = new HashSet<>();
@@ -88,7 +94,11 @@ public class CarInjector {
                     implementationClasses.add(new ImplementationClass(klass, entry.getValue()));
                 } catch (ClassNotFoundException | Error e) {
                     // Log this incident and don't add the class
-                    Syslog.info(e, "FYI: This is likely just a temporary problem");
+                    Syslog.info(e, "[" +
+                                   interfaceClass +
+                                   "] Listed here as INFO for your reference: You may need this " +
+                                   "only" +
+                                   " when analyzing dependency injection ERRORs down the line:");
                 }
             }
         }
@@ -182,6 +192,8 @@ public class CarInjector {
      */
     public static void finish(Object instance) {
         Syslog.debug(">>> %s.finish()", instance);
+//        Class<?> klass = instance.getClass();
+//        while (klass.isMemberClass()) ;
         try {
             AccessController.doPrivileged((PrivilegedExceptionAction<Object>)() -> {
                 for (Class<?> targetClass = instance.getClass();
@@ -204,7 +216,8 @@ public class CarInjector {
                                                 ((ParameterizedType)genericType)
                                                         .getActualTypeArguments());
                                 field.setAccessible(true);
-                                field.set(instance, implementationFor(fieldType, typeArgs));
+                                field.set(instance,
+                                        implementationFor(fieldType, typeArgs, instance));
                                 Syslog.debug("Field %s of %s set to %s", name, instance,
                                         StringUtil.toString(field.get(instance)));
                             } catch (Exception e) {
@@ -248,13 +261,17 @@ public class CarInjector {
         }
         Exception[] failed = new Exception[1];
         try {
-            final Set<ImplementationClass<?>> ics = getImplementationClasses();
+            final Set<ImplementationClass<?>> ics = getImplementationClasses(interfaceClass);
             return ics.stream()
                       .filter(ic -> ic.matches(interfaceClass, types))
                       .sorted(Comparator.comparingInt(ic -> ic.relevanceFor(interfaceClass, types)))
                       .findFirst()
                       .map(ic -> {
                           try {
+                              Syslog.debug("Instantiating %s%s%s",
+                                      ClassUtil.nameOf(ic.getEmbeddedClass()),
+                                      StringUtil.toString(types, '<', '>'),
+                                      StringUtil.toString(args, '(', ')'));
                               return ic.instantiate(types, args);
                           } catch (ObjectInstantiationFailure e) {
                               failed[0] = e;
@@ -262,14 +279,49 @@ public class CarInjector {
                           }
                       })
                       .filter(Objects::nonNull)
-                      .orElseThrow(() -> failed[0] != null //
-                                         ? failed[0] : new ImplementationNotFoundException(
-                              interfaceClass.getName(), types, args));
+                      .orElseGet(() -> alternatives(interfaceClass, types, args, failed[0]));
+//                      .orElseThrow(() -> failed[0] != null //
+//                                         ? failed[0] : new ImplementationNotFoundException(
+//                              interfaceClass.getName(), types, args));
         } catch (ObjectInstantiationFailure e) {
             throw e;
         } catch (Exception e) {
             throw new ObjectInstantiationFailure(interfaceClass, e);
         }
+    }
+
+    /**
+     * Handles alternative implementations once the usual ways don't yield a result.
+     *
+     * @return an alternative implementation, if possible.
+     */
+    private static <T> T alternatives(Class<?> type, final List<Type> types, final Object[] args,
+                                      final Exception problem) throws RuntimeException {
+        if (type.isArray()) {
+            final Class<?> componentType = type.getComponentType();
+            if (args.length > 0 && Stream.of(args).allMatch(componentType::isInstance) ||
+                componentType.equals(Object.class)) {
+                return (T)args.clone();
+            }
+            return (T)Array.newInstance(componentType, 0);
+        }
+        if (type.isAssignableFrom(SortedSet.class)) {
+            return (T)Collections.emptySortedSet();
+        }
+        if (type.isAssignableFrom(Set.class)) {
+            return (T)Collections.emptySet();
+        }
+        if (type.isAssignableFrom(SortedMap.class)) {
+            return (T)Collections.emptySortedMap();
+        }
+        if (type.isAssignableFrom(Map.class)) {
+            return (T)Collections.emptyMap();
+        }
+        if (type.isAssignableFrom(List.class)) {
+            return (T)Collections.emptyList();
+        }
+        if (problem != null) throw BasicException.wrapIfNecessary(problem);
+        throw new ImplementationNotFoundException(type.getName(), types, args);
     }
 
     /**
@@ -315,7 +367,7 @@ public class CarInjector {
             parametrizedInstances = new HashMap<>();
         }
 
-        private Class<? super T> getEmbeddedClass() {
+        Class<? super T> getEmbeddedClass() {
             return this.klass;
         }
 
@@ -370,12 +422,12 @@ public class CarInjector {
          * the type parameters of the class.
          *
          * @param types  the type arguments.
-         * @param extras additional arguments.
+         * @param values additional arguments.
          * @return an instance of the class.
          * @throws ObjectInstantiationFailure if the class could not be instantiated due to one or
          *                                    more of several reasons..
          */
-        @SuppressWarnings("unchecked") T instantiate(final List<Type> types, final Object[] extras)
+        @SuppressWarnings("unchecked") T instantiate(final List<Type> types, final Object[] values)
                 throws ObjectInstantiationFailure {
             Syslog.debug("Instantiating %s%s", //
                     klass.getName(), StringUtil.toString(typeParameters)
@@ -412,9 +464,9 @@ public class CarInjector {
                             }
                             if (arguments[i] == null) {
                                 Syslog.trace("Found class argument %s",
-                                        StringUtil.toString(typeArgs), StringUtil.toString(extras));
-                                if (extras.length > i && extras[i] instanceof Class)
-                                    arguments[i] = extras[i];
+                                        StringUtil.toString(typeArgs), StringUtil.toString(values));
+                                if (values.length > i && values[i] instanceof Class)
+                                    arguments[i] = values[i];
                                 else continue outer;
                             }
                         } else {
@@ -425,8 +477,9 @@ public class CarInjector {
                     } else if (para instanceof Class<?>) {
                         Syslog.trace("Parameter %d is %s", i, para);
                         Class<?> klass = (Class<?>)para;
+                        if (klass.isPrimitive()) klass = ClassUtil.getBoxingType(klass);
                         Object value;
-                        if (extras.length > i) value = extras[i];
+                        if (values.length > i && klass.isInstance(values[i])) value = values[i];
                         else try {
                             value = implementationFor((Class<?>)para, Collections.EMPTY_LIST);
                         } catch (ImplementationNotFoundException | ObjectInstantiationFailure e) {
@@ -449,7 +502,7 @@ public class CarInjector {
 //                        }
 //                        continue outer;
                         Object value;
-                        if (extras.length > i) value = extras[i];
+                        if (values.length > i) value = values[i];
                         else continue outer;
                         arguments[i] = value;
                     } else {
@@ -466,8 +519,9 @@ public class CarInjector {
                     conScope = scope;
                 }
             }
-            if (constructor == null) throw new ObjectInstantiationFailure(klass,
-                    "No suitable public constructor found!");
+            if (constructor == null) throw new ObjectInstantiationFailure(klass, String.format(
+                    "No suitable public constructor found for type args %s and arguments %s!",
+                    StringUtil.toString(types), StringUtil.toString(values)));
             try {
                 Syslog.trace("Using %s with %s in scope %s", constructor, StringUtil.toString(args),
                         conScope);
@@ -491,6 +545,11 @@ public class CarInjector {
                         throw new IllegalArgumentException(
                                 String.format("Unknown scope: %s", conScope.name()));
                 }
+            } catch (IllegalArgumentException e) {
+                throw new ObjectInstantiationFailure(klass, new IllegalArgumentException(
+                        String.format(
+                                "Argument type mismatch: cannot fit arguments %s into invocation " +
+                                "of constructor %s", StringUtil.toString(args), constructor)));
             } catch (Exception e) {
                 throw new ObjectInstantiationFailure(klass, e);
             }

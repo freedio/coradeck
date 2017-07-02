@@ -31,6 +31,11 @@
 
     <artifactId>coracore</artifactId>
 
-    <dependencies></dependencies>
+    <dependencies>
+        <dependency>
+            <groupId>com.coradec.coradeck</groupId>
+            <artifactId>coracore-tools</artifactId>
+        </dependency>
+    </dependencies>
 
 </project>

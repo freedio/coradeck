@@ -22,6 +22,9 @@ package com.coradec.coractrl.ctrl;
 
 import com.coradec.coracom.model.Request;
 import com.coradec.coracore.model.State;
+import com.coradec.coractrl.model.StateTransition;
+
+import java.util.Collection;
 
 /**
  * ​​API of a state machine.
@@ -50,18 +53,24 @@ public interface StateMachine {
     void initialize(State state);
 
     /**
-     * Adds a trajectory to the state machine.
+     * Adds the specified transitions to the set of state transitions.
      *
-     * @param trajectory the trajectory to add.
+     * @param transitions the transitions to add.
      */
-    void addTrajectory(Trajectory trajectory);
+    void addTransitions(Collection<StateTransition> transitions);
 
     /**
      * Sets the target state and starts the state machine, unless this state is already reached.
      *
      * @param state the state.
-     * @return a request to track progress.
      */
-    Request setTargetState(State state);
+    void setTargetState(State state);
+
+    /**
+     * Starts the state machine.
+     *
+     * @return a ticket to track progress of the request.
+     */
+    Request start();
 
 }

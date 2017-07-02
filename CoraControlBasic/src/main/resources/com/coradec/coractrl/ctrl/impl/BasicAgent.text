@@ -1,5 +1,5 @@
 # Localized text base for default locale of class BasicAgent
 
-MessageUnprocessed: %s left %s unprocessed!
+MessageUnprocessed: <%s> left <%s> unprocessed!
 MessageBounced: %s bounced!
 CommandNotApproved: Command %s not approved → not executed!

@@ -22,16 +22,22 @@ package com.coradec.coracom.model.impl;
 
 import static com.coradec.coracom.state.RequestState.*;
 
+import com.coradec.coracom.com.RequestCompleteEvent;
 import com.coradec.coracom.ctrl.Observer;
 import com.coradec.coracom.ctrl.impl.SimpleMessageQueue;
 import com.coradec.coracom.model.Asynchronous;
+import com.coradec.coracom.model.Command;
+import com.coradec.coracom.model.Event;
 import com.coradec.coracom.model.Message;
 import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Request;
 import com.coradec.coracom.model.Sender;
 import com.coradec.coracom.state.RequestState;
+import com.coradec.coracom.trouble.RequestFailedException;
 import com.coradec.coracore.annotation.Implementation;
+import com.coradec.coracore.annotation.NonNull;
 import com.coradec.coracore.annotation.Nullable;
+import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.trouble.OperationInterruptedException;
 import com.coradec.coracore.trouble.OperationTimedoutException;
 import com.coradec.coratext.model.LocalizedText;
@@ -39,10 +45,12 @@ import com.coradec.coratext.model.Text;
 
 import java.net.URI;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 
 /**
  * ​​Basic implementation of a request.
@@ -52,13 +60,18 @@ import java.util.concurrent.locks.ReentrantLock;
 public class BasicRequest extends BasicEvent implements Request, Asynchronous {
 
     private static final Text TEXT_MESSAGE_BOUNCED = LocalizedText.define("MessageBounced");
-    private static SimpleMessageQueue MQ;
+    private static final Text TEXT_NOT_EXECUTING = LocalizedText.define("NotExecuting");
+    private static final SimpleMessageQueue MQ = new SimpleMessageQueue();
+    private static final Text TEXT_CANNOT_HANDLE_MESSAGE =
+            LocalizedText.define("CannotHandleMessage");
 
-    private final Semaphore completion = new Semaphore(0);
-    final ReentrantLock stateLock = new ReentrantLock();
-    private @Nullable Exception problem;
+    RequestState requestState;
+    final Semaphore completion = new Semaphore(0);
+    @Nullable Throwable problem;
     final Set<Observer> completionObservers = new HashSet<>();
-    private final Set<RequestState> states = new HashSet<>();
+    Set<Runnable> successCallbacks = new CopyOnWriteArraySet<>();
+    Set<Consumer<Throwable>> failureCallbacks = new CopyOnWriteArraySet<>();
+    final Set<RequestState> states = new HashSet<>();
 
     /**
      * Initializes a new instance of BasicRequest with the specified sender and list of recipients.
@@ -68,43 +81,67 @@ public class BasicRequest extends BasicEvent implements Request, Asynchronous {
      */
     public BasicRequest(final Sender sender, final Recipient... recipients) {
         super(sender, recipients);
+        requestState = NEW;
     }
 
-    protected Request setState(final RequestState state) {
-        stateLock.lock();
-        super.setState(state);
-        stateLock.unlock();
-        return this;
+    protected void setRequestState(final RequestState state) {
+        MQ.inject(new SetStateCommand(state));
+    }
+
+    private void setRequestState(final RequestState state, final Throwable problem) {
+        MQ.inject(new SetStateCommand(state, problem));
+    }
+
+    private RequestState getRequestState() {
+        return requestState;
     }
 
     private Set<RequestState> getStates() {
         return states;
     }
 
-    @Override public Request standby(final long amount, final TimeUnit unit)
-            throws OperationTimedoutException, OperationInterruptedException {
-        try {
-            if (!completion.tryAcquire(amount, unit)) throw new OperationTimedoutException();
-        } catch (InterruptedException e) {
-            throw new OperationInterruptedException();
-        }
-        return this;
-    }
-
     @Override public @Nullable Throwable getProblem() {
         return problem;
     }
 
+    @Override public Request standby() throws InterruptedException, RequestFailedException {
+        try {
+            completion.acquire();
+        } finally {
+            completion.release();
+        }
+        if (isFailed()) throw Optional.ofNullable(getProblem())
+                                      .map(RequestFailedException::new)
+                                      .orElseGet(RequestFailedException::new);
+        return this;
+    }
+
+    @Override public Request standby(final long amount, final TimeUnit unit)
+            throws OperationTimedoutException, OperationInterruptedException,
+                   RequestFailedException {
+        try {
+            if (!completion.tryAcquire(amount, unit)) throw new OperationTimedoutException();
+        } catch (InterruptedException e) {
+            throw new OperationInterruptedException();
+        } finally {
+            completion.release();
+        }
+        if (isFailed()) throw Optional.ofNullable(getProblem())
+                                      .map(RequestFailedException::new)
+                                      .orElseGet(RequestFailedException::new);
+        return this;
+    }
+
     @Override public void succeed() {
-        setState(SUCCESSFUL).andThen(completion::release);
+        setRequestState(SUCCESSFUL);
     }
 
     @Override public void fail(final Throwable problem) {
-        setState(FAILED).andThen(completion::release);
+        setRequestState(FAILED, problem);
     }
 
     @Override public void cancel() {
-        setState(CANCELLED).andThen(completion::release);
+        setRequestState(CANCELLED);
     }
 
     @Override public boolean isSuccessful() {
@@ -119,20 +156,33 @@ public class BasicRequest extends BasicEvent implements Request, Asynchronous {
         return getStates().contains(CANCELLED);
     }
 
-    @Override public void reportCompletionTo(final Request request) {
-        addCompletionObserver(request);
+    public boolean isComplete() {
+        return getStates().stream()
+                          .anyMatch(rs -> rs == SUCCESSFUL || rs == FAILED || rs == CANCELLED);
     }
 
-    private void addCompletionObserver(final Request request) {
+    @Override public void reportCompletionTo(final Observer observer) {
+        addCompletionObserver(observer);
+    }
+
+    private void addCompletionObserver(final Observer request) {
         MQ.inject(new AddCompletionObserverCommand(request));
     }
 
     @Override public Request andThen(final Runnable action) {
-        return null;
+        if (isSuccessful()) {
+            debug("Exec direct of success action %s", action);
+            action.run();
+        } else successCallbacks.add(action);
+        return this;
     }
 
-    @Override public Request orElse(final Runnable action) {
-        return null;
+    @Override public Request orElse(final Consumer<Throwable> action) {
+        if (isFailed() || isCancelled()) {
+            debug("Exec direct of failure action %s", action);
+            action.accept(getProblem());
+        } else failureCallbacks.add(action);
+        return this;
     }
 
     @Override public String represent() {
@@ -140,7 +190,18 @@ public class BasicRequest extends BasicEvent implements Request, Asynchronous {
     }
 
     @Override public void onMessage(final Message message) {
-
+        if (message.getSender() == this) {
+            if (message instanceof Command) {
+//                debug("Executing command %s", message);
+                final Command command = (Command)message;
+                try {
+                    command.execute();
+                    command.succeed();
+                } catch (Exception e) {
+                    command.fail(e);
+                }
+            } else error(TEXT_CANNOT_HANDLE_MESSAGE, message);
+        } else error(TEXT_NOT_EXECUTING, message, message.getSender());
     }
 
     @Override public URI toURI() {
@@ -149,6 +210,10 @@ public class BasicRequest extends BasicEvent implements Request, Asynchronous {
 
     @Override public void bounce(final Message message) {
         error(TEXT_MESSAGE_BOUNCED, message);
+    }
+
+    @Override public boolean notify(final Event event) {
+        return true;
     }
 
     private abstract class InternalCommand extends AbstractCommand {
@@ -168,21 +233,93 @@ public class BasicRequest extends BasicEvent implements Request, Asynchronous {
 
     private class AddCompletionObserverCommand extends InternalCommand {
 
-        private final Request completionObserver;
+        private final Observer observer;
 
         /**
          * Initializes a new instance of InternalCommand with the specified completion observer.
          */
-        AddCompletionObserverCommand(final Request completionObserver) {
-            this.completionObserver = completionObserver;
+        AddCompletionObserverCommand(final Observer observer) {
+            this.observer = observer;
         }
 
         @Override public void execute() {
-            stateLock.lock();
-            if (isSuccessful()) completionObserver.succeed();
-            else if (isFailed()) completionObserver.fail(getProblem());
-            else if (isCancelled()) completionObserver.cancel();
-            else completionObservers.add(completionObserver);
+            if (BasicRequest.this.isComplete()) {
+                if (observer.notify(new RequestCompleteEventImpl()))
+                    BasicRequest.this.completionObservers.remove(observer);
+            } else BasicRequest.this.completionObservers.add(observer);
+        }
+
+    }
+
+    private class SetStateCommand extends AbstractCommand {
+
+        private final RequestState state;
+        private final @Nullable Throwable problem;
+
+        public SetStateCommand(final RequestState state) {
+            super(BasicRequest.this);
+            this.state = state;
+            this.problem = null;
+        }
+
+        public SetStateCommand(final RequestState state, final @NonNull Throwable problem) {
+            super(BasicRequest.this);
+            this.state = state;
+            this.problem = problem;
+        }
+
+        @Override public boolean isUrgent() {
+            return true;
+        }
+
+        @Override public void execute() {
+//            debug("%s → %s", requestState, state);
+            BasicRequest.this.requestState = state;
+            BasicRequest.this.states.add(state);
+            if (problem != null) BasicRequest.this.problem = problem;
+            if (state == SUCCESSFUL) {
+                if (!BasicRequest.this.successCallbacks.isEmpty()) {
+                    for (final Runnable successCallback : BasicRequest.this.successCallbacks) {
+                        try {
+//                            debug("success >> %s", successCallback);
+                            successCallback.run();
+                        } catch (Exception e) {
+                            error(e);
+                        }
+                    }
+                    BasicRequest.this.successCallbacks.clear();
+                }
+                BasicRequest.this.completion.release();
+            } else if (state == FAILED || state == CANCELLED) {
+                if (!BasicRequest.this.failureCallbacks.isEmpty()) {
+                    final Throwable problem = getProblem();
+                    for (final Consumer<Throwable> failureCallback : BasicRequest.this
+                            .failureCallbacks) {
+                        try {
+//                            debug("failure >> %s", failureCallback);
+                            failureCallback.accept(problem);
+                        } catch (Exception e) {
+                            error(e);
+                        }
+                    }
+                    BasicRequest.this.failureCallbacks.clear();
+                }
+                BasicRequest.this.completion.release();
+            }
+        }
+    }
+
+    private class RequestCompleteEventImpl extends BasicEvent implements RequestCompleteEvent {
+
+        /**
+         * Initializes a new instance of RequestCompleteEvent.
+         */
+        public RequestCompleteEventImpl() {
+            super(BasicRequest.this);
+        }
+
+        @ToString public Request getRequest() {
+            return (Request)getSender();
         }
 
     }

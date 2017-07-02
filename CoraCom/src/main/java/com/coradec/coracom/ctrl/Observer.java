@@ -20,9 +20,26 @@
 
 package com.coradec.coracom.ctrl;
 
+import com.coradec.coracom.model.Event;
+
 /**
  * ​An object that observes (and gets notified about) state changes in another object.
  */
 public interface Observer {
+
+    /**
+     * Notifies the observer of the specified event.
+     * <p>
+     * <span style="color:yellow; background:red">Important Note:</span> Event notifications are
+     * asynchronous by virtue and thus can subtly infect an otherwise clean environment with
+     * concurrency.  This will not be a problem if you strictly keep from making modifications on
+     * the caller thread, instead using the message queue to trigger modifications on a message
+     * processor thread.
+     *
+     * @param event the event.
+     * @return {@code true} if the observer is to be removed after the notification ("one-shot
+     * trigger"), {@code false} if it continues to observe.
+     */
+    boolean notify(Event event);
 
 }

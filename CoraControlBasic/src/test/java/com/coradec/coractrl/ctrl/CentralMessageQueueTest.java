@@ -184,7 +184,15 @@ public class CentralMessageQueueTest {
         }
 
         @Override public void onMessage(final Message message) {
-            if (message instanceof ExecuteAgentCommand) ((ExecuteAgentCommand)message).execute();
+            if (message instanceof ExecuteAgentCommand) {
+                final ExecuteAgentCommand command = (ExecuteAgentCommand)message;
+                try {
+                    command.execute();
+                    command.succeed();
+                } catch (Exception e) {
+                    command.fail(e);
+                }
+            }
             else Syslog.error("Invalid message: " + message);
         }
 

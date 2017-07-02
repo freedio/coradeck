@@ -31,6 +31,15 @@
 
     <artifactId>corasession-basic</artifactId>
 
-    <dependencies></dependencies>
+    <dependencies>
+        <dependency>
+            <groupId>com.coradec.coradeck</groupId>
+            <artifactId>corasession</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.coradec.coradeck</groupId>
+            <artifactId>coracore</artifactId>
+        </dependency>
+    </dependencies>
 
 </project>

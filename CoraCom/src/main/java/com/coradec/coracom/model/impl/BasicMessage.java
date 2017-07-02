@@ -81,11 +81,9 @@ public class BasicMessage extends Logger implements Message {
      * Sets the state of the message.
      *
      * @param state the new state.
-     * @return this message, for method chaining.
      */
-    protected Message setState(final State state) {
+    protected void setState(final State state) {
         this.state = state;
-        return this;
     }
 
     @Override @ToString public Set<Recipient> getRecipients() {
@@ -105,22 +103,30 @@ public class BasicMessage extends Logger implements Message {
     }
 
     @Override public void onEnqueue() throws IllegalStateException {
-        if (state != NEW) throw new IllegalStateException(state.name());
+        if (state != NEW) throw new IllegalStateException(
+                String.format("Message %s has illegal state %s (should be NEW)", this,
+                        state.name()));
         setState(ENQUEUED);
     }
 
     @Override public void onDispatch() throws IllegalStateException {
-        if (state != ENQUEUED) throw new IllegalStateException(state.name());
+        if (state != ENQUEUED) throw new IllegalStateException(
+                String.format("Message %s has illegal state %s (should be ENQUEUED)", this,
+                        state.name()));
         setState(DISPATCHED);
     }
 
     @Override public void onDeliver() throws IllegalStateException {
-        if (state != ENQUEUED) throw new IllegalStateException(state.name());
+        if (state != ENQUEUED) throw new IllegalStateException(
+                String.format("Message %s has illegal state %s (should be ENQUEUED)", this,
+                        state.name()));
         if (--deliveries == 0) onDelivered();
     }
 
     @Override public void onDelivered() {
-        if (state != ENQUEUED) throw new IllegalStateException(state.name());
+        if (state != ENQUEUED) throw new IllegalStateException(
+                String.format("Message %s has illegal state %s (should be ENQUEUED)", this,
+                        state.name()));
         setState(DELIVERED);
     }
 

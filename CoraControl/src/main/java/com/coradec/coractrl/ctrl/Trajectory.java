@@ -20,7 +20,12 @@
 
 package com.coradec.coractrl.ctrl;
 
+import com.coradec.coracom.model.Request;
+import com.coradec.coracore.model.State;
 import com.coradec.coractrl.model.StateTransition;
+
+import java.util.List;
+import java.util.Optional;
 
 /**
  * ​A trajectory consisting of several state transitions.
@@ -36,14 +41,83 @@ public interface Trajectory {
     Trajectory add(StateTransition... transitions);
 
     /**
-     * Removes the specified transitions from the trajectory.
-     * <p>
-     * The method silently ignores transitions which are not members of the trajectory.
+     * Returns the list of transitions.
      *
-     * @param transitions the transitions to remove.
-     * @return this trajectory. for method chaining.
+     * @return the list of transitions.
      */
-    @SuppressWarnings("unchecked") Trajectory remove(
-            Class<? extends StateTransition>... transitions);
+    List<StateTransition> getTransitions();
 
+    /**
+     * Returns a trajectory with the specified transition prepended.
+     *
+     * @param transition the transition to prepend.
+     * @return this trajectory, with the specified transition prepended.
+     */
+    Trajectory prepend(StateTransition transition);
+
+    /**
+     * Checks if this trajectory begins with the specified state.
+     *
+     * @param state the state to check for.
+     * @return {@code true} if the trajectory begins with the specified state.
+     */
+    boolean startsWith(State state);
+
+    /**
+     * Returns the initial state of the trajector.
+     *
+     * @return the initial state of the trajector.
+     */
+    State getInitialState();
+
+    /**
+     * Checks if the trajectory is cyclic.
+     * <p>
+     * A trajectory is cyclic if it contains the same state transition more than once.
+     *
+     * @return {@code true} if the trajectory is cyclic.
+     */
+    boolean isCyclic();
+
+    /**
+     * Checks if this trajectory connects states s1 and s2.
+     *
+     * @param s1 the first state.
+     * @param s2 the second state.
+     * @return {@code true} if the trajectory connects the first and second state.
+     */
+    boolean connects(State s1, State s2);
+
+    /**
+     * Checks if this trajectory is viable for the specified request from the specified state.
+     *
+     * @param request the request.
+     * @param state   the state to go from.
+     * @return {@code true} if the trajectory is viable, {@code false} if not.
+     */
+    boolean isViable(final Request request, State state);
+
+    /**
+     * Returns the state transition that leads on from the specified state, if there is such a state
+     * transition.
+     *
+     * @param state the state to move on from.
+     * @return a state transition, or none, if the state is not present in the trajectory.
+     */
+    Optional<StateTransition> transitionFor(State state);
+
+    /**
+     * Checks if the trajectory contains the specified state transition.
+     *
+     * @param transition the transition.
+     * @return {@code true} if the trajectory contains the state transition.
+     */
+    boolean contains(StateTransition transition);
+
+    /**
+     * Blocks this trajectory for the specified request.
+     *
+     * @param request the request.
+     */
+    void block(Request request);
 }

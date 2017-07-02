@@ -1,0 +1,8 @@
+Manifest-Version: 1.0
+Archiver-Version: Coradec Carchiver
+Implementation-Classes: com.coradec.coracom.model.impl.BasicEvent com.
+ coradec.coracom.model.impl.BasicMessage com.coradec.coracom.model.imp
+ l.BasicRequest
+Dependencies: com.coradec.coradeck:coracore:jar:0.3 com.coradec.corade
+ ck:coralog:jar:0.3 com.coradec.coradeck:corasession:jar:0.3
+

@@ -38,7 +38,7 @@ public interface Duration {
      * @param amount the amount.
      * @param unit   the time unit.
      */
-    static Duration of(int amount, TimeUnit unit) {
+    static Duration of(long amount, TimeUnit unit) {
         return FACTORY.create(amount, unit);
     }
 

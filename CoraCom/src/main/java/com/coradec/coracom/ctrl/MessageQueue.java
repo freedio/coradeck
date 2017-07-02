@@ -32,8 +32,9 @@ public interface MessageQueue {
      * Injects a message into the queue.
      *
      * @param message the message to inject.
+     * @return the injected message.
      * @throws QueueException if the message could not be injected.
      */
-    void inject(Message message) throws QueueException;
+    <M extends Message> M inject(M message) throws QueueException;
 
 }

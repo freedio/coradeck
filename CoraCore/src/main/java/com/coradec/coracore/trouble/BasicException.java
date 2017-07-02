@@ -45,6 +45,18 @@ public class BasicException extends RuntimeException {
                     "getStackTrace"));
 
     /**
+     * Wrap the specified problem in a BasicException if it is not already a kind of
+     * RuntimeException.
+     *
+     * @param problem the problem to wrap if necessary.
+     * @return a RuntimeException.
+     */
+    public static RuntimeException wrapIfNecessary(Throwable problem) {
+        if (problem instanceof RuntimeException) return (RuntimeException)problem;
+        return new BasicException(problem);
+    }
+
+    /**
      * Initializes a new instance of BasicException.
      */
     protected BasicException() {
@@ -103,17 +115,14 @@ public class BasicException extends RuntimeException {
                                               method.setAccessible(true);
                                               return method.invoke(this);
                                           });
-                              }
-                              catch (PrivilegedActionException e) {
+                              } catch (PrivilegedActionException e) {
                                   throw e.getException();
                               }
                               if (value != null) result = String.format("%s: %s", propertyName,
                                       StringUtil.toString(value));
-                          }
-                          catch (IllegalAccessException e) {
+                          } catch (IllegalAccessException e) {
                               result = String.format("%s: %s", propertyName, "<inaccessible>");
-                          }
-                          catch (Exception e) {
+                          } catch (Exception e) {
                               result = String.format("%s: %s", propertyName, "<faulty>");
                           }
                           return result;
@@ -131,4 +140,5 @@ public class BasicException extends RuntimeException {
         return name.startsWith("get") ? name.substring(3)
                                       : name.startsWith("is") ? name.substring(2) : name;
     }
+
 }

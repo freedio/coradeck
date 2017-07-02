@@ -85,7 +85,7 @@ public class CentralMessageQueue extends Logger implements MultiThreadedMessageQ
         lowWaterMark = PROP_LOW_WATER_MARK.value();
         highWaterMark = PROP_HIGH_WATER_MARK.value();
         queueMap = new HashMap<>();
-        queueQueue = new ArrayBlockingQueue<>(PROP_QQ_SIZE.value());
+        queueQueue = new ArrayBlockingQueue<>(1024);
         queues = new Semaphore(0);
         qman = new Semaphore(1);
         processors = new ConcurrentLinkedQueue<>();
@@ -100,7 +100,7 @@ public class CentralMessageQueue extends Logger implements MultiThreadedMessageQ
         new MessageProcessor().start();
     }
 
-    @Override public void inject(final Message message) throws QueueException {
+    @Override public <M extends Message> M inject(final M message) throws QueueException {
         if (!running) throw new MessageQueueDisabledException();
         if (message.getSender() == null) throw new MessageWithoutSenderException(message);
         Set<Recipient> recipients = message.getRecipients();
@@ -113,6 +113,7 @@ public class CentralMessageQueue extends Logger implements MultiThreadedMessageQ
         try {
             qman.acquire();
             for (Recipient recipient : recipients) {
+                message.onEnqueue();
                 queueMap.computeIfAbsent(recipient, r -> {
                     final RecipientQueue queue = new RecipientQueue(r);
                     queueQueue.add(queue);
@@ -120,20 +121,22 @@ public class CentralMessageQueue extends Logger implements MultiThreadedMessageQ
                     boost();
                     return queue;
                 }).add(message);
-                message.onEnqueue();
             }
         } catch (InterruptedException e) {
             throw new OperationInterruptedException();
         } finally {
             qman.release();
         }
+        return message;
     }
 
     @Override @ToString public int getLowWaterMark() {
+//        if (lowWaterMark == 0) lowWaterMark = PROP_LOW_WATER_MARK.value();
         return lowWaterMark;
     }
 
     @Override @ToString public int getHighWaterMark() {
+//        if (highWaterMark == 0) highWaterMark = PROP_HIGH_WATER_MARK.value();
         return highWaterMark;
     }
 

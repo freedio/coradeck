@@ -1,3 +1,5 @@
 # Localized text base for default locale of class BasicRequest
 
 MessageBounced: Internal message %s bounced!
+NotExecuting: Not executing foreign message %s from %s!
+CannotHandleMessage: Cannot handle message %s!

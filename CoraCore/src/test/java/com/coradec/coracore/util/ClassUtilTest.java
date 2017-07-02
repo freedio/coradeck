@@ -18,14 +18,13 @@
  *
  */
 
-package com.coradec.corecore.util;
+package com.coradec.coracore.util;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.*;
 
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.trouble.ResourceFileNotFoundException;
-import com.coradec.coracore.util.ClassUtil;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -84,7 +83,8 @@ public class ClassUtilTest {
                    ".coracore.trouble.ResourceFileNotFoundException: (FileName: \"a.context\"))" +
                    ""));
         assertThat(ClassUtil.toString(Boolean.TRUE), is("(Boolean true)"));
-        assertThat(ClassUtil.toString('ö'), is("(Character '\\u00f6')"));
+        assertThat(ClassUtil.toString('ö'), is("(Character 'ö')"));
+        assertThat(ClassUtil.toString('ق'), is("(Character '\\u0642')"));
         assertThat(ClassUtil.toString("abc.def".split("\\.")), is("(String[\"abc\", \"def\"])"));
         assertThat(ClassUtil.toString(new byte[] {0, 1, 2}), is("(byte[00, 01, 02])"));
         assertThat(ClassUtil.toString(new char[] {'a', '\n', '\20'}),

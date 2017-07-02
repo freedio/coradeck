@@ -20,6 +20,8 @@
 
 package com.coradec.coracore.model;
 
+import com.coradec.coracore.util.StringUtil;
+
 /**
  * ​Representation of a state.
  */
@@ -47,6 +49,10 @@ public interface State extends Representable {
      */
     default boolean precedes(final State state) {
         return ordinal() < state.ordinal();
+    }
+
+    default String represent() {
+        return StringUtil.toTitleCase(name().toLowerCase());
     }
 
 }

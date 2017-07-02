@@ -52,10 +52,6 @@ public class RequestState implements State {
         return rank;
     }
 
-    @Override public String represent() {
-        return name();
-    }
-
     @Override public String toString() {
         return ClassUtil.toString(this);
     }

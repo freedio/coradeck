@@ -51,6 +51,7 @@
         <module>CoraSession</module>
         <module>CoraSessionBasic</module>
         <module>CoraNet</module>
+        <module>CoraCoreTools</module>
     </modules>
 
     <properties>
@@ -88,6 +89,11 @@
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coracore-basic</artifactId>
+                <version>0.3</version>
+            </dependency>
+            <dependency>
+                <groupId>com.coradec.coradeck</groupId>
+                <artifactId>coracore-tools</artifactId>
                 <version>0.3</version>
             </dependency>
             <dependency>

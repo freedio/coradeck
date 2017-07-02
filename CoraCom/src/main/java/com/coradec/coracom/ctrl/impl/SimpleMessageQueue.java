@@ -28,6 +28,7 @@ import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Sender;
 import com.coradec.coracom.trouble.MessageWithoutSenderException;
 import com.coradec.coracom.trouble.QueueException;
+import com.coradec.coralog.ctrl.impl.Logger;
 
 import java.util.Collections;
 import java.util.Set;
@@ -41,7 +42,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * ​​Simple implementation of a message queue for internal purposes.
  */
 @SuppressWarnings("ClassHasNoToStringMethod")
-public class SimpleMessageQueue implements MessageQueue {
+public class SimpleMessageQueue extends Logger implements MessageQueue {
 
     private final BlockingQueue<Message> queue = new LinkedBlockingQueue<>();
     private final AtomicBoolean running = new AtomicBoolean();
@@ -51,13 +52,20 @@ public class SimpleMessageQueue implements MessageQueue {
 
     }
 
-    @Override public void inject(final Message message) throws QueueException {
+    @Override public <M extends Message> M inject(final M message) throws QueueException {
         if (message.getSender() == null) throw new MessageWithoutSenderException(message);
-        queue.add(message);
         message.onEnqueue();
+//        if (message.getClass().getSimpleName().endsWith("ExecuteStateTransitionRequest")) {
+//            debug("Enqueuing message %s", message);
+//            for (final StackTraceElement element : Thread.currentThread().getStackTrace()) {
+//                System.out.println("\tat " + element);
+//            }
+//        }
+        queue.add(message);
         if (!running.getAndSet(true)) {
             startQueueProcessor();
         }
+        return message;
     }
 
     private void startQueueProcessor() {
@@ -81,6 +89,7 @@ public class SimpleMessageQueue implements MessageQueue {
                     }
                     for (final Recipient recipient : recipients) {
                         try {
+//                            debug("Delivering message %s to %s", message, recipient);
                             recipient.onMessage(message);
                             message.onDeliver();
                         } catch (IllegalStateException e) {

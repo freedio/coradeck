@@ -69,6 +69,11 @@ public final class StringUtil {
             return "";
         }
     };
+    public static final String[] UNCAPITALIZED = {
+            "a", "an", "the", "on", "in", "of", "for", "from", "with", "as", "at", "to", "like",
+            "upon", "down", "near", "off", "onto", "unto", "yet", "nor", "so", "if", "once", "than",
+            "that", "till", "when", "into", "out", "by", "and", "or", "but", "up", "over",
+            };
 
     private StringUtil() {
     }
@@ -117,9 +122,7 @@ public final class StringUtil {
         if (o instanceof List) //
             return ((List<?>)o).stream().map(StringUtil::toString).collect(joining(", ", "[", "]"));
         if (o instanceof Collection) //
-            return ((Collection<?>)o).stream()
-                                     .map(StringUtil::toString)
-                                     .collect(joining(", ", "(", ")"));
+            return toString((Collection<?>)o, '(', ')');
         if (o instanceof Map) //
             return ((Map<?, ?>)o).entrySet()
                                  .stream()
@@ -177,7 +180,7 @@ public final class StringUtil {
         final int i = "\f\r\n\0\b\7".indexOf(o);
         if (i != -1) return "\\" + "frn0ba".charAt(i);
         if (o < ' ') return "\\" + Integer.toOctalString(o);
-        if (o > 126) return "\\u" + String.format("%04x", (int)o);
+        if (o > 255) return "\\u" + String.format("%04x", (int)o);
         return String.valueOf(o);
     }
 
@@ -210,4 +213,51 @@ public final class StringUtil {
         }
         return collector.append(']').toString();
     }
+
+    /**
+     * Formats the specified string according to the English title case rule.
+     *
+     * @param s the string to format.
+     * @return the same string with cases adjusted.
+     */
+    public static String toTitleCase(final String s) {
+        final StringBuilder collector = new StringBuilder();
+        boolean inWord = false;
+        int off;
+        for (int i = 0, is = s.length(); i < is; ++i) {
+            char c = s.charAt(i);
+            if (inWord) {
+                if (Character.isWhitespace(c)) inWord = false;
+            } else if (!Character.isWhitespace(c)) {
+                c = Character.toUpperCase(c);
+                for (final String word : UNCAPITALIZED) {
+                    if (i != 0 &&
+                        s.startsWith(word, i) &&
+                        (off = i + word.length()) < s.length() &&
+                        !Character.isLetter(s.charAt(off)) &&
+                        s.substring(off).matches(".*\\p{IsAlphabetic}.*")) {
+                        c = Character.toLowerCase(c);
+                        break;
+                    }
+                }
+                inWord = true;
+            }
+            collector.append(c);
+        }
+        return collector.toString();
+    }
+
+    public static String toString(final Collection<?> o, final char start, final char end) {
+        return ((Collection<?>)o).stream()
+                                 .map(StringUtil::toString)
+                                 .collect(
+                                         joining(", ", String.valueOf(start), String.valueOf(end)));
+    }
+
+    public static String toString(final Object[] o, final char start, final char end) {
+        return Stream.of(o)
+                     .map(StringUtil::toString)
+                     .collect(joining(", ", String.valueOf(start), String.valueOf(end)));
+    }
+
 }

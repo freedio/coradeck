@@ -53,7 +53,7 @@ import java.util.stream.Stream;
 @SuppressWarnings({"UseOfObsoleteDateTimeApi", "UseOfSystemOutOrSystemErr"})
 public class ClassUtil {
 
-    private static final RecursiveObjects registry = RecursiveObjects.getInstance();
+    private static final RecursiveObjects REGISTRY = RecursiveObjects.getInstance();
     @SuppressWarnings("ArraysAsListWithZeroOrOneArgument")
     private static final Set<String> IGNORED_PROPERTIES = new HashSet<>(Arrays.asList("Class"));
     private static final Class[] VALUE_CLASSES = {
@@ -67,8 +67,8 @@ public class ClassUtil {
         if (klass.isArray()) return arrayOf(klass.getComponentType(), o);
         if (Stream.of(VALUE_CLASSES).anyMatch(c -> c.isInstance(o))) return valueOf(klass, o);
         String result;
-        if (registry.contains(o)) return String.format("<@%08x>", System.identityHashCode(o));
-        registry.add(o);
+        if (REGISTRY.contains(o)) return String.format("<@%08x>", System.identityHashCode(o));
+        REGISTRY.add(o);
         try {
             final String attributes = //
                     Stream.of(klass.getMethods())
@@ -107,7 +107,7 @@ public class ClassUtil {
             else result = String.format("(%s%s)", nameOf(klass),
                     attributes.isEmpty() ? StringUtil.EMPTY : " " + attributes);
         } finally {
-            registry.remove(o);
+            REGISTRY.remove(o);
         }
         return result;
     }
@@ -449,6 +449,26 @@ public class ClassUtil {
      */
     public static boolean isAnyOf(final Object obj, final Class<?>... types) {
         return Stream.of(types).anyMatch(type -> type.isInstance(obj));
+    }
+
+    /**
+     * Returns the boxing type of a primitive type, or the type itself if it is not a primitve
+     * type.
+     *
+     * @param klass the primitive type.
+     * @return the boxing type.
+     */
+    public static Class<?> getBoxingType(final Class<?> klass) {
+        if (klass == Boolean.TYPE) return Boolean.class;
+        if (klass == Byte.TYPE) return Byte.class;
+        if (klass == Short.TYPE) return Short.class;
+        if (klass == Integer.TYPE) return Integer.class;
+        if (klass == Long.TYPE) return Long.class;
+        if (klass == Float.TYPE) return Float.class;
+        if (klass == Double.TYPE) return Double.class;
+        if (klass == Character.TYPE) return Character.class;
+        if (klass == Void.TYPE) return Void.class;
+        return klass;
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")

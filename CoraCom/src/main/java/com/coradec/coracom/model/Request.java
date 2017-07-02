@@ -21,10 +21,12 @@
 package com.coradec.coracom.model;
 
 import com.coradec.coracom.ctrl.Observer;
+import com.coradec.coracom.trouble.RequestFailedException;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.trouble.OperationTimedoutException;
 
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 /**
  * ​An event that needs permission to happen.
@@ -32,14 +34,29 @@ import java.util.concurrent.TimeUnit;
 public interface Request extends Event, Observer {
 
     /**
+     * Waits for the request to become complete.
+     *
+     * @return this request, for method chaining.
+     * @throws InterruptedException   if the thread was interruoted while waiting for the request to
+     *                                complete.
+     * @throws RequestFailedException if the request failed.
+     */
+    Request standby() throws InterruptedException, RequestFailedException;
+
+    /**
      * Waits the specified amount of time for the request to become complete.
      *
      * @param amount the amount of time.
      * @param unit   the time unit.
      * @return this request, for method chaining.
+     * @throws OperationTimedoutException if the set time limit expired without the request becoming
+     *                                    complete.
+     * @throws InterruptedException       if the thread was interrupted while waiting for the
+     *                                    request to complete.
+     * @throws RequestFailedException     if the request failed.
      */
     Request standby(long amount, TimeUnit unit)
-            throws OperationTimedoutException, InterruptedException;
+            throws OperationTimedoutException, InterruptedException, RequestFailedException;
 
     /**
      * Returns the problem in case of a failure.
@@ -50,19 +67,19 @@ public interface Request extends Event, Observer {
     @Nullable Throwable getProblem();
 
     /**
-     * Marks the request as successful.
+     * Asynchronously marks the request as successful.
      */
     void succeed();
 
     /**
-     * Marks the request as failed with the specified optional problem.
+     * Asynchronously marks the request as failed with the specified optional problem.
      *
      * @param problem the problem, if known.
      */
     void fail(@Nullable Throwable problem);
 
     /**
-     * Marks the request as cancelled.
+     * Asynchronously marks the request as cancelled.
      */
     void cancel();
 
@@ -88,11 +105,11 @@ public interface Request extends Event, Observer {
     boolean isCancelled();
 
     /**
-     * Forwards state changes to the specified request.
+     * Notifies the specified observer when the request is complete.
      *
-     * @param request the request to forward to.
+     * @param observer the observer to notify.
      */
-    void reportCompletionTo(Request request);
+    void reportCompletionTo(Observer observer);
 
     /**
      * Performs the specified action when the request was successful.
@@ -109,7 +126,8 @@ public interface Request extends Event, Observer {
     Request andThen(Runnable action);
 
     /**
-     * Performs the specified action when the request failed.
+     * Performs the specified action when the request failed.  The action takes a failure reason
+     * which me be absent.
      * <p>
      * <span style="color: yellow; background:red;"><strong>IMPORTANT NOTE:</strong></span>
      * <p>
@@ -120,6 +138,5 @@ public interface Request extends Event, Observer {
      * @param action the action to take.
      * @return this request, for method chaining.
      */
-    Request orElse(Runnable action);
-
+    Request orElse(Consumer<Throwable> action);
 }

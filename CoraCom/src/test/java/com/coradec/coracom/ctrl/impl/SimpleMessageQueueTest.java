@@ -48,11 +48,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 @RunWith(CoradeckJUnit4TestRunner.class)
 public class SimpleMessageQueueTest {
 
-    public static final String SYSLOG_LEVEL = "INFORMATION";
+    public static final String SYSLOG_LEVEL = "DEBUG";
     private static final int AGENT_WORKTIME = 5;
 
     static {
-        Syslog.setLevel(SYSLOG_LEVEL);
+        if (!SYSLOG_LEVEL.equals("INFORMATION")) Syslog.setLevel(SYSLOG_LEVEL);
     }
 
     static final AtomicInteger ID = new AtomicInteger(0);
@@ -83,7 +83,8 @@ public class SimpleMessageQueueTest {
         Syslog.info("Total time elapsed: %d ms with 1 message processor.", elapsed);
         Syslog.info("Throughput: %.3f ms/msg @ %d ms of work/msg.", (double)elapsed / dispatched,
                 AGENT_WORKTIME);
-        assertThat(elapsed < 50000, is(true));
+        Syslog.info("Throughput: %.3f ms/msg.", (double)(elapsed - 5 * dispatched) / dispatched);
+        assertThat(elapsed < 10 * dispatched, is(true));
         assertThat(generated, is(approved));
         assertThat(dispatched, is(approved));
         assertThat(termLock.availablePermits(), is(0)); // All tests reported finished.
@@ -176,7 +177,15 @@ public class SimpleMessageQueueTest {
         }
 
         @Override public void onMessage(final Message message) {
-            if (message instanceof ExecuteAgentCommand) ((ExecuteAgentCommand)message).execute();
+            if (message instanceof ExecuteAgentCommand) {
+                final ExecuteAgentCommand command = (ExecuteAgentCommand)message;
+                try {
+                    command.execute();
+                    command.succeed();
+                } catch (Exception e) {
+                    command.fail(e);
+                }
+            }
             else Syslog.error("Invalid message: " + message);
         }
 

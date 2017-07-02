@@ -37,8 +37,11 @@ import com.coradec.coratext.model.LocalizedText;
 import com.coradec.coratext.model.Text;
 
 import java.net.URI;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -53,7 +56,7 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
     private static final Text TEXT_MESSAGE_BOUNCED = LocalizedText.define("MessageBounced");
     private static final Text TEXT_COMMAND_NOT_APPROVED =
             LocalizedText.define("CommandNotApproved");
-    @Inject
+    @SuppressWarnings("ProtectedField") @Inject
     private static MessageQueue MQ;
 
     private static final Map<Class<?>, AtomicInteger> IDS = new ConcurrentHashMap<>();
@@ -61,9 +64,20 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
 
     private final int id;
     private @Nullable Map<Class<?>, Consumer<?>> routes;
+    private final Set<Class<?>> approvedCommands = new HashSet<>();
 
     protected BasicAgent() {
         id = IDS.computeIfAbsent(getClass(), klass -> new AtomicInteger(0)).incrementAndGet();
+        approve(AddRouteCommand.class, RemoveRouteCommand.class);
+    }
+
+    /**
+     * Approves commands of the specified types for execution.
+     *
+     * @param types a list of (additionally) approved commands.
+     */
+    @SafeVarargs protected final void approve(final Class<? extends Command>... types) {
+        approvedCommands.addAll(Arrays.asList(types));
     }
 
     @ToString public int getId() {
@@ -88,8 +102,8 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
      *
      * @param message the message to inject.
      */
-    protected void inject(final Message message) {
-        MQ.inject(message);
+    protected <M extends Message> M inject(final M message) {
+        return MQ.inject(message);
     }
 
     @Override public String represent() {
@@ -113,28 +127,33 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
         if (!onMessage(processed, message)) warn(TEXT_MESSAGE_UNPROCESSED, this, message);
     }
 
-    protected boolean onMessage(final boolean processed, final Message message) {
+    protected boolean onMessage(boolean processed, final Message message) {
         if (!processed && message instanceof Command) {
             final Command command = (Command)message;
-            if (approve(command)) command.execute();
+            if (approved(command)) try {
+                command.execute();
+                command.succeed();
+            } catch (Exception e) {
+                command.fail(e);
+            }
             else error(TEXT_COMMAND_NOT_APPROVED, command);
-            return true;
+            processed = true;
         }
-        return false;
+        return processed;
     }
 
     /**
      * Callback invoked to check if the specified command is approved for execution.
      * <p>
-     * The default is to not approve commands for reasons of security.  Classes that overwrite this
-     * method should return with {@code true} for all cases to approve, and finally invoke the super
-     * method which will handle the superclass cases.
+     * The default is to not approve commands for reasons of security except if there is a route for
+     * them.  Classes that overwrite this method should return with {@code true} for all cases to
+     * approve, and finally invoke the super method which will handle the superclass cases.
      *
      * @param command the command to check.
      * @return {@code true} if the command is approved for execution, {@code false} if not.
      */
-    protected boolean approve(final Command command) {
-        return ClassUtil.isAnyOf(command, AddRouteCommand.class, RemoveRouteCommand.class);
+    protected boolean approved(final Command command) {
+        return approvedCommands.stream().anyMatch(cmd -> cmd.isInstance(command));
     }
 
     @Override public URI toURI() {
