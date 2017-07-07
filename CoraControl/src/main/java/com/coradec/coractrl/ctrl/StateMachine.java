@@ -20,8 +20,8 @@
 
 package com.coradec.coractrl.ctrl;
 
-import com.coradec.coracom.model.Request;
 import com.coradec.coracore.model.State;
+import com.coradec.coractrl.com.StartStateMachineRequest;
 import com.coradec.coractrl.model.StateTransition;
 
 import java.util.Collection;
@@ -71,6 +71,6 @@ public interface StateMachine {
      *
      * @return a ticket to track progress of the request.
      */
-    Request start();
+    StartStateMachineRequest start();
 
 }

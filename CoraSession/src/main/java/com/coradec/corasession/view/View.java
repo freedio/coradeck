@@ -18,38 +18,21 @@
  *
  */
 
-package com.coradec.corabus.com;
+package com.coradec.corasession.view;
 
-import com.coradec.corabus.trouble.NodeNotAttachedException;
-import com.coradec.corabus.view.BusContext;
-import com.coradec.corabus.view.Member;
-import com.coradec.coracom.model.SessionRequest;
+import com.coradec.corasession.model.Session;
 
 /**
- * ​Request to join a bus.
+ * ​A view on an object.
+ * <p>
+ * Views are used to disclose a limited (or extended) interface on a particular object.
  */
-public interface Invitation extends SessionRequest {
+public interface View {
 
     /**
-     * Returns the bus context to attach to.
+     * Returns the session context.
      *
-     * @return the bus context.
+     * @return the session context.
      */
-    BusContext getContext();
-
-    /**
-     * Returns the member, if one is attached.
-     *
-     * @return the member.
-     * @throws NodeNotAttachedException if no member is attached.
-     */
-    Member getMember() throws NodeNotAttachedException;
-
-    /**
-     * Sets the member.
-     *
-     * @param member the member view.
-     */
-    void setMember(Member member);
-
+    Session getSession();
 }

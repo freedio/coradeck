@@ -27,7 +27,7 @@ import com.coradec.corabus.model.BusNode;
 import com.coradec.corabus.model.NodeState;
 import com.coradec.corabus.trouble.NodeAlreadyAttachedException;
 import com.coradec.corabus.view.BusContext;
-import com.coradec.coracom.model.Message;
+import com.coradec.corabus.view.Member;
 import com.coradec.coracom.model.Request;
 import com.coradec.coracom.model.Sender;
 import com.coradec.coracore.annotation.Inject;
@@ -35,12 +35,15 @@ import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.ctrl.Factory;
 import com.coradec.coracore.model.State;
 import com.coradec.coracore.util.ClassUtil;
+import com.coradec.coractrl.com.ExecuteStateTransitionRequest;
 import com.coradec.coractrl.ctrl.StateMachine;
 import com.coradec.coractrl.ctrl.impl.BasicAgent;
 import com.coradec.coractrl.model.StateTransition;
 import com.coradec.coractrl.model.impl.AbstractStateTransition;
 import com.coradec.corasession.model.Session;
+import com.coradec.corasession.view.impl.AbstractView;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Optional;
@@ -52,42 +55,50 @@ public class BasicNode extends BasicAgent implements BusNode {
 
     @Inject private static Factory<Request> REQUEST_FACTORY;
 
-    @Inject private StateMachine stateMachine;
-    private final NodeState state;
-    private BusContext contact, context, defaultContext;
+    @SuppressWarnings("WeakerAccess") @Inject StateMachine stateMachine;
+    private NodeState state;
+    private BusContext contact, context;
+    private final BusContext defaultContext;
 
-    @SuppressWarnings("WeakerAccess") public <R extends Message> BasicNode() {
+    @SuppressWarnings("WeakerAccess") public BasicNode() {
         state = UNATTACHED;
+        context = defaultContext = new DefaultBusContext();
         stateMachine.initialize(state);
         addRoute(Invitation.class, this::invite);
+        addRoute(ExecuteStateTransitionRequest.class, this::transit);
     }
 
     @Override public NodeState getState() {
         return state;
     }
 
-    @SuppressWarnings("WeakerAccess") public void invite(final Invitation invitation) {
-        final Sender sender = invitation.getSender();
-        Session session = invitation.getSession();
-        BusContext context = invitation.getContext();
-        stateMachine.addTransitions(getSetupTransitions(session, context));
-        stateMachine.addTransitions(getShutdownTransitions(session));
-        stateMachine.setTargetState(getReadyState());
-        stateMachine.start().reportCompletionTo(invitation);
+    protected void setState(NodeState state) {
+        this.state = state;
+    }
+
+    private BusContext getContext() {
+        return context;
+    }
+
+    private void setContext(final BusContext context) {
+        this.context = context;
     }
 
     /**
      * Returns the setup trajectory for the specified bus context in the context of the specified
-     * session.
+     * session according to the specified invitation.
      *
-     * @param session the session context.
-     * @param context the bus context.
+     * @param session    the session context.
+     * @param context    the bus context.
+     * @param invitation the invitation
      * @return the setup trajectory.
      */
     protected Collection<StateTransition> getSetupTransitions(final Session session,
-                                                              final BusContext context) {
-        return Arrays.asList(new Attaching(session, context), new Attached(session, context),
-                new Initializing(session), new Initialized(session));
+                                                              final BusContext context,
+                                                              final Invitation invitation) {
+        return new ArrayList<>(Arrays.asList(new Attaching(session, context),
+                new Attached(session, context, invitation), new Initializing(session),
+                new Initialized(session)));
     }
 
     /**
@@ -97,8 +108,8 @@ public class BasicNode extends BasicAgent implements BusNode {
      * @return the shutdown trajectory.
      */
     protected Collection<StateTransition> getShutdownTransitions(final Session session) {
-        return Arrays.asList(new Terminating(session), new Terminated(session),
-                new Detaching(session), new Detached(session));
+        return new ArrayList<>(Arrays.asList(new Terminating(session), new Terminated(session),
+                new Detaching(session), new Detached(session)));
     }
 
     /**
@@ -109,6 +120,28 @@ public class BasicNode extends BasicAgent implements BusNode {
      */
     protected State getReadyState() {
         return INITIALIZED;
+    }
+
+    private void transit(final ExecuteStateTransitionRequest request) {
+        final StateTransition transition = request.getTransition();
+        debug("Execute state transition %s", transition);
+        try {
+            final Optional<Request> result = transition.execute();
+            if (result.isPresent()) result.get().reportCompletionTo(request);
+            else request.succeed();
+        } catch (Exception e) {
+            request.fail(e);
+        }
+    }
+
+    @SuppressWarnings("WeakerAccess") private void invite(final Invitation invitation) {
+        final Sender sender = invitation.getSender();
+        Session session = invitation.getSession();
+        BusContext context = invitation.getContext();
+        stateMachine.addTransitions(getSetupTransitions(session, context, invitation));
+        stateMachine.addTransitions(getShutdownTransitions(session));
+        stateMachine.setTargetState(getReadyState());
+        stateMachine.start().reportCompletionTo(invitation);
     }
 
     /**
@@ -131,12 +164,15 @@ public class BasicNode extends BasicAgent implements BusNode {
      */
     @SuppressWarnings("WeakerAccess") protected void onAttaching(final Session session,
                                                                  final BusContext context) {
-        if (context != defaultContext) throw new NodeAlreadyAttachedException();
+        if (this.context != defaultContext) throw new NodeAlreadyAttachedException();
         contact = context;
+        setState(ATTACHING);
     }
 
     /**
      * Interceptor invoked during the state transition from ATTACHING to ATTACHED.
+     * <p>
+     * The base method creates a member context and registers it in the invitation.
      * <p>
      * Can be used to do post-attachment work using the specified bus context in the context of the
      * specified session.  Exceptions should not be thrown by this method except if something really
@@ -149,15 +185,19 @@ public class BasicNode extends BasicAgent implements BusNode {
      * Subclasses can wrap this method early (i.e. override it and invoke the superclass method as
      * soon as possible.
      *
-     * @param session the session context.
-     * @param context the bus context to attach to.
+     * @param session    the session context.
+     * @param context    the bus context to attach to.
+     * @param invitation the invitation to accept.
      */
     @SuppressWarnings("WeakerAccess") protected void onAttach(final Session session,
-                                                              final BusContext context) {
+                                                              final BusContext context,
+                                                              final Invitation invitation) {
         if (contact != context) throw new IllegalArgumentException("context");
         this.context.left(this);
-        this.context = context;
+        setContext(context);
         context.joined(this);
+        setState(ATTACHED);
+        invitation.setMember(new InternalMember(session));
     }
 
     /**
@@ -174,7 +214,7 @@ public class BasicNode extends BasicAgent implements BusNode {
      * @param session the session context.
      */
     @SuppressWarnings("WeakerAccess") protected void onInitializing(final Session session) {
-
+        setState(INITIALIZING);
     }
 
     /**
@@ -190,7 +230,7 @@ public class BasicNode extends BasicAgent implements BusNode {
      * @param session the session context.
      */
     @SuppressWarnings("WeakerAccess") protected void onInitialize(final Session session) {
-
+        setState(INITIALIZED);
     }
 
     /**
@@ -206,7 +246,7 @@ public class BasicNode extends BasicAgent implements BusNode {
      * @param session the session context.
      */
     @SuppressWarnings("WeakerAccess") protected void onTerminating(final Session session) {
-
+        setState(TERMINATING);
     }
 
     /**
@@ -222,7 +262,7 @@ public class BasicNode extends BasicAgent implements BusNode {
      * @param session the session context.
      */
     @SuppressWarnings("WeakerAccess") protected void onTerminate(final Session session) {
-
+        setState(TERMINATED);
     }
 
     /**
@@ -238,6 +278,7 @@ public class BasicNode extends BasicAgent implements BusNode {
      * @param session the session context.
      */
     @SuppressWarnings("WeakerAccess") protected void onDetaching(final Session session) {
+        setState(DETACHING);
     }
 
     /**
@@ -256,6 +297,7 @@ public class BasicNode extends BasicAgent implements BusNode {
         this.context.left(this);
         this.context = defaultContext;
         this.context.joined(this);
+        setState(DETACHED);
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")
@@ -305,10 +347,12 @@ public class BasicNode extends BasicAgent implements BusNode {
     private class Attached extends NodeStateTransition {
 
         private final BusContext context;
+        private final Invitation invitation;
 
-        Attached(final Session session, final BusContext context) {
+        Attached(final Session session, final BusContext context, final Invitation invitation) {
             super(session, ATTACHING, ATTACHED);
             this.context = context;
+            this.invitation = invitation;
         }
 
         @ToString public BusContext getContext() {
@@ -316,7 +360,7 @@ public class BasicNode extends BasicAgent implements BusNode {
         }
 
         @Override protected void onExecute() {
-            onAttach(getSession(), getContext());
+            onAttach(getSession(), getContext(), invitation);
         }
     }
 
@@ -388,5 +432,40 @@ public class BasicNode extends BasicAgent implements BusNode {
 
     @Override public String toString() {
         return ClassUtil.toString(this);
+    }
+
+    @SuppressWarnings("ClassHasNoToStringMethod")
+    private class DefaultBusContext implements BusContext {
+
+        private BusNode node;
+
+        @Override public void left(final BusNode node) {
+            this.node = null;
+        }
+
+        @Override public void joined(final BusNode node) {
+            this.node = node;
+        }
+
+        @Override public Optional<BusNode> getNode() {
+            return Optional.ofNullable(node);
+        }
+    }
+
+    private class InternalMember extends AbstractView implements Member {
+
+        /**
+         * Initializes a new instance of InternalMember with the specified session context.
+         *
+         * @param session the session context.
+         */
+        InternalMember(final Session session) {
+            super(session);
+        }
+
+        @Override public Request dismiss() {
+            stateMachine.setTargetState(DETACHED);
+            return stateMachine.start();
+        }
     }
 }

@@ -22,10 +22,10 @@ package com.coradec.corabus.model.impl;
 
 import static com.coradec.corabus.model.HubState.*;
 
+import com.coradec.corabus.com.Invitation;
 import com.coradec.corabus.model.BusHub;
+import com.coradec.corabus.model.NodeState;
 import com.coradec.corabus.view.BusContext;
-import com.coradec.coracom.model.Request;
-import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.model.State;
 import com.coradec.coractrl.model.StateTransition;
 import com.coradec.corasession.model.Session;
@@ -38,24 +38,33 @@ import java.util.Collections;
  */
 public class BasicHub extends BasicNode implements BusHub {
 
-    protected BasicHub() {
+    @SuppressWarnings("WeakerAccess") public BasicHub() {
     }
 
     @Override protected Collection<StateTransition> getSetupTransitions(final Session session,
-                                                                        final BusContext context) {
-        final Collection<StateTransition> result = super.getSetupTransitions(session, context);
+                                                                        final BusContext context,
+                                                                        final Invitation
+                                                                                invitation) {
+        final Collection<StateTransition> result =
+                super.getSetupTransitions(session, context, invitation);
         Collections.addAll(result, new Loading(session), new Loaded(session));
         return result;
     }
 
     @Override protected Collection<StateTransition> getShutdownTransitions(final Session session) {
         final Collection<StateTransition> result = super.getShutdownTransitions(session);
-        Collections.addAll(result, new Unloading(session), new Unloaded(session));
+        Collections.addAll(result, new Unloading(session), new Unloaded(session),
+                new Terminating(session));
         return result;
     }
 
+    @Override protected void setState(final NodeState state) {
+        debug("Setting state to %s", state);
+        super.setState(state);
+    }
+
     @Override protected State getReadyState() {
-        return super.getReadyState();
+        return LOADED;
     }
 
     /**
@@ -71,6 +80,7 @@ public class BasicHub extends BasicNode implements BusHub {
      * @param session the session context.
      */
     @SuppressWarnings("WeakerAccess") protected void onLoading(final Session session) {
+        setState(LOADING);
     }
 
     /**
@@ -88,6 +98,7 @@ public class BasicHub extends BasicNode implements BusHub {
      * @param session the session context.
      */
     @SuppressWarnings("WeakerAccess") protected void onLoad(final Session session) {
+        setState(LOADED);
     }
 
     /**
@@ -103,6 +114,7 @@ public class BasicHub extends BasicNode implements BusHub {
      * @param session the session context.
      */
     @SuppressWarnings("WeakerAccess") void onUnloading(final Session session) {
+        setState(UNLOADING);
     }
 
     /**
@@ -118,12 +130,11 @@ public class BasicHub extends BasicNode implements BusHub {
      * @param session the session context.
      */
     @SuppressWarnings("WeakerAccess") void onUnload(final Session session) {
+        setState(UNLOADED);
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")
     private class Loading extends NodeStateTransition {
-
-        @Inject private Request Request;
 
         Loading(final Session session) {
             super(session, INITIALIZED, LOADING);
@@ -138,8 +149,6 @@ public class BasicHub extends BasicNode implements BusHub {
     @SuppressWarnings("ClassHasNoToStringMethod")
     private class Loaded extends NodeStateTransition {
 
-        @Inject private Request Request;
-
         Loaded(final Session session) {
             super(session, LOADING, LOADED);
         }
@@ -151,8 +160,6 @@ public class BasicHub extends BasicNode implements BusHub {
 
     @SuppressWarnings("ClassHasNoToStringMethod")
     private class Unloading extends NodeStateTransition {
-
-        @Inject private Request Request;
 
         Unloading(final Session session) {
             super(session, LOADED, UNLOADING);
@@ -166,14 +173,24 @@ public class BasicHub extends BasicNode implements BusHub {
     @SuppressWarnings("ClassHasNoToStringMethod")
     private class Unloaded extends NodeStateTransition {
 
-        @Inject private Request Request;
-
         Unloaded(final Session session) {
             super(session, UNLOADING, UNLOADED);
         }
 
         @Override protected void onExecute() {
             onUnload(getSession());
+        }
+    }
+
+    @SuppressWarnings("ClassHasNoToStringMethod")
+    private class Terminating extends NodeStateTransition {
+
+        Terminating(final Session session) {
+            super(session, UNLOADED, TERMINATING);
+        }
+
+        @Override protected void onExecute() {
+            onTerminating(getSession());
         }
     }
 

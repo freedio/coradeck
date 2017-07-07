@@ -53,7 +53,7 @@ public class RequestState implements State {
     }
 
     @Override public String toString() {
-        return ClassUtil.toString(this);
+        return ClassUtil.toString(this, this);
     }
 
 }

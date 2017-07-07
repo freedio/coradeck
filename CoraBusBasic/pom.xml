@@ -56,12 +56,17 @@
         </dependency>
         <dependency>
             <groupId>com.coradec.coradeck</groupId>
+            <artifactId>coratext</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.coradec.coradeck</groupId>
             <artifactId>coratype-basic</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.coradec.coradeck</groupId>
             <artifactId>coractrl-basic</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.coradec.coradeck</groupId>
@@ -91,6 +96,11 @@
         <dependency>
             <groupId>com.coradec.coradeck</groupId>
             <artifactId>coracom-basic</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 

@@ -65,7 +65,7 @@ public class CoradeckJUnit4TestRunner extends BlockJUnit4ClassRunner {
             final String level = String.valueOf(syslog_level.get(null));
             Syslog.setLevel(level);
             if (level.equals("DEBUG") || level.equals("TRACE"))
-                getClassLoader().showImpplementations();
+                getClassLoader().showImplementations();
         } catch (IllegalAccessException | NoSuchFieldException e) {
             // static field SYSLOG_LEVEL undefined/not accessible ⇒ don't change current log level
         }

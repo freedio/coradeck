@@ -28,6 +28,7 @@ import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Sender;
 import com.coradec.coracom.model.impl.BasicSessionRequest;
 import com.coradec.coracore.annotation.Implementation;
+import com.coradec.coracore.annotation.NonNull;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.corasession.model.Session;
@@ -63,6 +64,10 @@ public class BasicInvitation extends BasicSessionRequest implements Invitation {
     @Override public Member getMember() throws NodeNotAttachedException {
         if (member == null) throw new NodeNotAttachedException();
         return member;
+    }
+
+    @Override public void setMember(final @NonNull Member member) {
+        this.member = member;
     }
 
 }

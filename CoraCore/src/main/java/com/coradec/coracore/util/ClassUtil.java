@@ -54,8 +54,8 @@ import java.util.stream.Stream;
 public class ClassUtil {
 
     private static final RecursiveObjects REGISTRY = RecursiveObjects.getInstance();
-    @SuppressWarnings("ArraysAsListWithZeroOrOneArgument")
-    private static final Set<String> IGNORED_PROPERTIES = new HashSet<>(Arrays.asList("Class"));
+    @SuppressWarnings("ArraysAsListWithZeroOrOneArgument") private static final Set<String>
+            IGNORED_PROPERTIES = new HashSet<>(Arrays.asList("Class"));
     private static final Class[] VALUE_CLASSES = {
             String.class, Number.class, Date.class, Throwable.class, Boolean.class, Character.class,
             CharSequence.class, Collection.class, Map.class, URL.class,
@@ -67,7 +67,8 @@ public class ClassUtil {
         if (klass.isArray()) return arrayOf(klass.getComponentType(), o);
         if (Stream.of(VALUE_CLASSES).anyMatch(c -> c.isInstance(o))) return valueOf(klass, o);
         String result;
-        if (REGISTRY.contains(o)) return String.format("<@%08x>", System.identityHashCode(o));
+        if (REGISTRY.contains(o))
+            return String.format("%s<@%08x>", o.getClass().getName(), System.identityHashCode(o));
         REGISTRY.add(o);
         try {
             final String attributes = //

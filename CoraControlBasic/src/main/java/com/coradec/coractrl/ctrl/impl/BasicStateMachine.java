@@ -43,7 +43,6 @@ import com.coradec.coratext.model.Text;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -65,7 +64,6 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
     @SuppressWarnings("WeakerAccess") State currentState, targetState;
     private final Set<StateTransition> transitions = new HashSet<>();
     private final Set<Trajectory> trajectories = new HashSet<>();
-    private Comparator<? super Trajectory> tranjectorySorter;
 
     /**
      * Initializes a new instance of BasicStateMachine on behalf of the specified recipient.
@@ -138,18 +136,23 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
      * Computes the trajectories from the current state to the target state.
      */
     private void computeTrajectories() {
-        final Set<Trajectory> trajectories =
-                getTransitionsTo(getTargetState()).map(this::trajectoryFrom).collect(toSet());
-        // extract direct trajectory, if any:
-        for (Iterator<Trajectory> it = trajectories.iterator(); it.hasNext(); ) {
-            final Trajectory trajectory = it.next();
-            if (trajectory.connects(getCurrentState(), getTargetState())) {
-                this.trajectories.add(trajectory);
-                it.remove();
-                break;
+        final Set<Trajectory> trajectories;
+        try {
+            trajectories =
+                    getTransitionsTo(getTargetState()).map(this::trajectoryFrom).collect(toSet());
+            // extract direct trajectory, if any:
+            for (Iterator<Trajectory> it = trajectories.iterator(); it.hasNext(); ) {
+                final Trajectory trajectory = it.next();
+                if (trajectory.connects(getCurrentState(), getTargetState())) {
+                    this.trajectories.add(trajectory);
+                    it.remove();
+                    break;
+                }
             }
+            findTrajectories(getCurrentState(), trajectories);
+        } catch (Throwable e) {
+            e.printStackTrace();
         }
-        findTrajectories(getCurrentState(), trajectories);
     }
 
     /**
@@ -200,6 +203,7 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
     private void proceed(final InternalStartMachineRequest request)
             throws StateMachineStalledException {
         while (getCurrentState() != getTargetState()) {
+            debug("Proceeding from %s to %s", getCurrentState(), getTargetState());
             final State state = getCurrentState();
             request.addState(state);
             try {
@@ -219,6 +223,7 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
                     final State newState = transition.getTerminalState();
                     setCurrentState(newState);
                     if (newState == getTargetState()) {
+                        debug("Trajectory successful, reached state %s", newState);
                         request.addState(newState);
                         request.succeed();
                     }
@@ -259,6 +264,7 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
          */
         InternalStartMachineRequest() {
             super(BasicStateMachine.this);
+            getTrajectories().clear();
         }
 
         void addState(final State state) {

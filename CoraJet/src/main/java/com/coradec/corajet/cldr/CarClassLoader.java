@@ -23,6 +23,8 @@ package com.coradec.corajet.cldr;
 import static java.nio.file.StandardOpenOption.*;
 
 import com.coradec.coracore.annotation.Nullable;
+import com.coradec.coracore.collections.impl.BasicHashCache;
+import com.coradec.coracore.trouble.BasicException;
 import com.coradec.coracore.trouble.ObjectInstantiationFailure;
 
 import java.io.File;
@@ -71,9 +73,10 @@ public class CarClassLoader extends ClassLoader {
     private final Object injector;
     private final Method embed, analyze, implement;
     private final Map<String, List<URL>> resourceMap;
+    private final Map<String, Class<?>> classes = new HashMap<>();
+    private final Map<String, byte[]> classData = new BasicHashCache<>();
     private final Set<String> components = new HashSet<>();
     private final Set<String> implementations = new HashSet<>();
-    private final Map<String, Class<?>> classes = new HashMap<>();
     private final List<String> fileList = new LinkedList<>();
     private final boolean outputInjectedFiles;
 
@@ -205,9 +208,10 @@ public class CarClassLoader extends ClassLoader {
      *
      * @param name     the name of the class.
      * @param location the location of the class.
-     * @throws IOException if the class failed to be read.
+     * @throws InstantiationException if the class failed to be loaded.
      */
-    private void parseAnnotations(final String name, final URL location) throws IOException {
+    private void parseAnnotations(final String name, final URL location)
+            throws InstantiationException {
         readClass(name.replaceFirst("\\.class$", "").replace('/', '.'), location, false, true);
     }
 
@@ -288,7 +292,7 @@ public class CarClassLoader extends ClassLoader {
      * @param list   the list of classes (optional).
      */
     private void registerComponents(final String jarURL, final @Nullable String list) {
-//        Syslog.debug("Registering components from list \"%s\"", list);
+        Syslog.trace("Registering components from list \"%s\"", list);
         if (list != null && !list.isEmpty()) {
             Collections.addAll(components, list.split("\\s+"));
         }
@@ -302,7 +306,7 @@ public class CarClassLoader extends ClassLoader {
      * @param list   the list of classes (optional).
      */
     private void registerImplementations(final String jarURL, final @Nullable String list) {
-//        Syslog.debug("Registering implementations from list \"%s\"", list);
+        Syslog.trace("Registering implementations from list \"%s\"", list);
         if (list != null && !list.isEmpty()) {
             Collections.addAll(implementations, list.split("\\s+"));
         }
@@ -342,6 +346,7 @@ public class CarClassLoader extends ClassLoader {
         Class<?> klass;
         try {
             klass = findClass(name);
+            if (resolve) resolveClass(klass);
         } catch (ClassNotFoundException e) {
             klass = super.loadClass(name, resolve);
         }
@@ -350,22 +355,24 @@ public class CarClassLoader extends ClassLoader {
 
     @Override public Class<?> findClass(final String name) throws ClassNotFoundException {
         if (name.startsWith("java.") || name.startsWith("sun.")) return super.findClass(name);
-        try {
-            return classes.computeIfAbsent(name, k -> {
-                URL location = findResource(toResourceName(name));
-                //        Syslog.debug("findClass(%s) -> location = %s%n", name, location);
-                try {
-                    if (location == null) return super.findClass(name);
-                    else return loadClass(name, location);
-                } catch (IOException e) {
-                    throw new UnsupportedOperationException(new ClassNotFoundException(name, e));
-                } catch (ClassNotFoundException e) {
-                    throw new UnsupportedOperationException(e);
-                }
-            });
-        } catch (UnsupportedOperationException e) {
-            throw (ClassNotFoundException)e.getCause();
+        final Exception[] problem = new Exception[1];
+        final Class<?> result = classes.computeIfAbsent(name, k -> {
+            URL location = findResource(toResourceName(name));
+            try {
+                if (location == null) return super.findClass(name);
+                else return loadClass(name, location);
+            } catch (Exception e) {
+                Syslog.error(e);
+                problem[0] = e;
+                throw BasicException.wrapIfNecessary(e);
+            }
+        });
+        if (problem[0] != null) {
+            if (problem[0] instanceof ClassNotFoundException)
+                throw (ClassNotFoundException)problem[0];
+            else throw new ClassNotFoundException("Failed to load clas", problem[0]);
         }
+        return result;
     }
 
     /**
@@ -390,14 +397,14 @@ public class CarClassLoader extends ClassLoader {
     }
 
     /**
-     * Loads the closs with the specified name from the specified location.
+     * Loads the class with the specified name from the specified location.
      *
      * @param name     the name of the class.
      * @param location the location.
      * @return the loaded, emdedded and defined class.
-     * @throws IOException if the class failed to be read from its source.
      */
-    private Class<?> loadClass(final String name, final URL location) throws IOException {
+    private Class<?> loadClass(final String name, final URL location)
+            throws InstantiationException {
         Syslog.debug("Loading class %s from %s", name, location);
         byte[] data = readClass(name, location,
                 components.contains(name) || implementations.contains(name), false);
@@ -405,29 +412,39 @@ public class CarClassLoader extends ClassLoader {
     }
 
     private byte[] readClass(final String name, final URL location, final boolean doEmbed,
-                             final boolean doAnalyze) throws IOException {
-        final InputStream in = location.openStream();
-        final int blocksize = 65536;
-        byte[] buffer = new byte[blocksize];  // should covert 99% of all classes.
-        int buflen = 0;
-        for (int len = in.read(buffer, buflen, buffer.length - buflen);
-             len != -1;
-             len = in.read(buffer, buflen, buffer.length - buflen)) {
-            buflen += len;
-            if (buflen == buffer.length) buffer = Arrays.copyOf(buffer, buflen + blocksize);
-        }
-        byte[] data = Arrays.copyOfRange(buffer, 0, buflen);
-        if (injector != null) {
-            if (doEmbed) {
-                Syslog.debug(">> Injector.embed(%s)", name);
-                try {
-                    data = (byte[])embed.invoke(injector, name, buffer, 0, buflen);
-                } catch (final Exception e) {
-                    Syslog.error(e);
+                             final boolean doAnalyze) throws InstantiationException {
+//        Syslog.info("Reading class %s for %s", name,
+//                doEmbed ? "embedding" : doAnalyze ? "analysis" : "loading");
+        final InstantiationException[] problems = new InstantiationException[1];
+        final byte[] buffer = classData.computeIfAbsent(name, cname -> {
+            final int blocksize = 65536;
+            byte[] buf = new byte[blocksize];  // should covert 99% of all classes.
+            int buflen = 0;
+            try (final InputStream in = location.openStream()) {
+                for (int len = in.read(buf, buflen, buf.length - buflen);
+                     len != -1;
+                     len = in.read(buf, buflen, buf.length - buflen)) {
+                    buflen += len;
+                    if (buflen == buf.length) buf = Arrays.copyOf(buf, buflen + blocksize);
                 }
-            } else if (doAnalyze) {
-                Syslog.debug(">> Injector.analyze(%s)", name);
-                try {
+            } catch (IOException e) {
+                final InstantiationException err =
+                        new InstantiationException("Failed to read class file!");
+                err.initCause(e);
+                problems[0] = err;
+            }
+            return Arrays.copyOfRange(buf, 0, buflen);
+        });
+        final int buflen = buffer.length;
+        byte[] data = buffer;
+        if (problems[0] != null) throw problems[0];
+        if (injector != null) {
+            try {
+                if (doEmbed) {
+                    Syslog.debug(">> Injector.embed(%s)", name);
+                    data = (byte[])embed.invoke(injector, name, buffer, 0, buflen);
+                } else if (doAnalyze) {
+                    Syslog.debug(">> Injector.analyze(%s)", name);
                     int state = (int)analyze.invoke(injector, name, buffer, 0, buflen);
                     if ((state & 1) != 0) {
                         Syslog.debug("-> Adding as component");
@@ -437,13 +454,20 @@ public class CarClassLoader extends ClassLoader {
                         Syslog.debug("-> Adding as implementation");
                         implementations.add(name);
                     }
-                } catch (final Exception e) {
-                    Syslog.error(e);
                 }
+            } catch (final Exception e) {
+                final InstantiationException err =
+                        new InstantiationException("Static injection failed!");
+                err.initCause(e);
+                throw err;
             }
         }
-        if (outputInjectedFiles)
-            Files.write(Paths.get("/tmp/", name + ".class"), data, CREATE, TRUNCATE_EXISTING);
+        try {
+            if (outputInjectedFiles)
+                Files.write(Paths.get("/tmp/", name + ".class"), data, CREATE, TRUNCATE_EXISTING);
+        } catch (IOException e) {
+            Syslog.warn(e);
+        }
         return data;
     }
 
@@ -462,7 +486,8 @@ public class CarClassLoader extends ClassLoader {
         return result;
     }
 
-    public void showImpplementations() {
+    public void showImplementations() {
         Syslog.info("Collected implementations: %s", implementations);
     }
+
 }

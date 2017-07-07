@@ -18,38 +18,35 @@
  *
  */
 
-package com.coradec.corabus.com;
+package com.coradec.corasession.view.impl;
 
-import com.coradec.corabus.trouble.NodeNotAttachedException;
-import com.coradec.corabus.view.BusContext;
-import com.coradec.corabus.view.Member;
-import com.coradec.coracom.model.SessionRequest;
+import com.coradec.coracore.annotation.ToString;
+import com.coradec.coracore.util.ClassUtil;
+import com.coradec.corasession.model.Session;
+import com.coradec.corasession.view.View;
 
 /**
- * ​Request to join a bus.
+ * ​​Basic implementation of a view.
  */
-public interface Invitation extends SessionRequest {
+public class AbstractView implements View {
+
+    private final Session session;
 
     /**
-     * Returns the bus context to attach to.
+     * Initializes a new instance of AbstractView with the specified session context.
      *
-     * @return the bus context.
+     * @param session the session context.
      */
-    BusContext getContext();
+    protected AbstractView(final Session session) {
+        this.session = session;
+    }
 
-    /**
-     * Returns the member, if one is attached.
-     *
-     * @return the member.
-     * @throws NodeNotAttachedException if no member is attached.
-     */
-    Member getMember() throws NodeNotAttachedException;
+    @ToString @Override public Session getSession() {
+        return session;
+    }
 
-    /**
-     * Sets the member.
-     *
-     * @param member the member view.
-     */
-    void setMember(Member member);
+    @Override public String toString() {
+        return ClassUtil.toString(this);
+    }
 
 }

@@ -44,6 +44,7 @@
             <groupId>com.coradec.coradeck</groupId>
             <artifactId>coralog</artifactId>
         </dependency>
+
         <dependency>
             <groupId>com.coradec.coradeck</groupId>
             <artifactId>corajet</artifactId>

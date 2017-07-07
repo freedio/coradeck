@@ -21,11 +21,12 @@
 package com.coradec.corabus.view;
 
 import com.coradec.coracom.model.Request;
+import com.coradec.corasession.view.View;
 
 /**
  * ​Member view of a bus node on behalf of a bus context.
  */
-public interface Member {
+public interface Member extends View {
 
     /**
      * Dismisses the member from its current context.

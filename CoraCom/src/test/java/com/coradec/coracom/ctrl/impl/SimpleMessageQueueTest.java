@@ -48,7 +48,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @RunWith(CoradeckJUnit4TestRunner.class)
 public class SimpleMessageQueueTest {
 
-    public static final String SYSLOG_LEVEL = "DEBUG";
+    public static final String SYSLOG_LEVEL = "INFORMATION";
     private static final int AGENT_WORKTIME = 5;
 
     static {

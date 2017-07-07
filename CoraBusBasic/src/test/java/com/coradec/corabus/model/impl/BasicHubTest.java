@@ -18,21 +18,24 @@
  *
  */
 
-package com.coradec.coracom.com;
+package com.coradec.corabus.model.impl;
 
-import com.coradec.coracom.model.Event;
-import com.coradec.coracom.model.Request;
+import static com.coradec.corabus.model.HubState.*;
+
+import com.coradec.corajet.test.CoradeckJUnit4TestRunner;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 /**
- * ​Notification signalling that an observed request has been completed (successfully, with failure,
- * or cancelled).
+ * ​​Test suite for the BasicHub
  */
-public interface RequestCompleteEvent extends Event {
+@RunWith(CoradeckJUnit4TestRunner.class)
+public class BasicHubTest extends BasicBusTest {
 
-    /**
-     * Returns the complete request.
-     *
-     * @return the complete request.
-     */
-    Request getRequest();
+    private final BasicHub testee = new BasicHub();
+
+    @Test public void normalSetupAndShutdownShouldWork() throws InterruptedException {
+        testNormalSetupAndShutdown(testee, LOADED);
+    }
+
 }

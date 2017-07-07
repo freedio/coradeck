@@ -60,6 +60,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Implementation(SINGLETON)
 public class CentralMessageQueue extends Logger implements MultiThreadedMessageQueue {
 
+    static final AtomicInteger MP_ID_GEN = new AtomicInteger(0);
     private static final Property<Integer> PROP_HIGH_WATER_MARK =
             Property.define("HighWaterMark", Integer.class, 20);
     private static final Property<Integer> PROP_LOW_WATER_MARK =
@@ -68,7 +69,6 @@ public class CentralMessageQueue extends Logger implements MultiThreadedMessageQ
             LocalizedText.define("QueueDispatcherStarted");
     static final Property<Duration> PROP_PATIENCE =
             Property.define("Patience", Duration.class, Duration.of(20, SECONDS));
-    static final AtomicInteger MP_ID_GEN = new AtomicInteger(0);
     private static final Property<Integer> PROP_QQ_SIZE =
             Property.define("QueueQueueSize", Integer.class, 1024);
 
@@ -110,6 +110,7 @@ public class CentralMessageQueue extends Logger implements MultiThreadedMessageQ
             if (recipients.isEmpty()) throw new MessageUndeliverableException(message);
         }
         message.setDeliveries(recipients.size());
+        debug("Injecting message %s", message);
         try {
             qman.acquire();
             for (Recipient recipient : recipients) {
@@ -154,7 +155,7 @@ public class CentralMessageQueue extends Logger implements MultiThreadedMessageQ
 
         @Override public void run() {
             final Duration patience = PROP_PATIENCE.value();
-            debug("%s starting (patientce = %s).", getName(), patience);
+//            debug("%s starting (patientce = %s).", getName(), patience);
             do {
                 try {
                     if (!queues.tryAcquire(patience.getAmount(), patience.getUnit()))
@@ -176,6 +177,7 @@ public class CentralMessageQueue extends Logger implements MultiThreadedMessageQ
                     final Message message = queue.poll();
 //                    debug("%s: Acquired %s", getName(), message);
                     if (message != null) {
+                        debug("Delivering message %s to recipient %s", message, recipient);
                         recipient.onMessage(message);
                         message.onDeliver();
 //                        debug("%s: Delivered %s", getName(), message);
@@ -189,13 +191,13 @@ public class CentralMessageQueue extends Logger implements MultiThreadedMessageQ
                         }
                     }
                 } catch (InterruptedException e) {
-                    debug("%s interrupted.", getName());
+//                    debug("%s interrupted.", getName());
                     break;
                 } catch (Exception e) {
                     error(e);
                 }
             } while (true);
-            debug("%s terminated.", getName());
+//            debug("%s terminated.", getName());
             processors.remove(this);
         }
 

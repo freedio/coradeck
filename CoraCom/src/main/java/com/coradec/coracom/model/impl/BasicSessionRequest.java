@@ -51,4 +51,5 @@ public class BasicSessionRequest extends BasicRequest implements SessionRequest 
     @Override @ToString public Session getSession() {
         return session;
     }
+
 }

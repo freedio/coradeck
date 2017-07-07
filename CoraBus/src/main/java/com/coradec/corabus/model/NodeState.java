@@ -29,13 +29,13 @@ import com.coradec.coracore.util.ClassUtil;
 @SuppressWarnings("WeakerAccess")
 public class NodeState implements State {
 
-    public static final NodeState UNATTACHED = new NodeState("DETACHED", 0);
+    public static final NodeState UNATTACHED = new NodeState("UNATTACHED", 0);
     public static final NodeState ATTACHING = new NodeState("ATTACHING", 100);
     public static final NodeState ATTACHED = new NodeState("ATTACHED", 200);
-    public static final NodeState INITIALIZING = new NodeState("INITALIZING", 300);
+    public static final NodeState INITIALIZING = new NodeState("INITIALIZING", 300);
     public static final NodeState INITIALIZED = new NodeState("INITIALIZED", 400);
     public static final NodeState TERMINATING = new NodeState("TERMINATING", 9700);
-    public static final NodeState TERMINATED = new NodeState("TYERMINATED", 9800);
+    public static final NodeState TERMINATED = new NodeState("TERMINATED", 9800);
     public static final NodeState DETACHING = new NodeState("DETACHING", 9900);
     public static final NodeState DETACHED = new NodeState("DETACHED", 10000);
 
@@ -60,6 +60,7 @@ public class NodeState implements State {
     }
 
     @Override public String toString() {
-        return ClassUtil.toString(this);
+        return ClassUtil.toString(this, this);
     }
+
 }

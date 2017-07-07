@@ -49,20 +49,18 @@ import java.util.function.Consumer;
 /**
  * ​​Basic implementation of an agent.
  */
-@SuppressWarnings("WeakerAccess")
+@SuppressWarnings({"WeakerAccess", "PublicField"})
 @Implementation
 public class BasicAgent extends Logger implements Agent, Recipient, Sender {
 
+    private static final Map<Class<?>, AtomicInteger> IDS = new ConcurrentHashMap<>();
     private static final Text TEXT_MESSAGE_BOUNCED = LocalizedText.define("MessageBounced");
     private static final Text TEXT_COMMAND_NOT_APPROVED =
             LocalizedText.define("CommandNotApproved");
-    @SuppressWarnings("ProtectedField") @Inject
-    private static MessageQueue MQ;
-
-    private static final Map<Class<?>, AtomicInteger> IDS = new ConcurrentHashMap<>();
     private static final Text TEXT_MESSAGE_UNPROCESSED = LocalizedText.define("MessageUnprocessed");
-
     private final int id;
+
+    @Inject private MessageQueue MQ;
     private @Nullable Map<Class<?>, Consumer<?>> routes;
     private final Set<Class<?>> approvedCommands = new HashSet<>();
 

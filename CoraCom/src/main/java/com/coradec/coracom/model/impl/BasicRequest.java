@@ -35,7 +35,6 @@ import com.coradec.coracom.model.Sender;
 import com.coradec.coracom.state.RequestState;
 import com.coradec.coracom.trouble.RequestFailedException;
 import com.coradec.coracore.annotation.Implementation;
-import com.coradec.coracore.annotation.NonNull;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.trouble.OperationInterruptedException;
@@ -85,11 +84,54 @@ public class BasicRequest extends BasicEvent implements Request, Asynchronous {
     }
 
     protected void setRequestState(final RequestState state) {
-        MQ.inject(new SetStateCommand(state));
+        this.requestState = state;
+        this.states.add(state);
+        if (state == SUCCESSFUL) {
+            if (!this.successCallbacks.isEmpty()) {
+                for (final Runnable successCallback : this.successCallbacks) {
+                    try {
+//                            debug("success >> %s", successCallback);
+                        successCallback.run();
+                    } catch (Exception e) {
+                        error(e);
+                    }
+                }
+                this.successCallbacks.clear();
+            }
+            sendCompletionEvents();
+            this.completion.release();
+        } else if (state == FAILED || state == CANCELLED) {
+            if (!this.failureCallbacks.isEmpty()) {
+                final Throwable problem = getProblem();
+                for (final Consumer<Throwable> failureCallback : this.failureCallbacks) {
+                    try {
+//                            debug("failure >> %s", failureCallback);
+                        failureCallback.accept(problem);
+                    } catch (Exception e) {
+                        error(e);
+                    }
+                }
+                this.failureCallbacks.clear();
+            }
+            sendCompletionEvents();
+            this.completion.release();
+        }
     }
 
-    private void setRequestState(final RequestState state, final Throwable problem) {
-        MQ.inject(new SetStateCommand(state, problem));
+    private void setRequestState(final RequestState state, @Nullable final Throwable problem) {
+        this.problem = problem;
+        setRequestState(state);
+    }
+
+    private void sendCompletionEvents() {
+        final Set<Observer> completionObservers = this.completionObservers;
+        if (!completionObservers.isEmpty()) {
+            RequestCompleteEvent event = new RequestCompleteEventImpl();
+            for (final Observer observer : completionObservers) {
+                debug("Completion event to %s", observer);
+                observer.notify(event);
+            }
+        }
     }
 
     private RequestState getRequestState() {
@@ -136,7 +178,7 @@ public class BasicRequest extends BasicEvent implements Request, Asynchronous {
         setRequestState(SUCCESSFUL);
     }
 
-    @Override public void fail(final Throwable problem) {
+    @Override public void fail(@Nullable final Throwable problem) {
         setRequestState(FAILED, problem);
     }
 
@@ -162,11 +204,7 @@ public class BasicRequest extends BasicEvent implements Request, Asynchronous {
     }
 
     @Override public void reportCompletionTo(final Observer observer) {
-        addCompletionObserver(observer);
-    }
-
-    private void addCompletionObserver(final Observer request) {
-        MQ.inject(new AddCompletionObserverCommand(request));
+        MQ.inject(new AddCompletionObserverCommand(observer));
     }
 
     @Override public Request andThen(final Runnable action) {
@@ -213,6 +251,12 @@ public class BasicRequest extends BasicEvent implements Request, Asynchronous {
     }
 
     @Override public boolean notify(final Event event) {
+        if (event instanceof RequestCompleteEvent) {
+            final Request request = ((RequestCompleteEvent)event).getRequest();
+            if (request.isSuccessful()) succeed();
+            if (request.isCancelled()) cancel();
+            if (request.isFailed()) fail(getProblem());
+        }
         return true;
     }
 
@@ -244,69 +288,11 @@ public class BasicRequest extends BasicEvent implements Request, Asynchronous {
 
         @Override public void execute() {
             if (BasicRequest.this.isComplete()) {
-                if (observer.notify(new RequestCompleteEventImpl()))
-                    BasicRequest.this.completionObservers.remove(observer);
+                debug("Sending completion event directly to %s", observer);
+                observer.notify(new RequestCompleteEventImpl());
             } else BasicRequest.this.completionObservers.add(observer);
         }
 
-    }
-
-    private class SetStateCommand extends AbstractCommand {
-
-        private final RequestState state;
-        private final @Nullable Throwable problem;
-
-        public SetStateCommand(final RequestState state) {
-            super(BasicRequest.this);
-            this.state = state;
-            this.problem = null;
-        }
-
-        public SetStateCommand(final RequestState state, final @NonNull Throwable problem) {
-            super(BasicRequest.this);
-            this.state = state;
-            this.problem = problem;
-        }
-
-        @Override public boolean isUrgent() {
-            return true;
-        }
-
-        @Override public void execute() {
-//            debug("%s → %s", requestState, state);
-            BasicRequest.this.requestState = state;
-            BasicRequest.this.states.add(state);
-            if (problem != null) BasicRequest.this.problem = problem;
-            if (state == SUCCESSFUL) {
-                if (!BasicRequest.this.successCallbacks.isEmpty()) {
-                    for (final Runnable successCallback : BasicRequest.this.successCallbacks) {
-                        try {
-//                            debug("success >> %s", successCallback);
-                            successCallback.run();
-                        } catch (Exception e) {
-                            error(e);
-                        }
-                    }
-                    BasicRequest.this.successCallbacks.clear();
-                }
-                BasicRequest.this.completion.release();
-            } else if (state == FAILED || state == CANCELLED) {
-                if (!BasicRequest.this.failureCallbacks.isEmpty()) {
-                    final Throwable problem = getProblem();
-                    for (final Consumer<Throwable> failureCallback : BasicRequest.this
-                            .failureCallbacks) {
-                        try {
-//                            debug("failure >> %s", failureCallback);
-                            failureCallback.accept(problem);
-                        } catch (Exception e) {
-                            error(e);
-                        }
-                    }
-                    BasicRequest.this.failureCallbacks.clear();
-                }
-                BasicRequest.this.completion.release();
-            }
-        }
     }
 
     private class RequestCompleteEventImpl extends BasicEvent implements RequestCompleteEvent {
@@ -318,7 +304,7 @@ public class BasicRequest extends BasicEvent implements Request, Asynchronous {
             super(BasicRequest.this);
         }
 
-        @ToString public Request getRequest() {
+        @Override @ToString public Request getRequest() {
             return (Request)getSender();
         }
 
