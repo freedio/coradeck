@@ -105,6 +105,7 @@ public class CarClassLoader extends ClassLoader {
                 final URL resource = findResource(file);
                 if (resource != null) parseAnnotations(file, resource);
             }
+            Syslog.info("Loading implementation classes ...");
             implementations.forEach(implementation -> {
                 try {
                     findClass(implementation);
@@ -112,6 +113,7 @@ public class CarClassLoader extends ClassLoader {
                     Syslog.error(e);
                 }
             });
+            Syslog.info("Ready.");
             Syslog.debug("Collected components: %s", components);
             Syslog.debug("Collected implementations: %s", implementations);
         } catch (Exception e) {

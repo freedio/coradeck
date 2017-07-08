@@ -126,9 +126,9 @@ public class BasicRequest extends BasicEvent implements Request, Asynchronous {
     private void sendCompletionEvents() {
         final Set<Observer> completionObservers = this.completionObservers;
         if (!completionObservers.isEmpty()) {
-            RequestCompleteEvent event = new RequestCompleteEventImpl();
+            RequestCompleteEvent event = new RequestCompleteEventImpl(this);
             for (final Observer observer : completionObservers) {
-                debug("Completion event to %s", observer);
+//                debug("Completion event to %s", observer);
                 observer.notify(event);
             }
         }
@@ -209,7 +209,7 @@ public class BasicRequest extends BasicEvent implements Request, Asynchronous {
 
     @Override public Request andThen(final Runnable action) {
         if (isSuccessful()) {
-            debug("Exec direct of success action %s", action);
+//            debug("Exec direct of success action %s", action);
             action.run();
         } else successCallbacks.add(action);
         return this;
@@ -288,8 +288,8 @@ public class BasicRequest extends BasicEvent implements Request, Asynchronous {
 
         @Override public void execute() {
             if (BasicRequest.this.isComplete()) {
-                debug("Sending completion event directly to %s", observer);
-                observer.notify(new RequestCompleteEventImpl());
+//                debug("Sending completion event directly to %s", observer);
+                observer.notify(new RequestCompleteEventImpl(BasicRequest.this));
             } else BasicRequest.this.completionObservers.add(observer);
         }
 
@@ -297,15 +297,20 @@ public class BasicRequest extends BasicEvent implements Request, Asynchronous {
 
     private class RequestCompleteEventImpl extends BasicEvent implements RequestCompleteEvent {
 
+        private final BasicRequest request;
+
         /**
          * Initializes a new instance of RequestCompleteEvent.
+         *
+         * @param request the request to report complete.
          */
-        public RequestCompleteEventImpl() {
+        public RequestCompleteEventImpl(final BasicRequest request) {
             super(BasicRequest.this);
+            this.request = request;
         }
 
         @Override @ToString public Request getRequest() {
-            return (Request)getSender();
+            return request;
         }
 
     }

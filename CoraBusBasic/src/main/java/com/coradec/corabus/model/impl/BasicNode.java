@@ -124,7 +124,7 @@ public class BasicNode extends BasicAgent implements BusNode {
 
     private void transit(final ExecuteStateTransitionRequest request) {
         final StateTransition transition = request.getTransition();
-        debug("Execute state transition %s", transition);
+//        debug("Executing state transition %s", transition);
         try {
             final Optional<Request> result = transition.execute();
             if (result.isPresent()) result.get().reportCompletionTo(request);
@@ -316,6 +316,8 @@ public class BasicNode extends BasicAgent implements BusNode {
         }
 
         @Override public Optional<Request> execute() {
+            debug("%s: %s → %s", BasicNode.this.getClass().getSimpleName(), getInitialState(),
+                    getTerminalState());
             onExecute();
             return Optional.empty();
         }

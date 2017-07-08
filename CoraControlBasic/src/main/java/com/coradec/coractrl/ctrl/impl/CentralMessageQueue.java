@@ -43,7 +43,6 @@ import com.coradec.coratext.model.Text;
 
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
@@ -80,6 +79,7 @@ public class CentralMessageQueue extends Logger implements MultiThreadedMessageQ
     final Semaphore queues, qman;
     final Queue<MessageProcessor> processors;
     boolean running;
+    AtomicInteger maxUsed = new AtomicInteger(0), currentUsed = new AtomicInteger(0);
 
     public CentralMessageQueue() {
         lowWaterMark = PROP_LOW_WATER_MARK.value();
@@ -110,7 +110,7 @@ public class CentralMessageQueue extends Logger implements MultiThreadedMessageQ
             if (recipients.isEmpty()) throw new MessageUndeliverableException(message);
         }
         message.setDeliveries(recipients.size());
-        debug("Injecting message %s", message);
+//        debug("Injecting message %s", message);
         try {
             qman.acquire();
             for (Recipient recipient : recipients) {
@@ -141,9 +141,18 @@ public class CentralMessageQueue extends Logger implements MultiThreadedMessageQ
         return highWaterMark;
     }
 
+    @Override public int getMaxUsed() {
+        return maxUsed.get();
+    }
+
+    @Override public void resetUsage() {
+        processors.forEach(Thread::interrupt);
+        maxUsed.set(0);
+    }
+
     private void boost() {
         final int qsize = queueQueue.size();
-        if (qsize > processors.size() && qsize < highWaterMark) startThread();
+        if (qsize > processors.size() && processors.size() < highWaterMark) startThread();
     }
 
     private class MessageProcessor extends Thread {
@@ -151,11 +160,13 @@ public class CentralMessageQueue extends Logger implements MultiThreadedMessageQ
         MessageProcessor() {
             super("MessageProcessor-" + MP_ID_GEN.getAndIncrement());
             processors.add(this);
+            currentUsed.set(processors.size());
+            maxUsed.set(Integer.max(maxUsed.get(), currentUsed.get()));
         }
 
         @Override public void run() {
             final Duration patience = PROP_PATIENCE.value();
-//            debug("%s starting (patientce = %s).", getName(), patience);
+//            debug("%s starting (patience = %s).", getName(), patience);
             do {
                 try {
                     if (!queues.tryAcquire(patience.getAmount(), patience.getUnit()))
@@ -177,7 +188,7 @@ public class CentralMessageQueue extends Logger implements MultiThreadedMessageQ
                     final Message message = queue.poll();
 //                    debug("%s: Acquired %s", getName(), message);
                     if (message != null) {
-                        debug("Delivering message %s to recipient %s", message, recipient);
+//                        debug("Delivering message %s to recipient %s", message, recipient);
                         recipient.onMessage(message);
                         message.onDeliver();
 //                        debug("%s: Delivered %s", getName(), message);
@@ -199,8 +210,8 @@ public class CentralMessageQueue extends Logger implements MultiThreadedMessageQ
             } while (true);
 //            debug("%s terminated.", getName());
             processors.remove(this);
+            currentUsed.set(processors.size());
         }
-
     }
 
     boolean isOdd() {
@@ -215,8 +226,8 @@ public class CentralMessageQueue extends Logger implements MultiThreadedMessageQ
 
         public RecipientQueue(final Recipient recipient) {
             this.recipient = recipient;
-            this.stdQ = new LinkedList<>();
-            this.prioQ = new LinkedList<>();
+            this.stdQ = new ConcurrentLinkedQueue<>();
+            this.prioQ = new ConcurrentLinkedQueue<>();
         }
 
         @ToString public Recipient getRecipient() {

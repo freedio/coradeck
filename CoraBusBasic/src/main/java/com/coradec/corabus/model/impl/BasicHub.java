@@ -59,7 +59,7 @@ public class BasicHub extends BasicNode implements BusHub {
     }
 
     @Override protected void setState(final NodeState state) {
-        debug("Setting state to %s", state);
+//        debug("Setting state to %s", state);
         super.setState(state);
     }
 

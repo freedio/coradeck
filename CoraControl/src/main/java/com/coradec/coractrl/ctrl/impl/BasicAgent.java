@@ -24,6 +24,7 @@ import com.coradec.coracom.ctrl.MessageQueue;
 import com.coradec.coracom.model.Command;
 import com.coradec.coracom.model.Message;
 import com.coradec.coracom.model.Recipient;
+import com.coradec.coracom.model.Request;
 import com.coradec.coracom.model.Sender;
 import com.coradec.coracom.model.impl.AbstractCommand;
 import com.coradec.coracore.annotation.Implementation;
@@ -66,7 +67,7 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
 
     protected BasicAgent() {
         id = IDS.computeIfAbsent(getClass(), klass -> new AtomicInteger(0)).incrementAndGet();
-        approve(AddRouteCommand.class, RemoveRouteCommand.class);
+        approve(AddRouteCommand.class, RemoveRouteCommand.class, InternalCommandWrapper.class);
     }
 
     /**
@@ -78,27 +79,55 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
         approvedCommands.addAll(Arrays.asList(types));
     }
 
+    /**
+     * Returns the agent ID.
+     * <p>
+     * Each agent gets a new individual number from a counter during the execution of the JVM.
+     *
+     * @return the agent ID.
+     */
     @ToString public int getId() {
         return id;
     }
 
+    /**
+     * Returns the established message routes.
+     *
+     * @return the message routes.
+     */
     protected Map<Class<?>, Consumer<?>> getRoutes() {
         if (routes == null) routes = new HashMap<>();
         return routes;
     }
 
+    /**
+     * Adds a new message route.  Messages of the specified type injected into the agent will be
+     * handled by the specified message consumer.
+     *
+     * @param <R>       the message type.
+     * @param selector  the message type selector.
+     * @param processor the message processor.
+     */
     protected <R extends Message> void addRoute(Class<? super R> selector, Consumer<R> processor) {
         inject(new AddRouteCommand<>(selector, processor));
     }
 
+    /**
+     * Removes an existing route.  Disables the established message processor for messages of the
+     * specified type.
+     *
+     * @param <R>      the message type.
+     * @param selector the message type selector.
+     */
     protected <R extends Message> void removeRoute(Class<? super R> selector) {
         inject(new RemoveRouteCommand<>(selector));
     }
 
     /**
-     * Injects the specified message on behalf of this sender.
+     * Injects the specified message on behalf of its sender into the central message queue.
      *
      * @param message the message to inject.
+     * @return the message, for further processing.
      */
     protected <M extends Message> M inject(final M message) {
         return MQ.inject(message);
@@ -125,6 +154,19 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
         if (!onMessage(processed, message)) warn(TEXT_MESSAGE_UNPROCESSED, this, message);
     }
 
+    /**
+     * Processes the specified message after applying message routing, which may or may not have
+     * found a processor for the message, according to the specified processed flag ({@code true}:
+     * at least one message processor was activated by the message, {@code false}: no message
+     * processor has seen this message yet).
+     *
+     * @param processed indicates whether at least one of the message processors has already seen
+     *                  this message.
+     * @param message   the message.
+     * @return {@code true} if after-processing processed this message, {@code false} if not (which
+     * means that a message was injected which the system cannot understand (has no processors for
+     * it).
+     */
     protected boolean onMessage(boolean processed, final Message message) {
         if (!processed && message instanceof Command) {
             final Command command = (Command)message;
@@ -138,6 +180,16 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
             processed = true;
         }
         return processed;
+    }
+
+    /**
+     * Performs the specified task in concurrency separation by wrapping it in a command and
+     * injecting it into the message queue.
+     *
+     * @param task the task to perform.
+     */
+    protected Request execute(final Runnable task) {
+        return inject(new InternalCommandWrapper(task));
     }
 
     /**
@@ -160,6 +212,10 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
 
     @Override public void bounce(final Message message) {
         error(TEXT_MESSAGE_BOUNCED, message);
+    }
+
+    @Override public String toString() {
+        return ClassUtil.toString(this);
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")
@@ -204,9 +260,26 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
         @Override public void execute() {
             getRoutes().remove(getSelector());
         }
+
     }
 
-    @Override public String toString() {
-        return ClassUtil.toString(this);
+    @SuppressWarnings("ClassHasNoToStringMethod")
+    private class InternalCommandWrapper extends AbstractCommand {
+
+        private final Runnable task;
+
+        InternalCommandWrapper(final Runnable task) {
+            super(BasicAgent.this);
+            this.task = task;
+        }
+
+        @Override public void execute() {
+            try {
+                task.run();
+                succeed();
+            } catch (Exception e) {
+                fail(e);
+            }
+        }
     }
 }

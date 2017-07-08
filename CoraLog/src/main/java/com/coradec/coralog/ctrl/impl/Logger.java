@@ -62,9 +62,8 @@ public class Logger extends AutoOrigin {
      * Logs a method entry at log level CHAT.
      */
     protected void enter() {
-        if (ENTERING == null) ENTERING = LocalizedText.define("Entering");
         if (log.logsAt(CHAT)) {
-            log.log(new BasicTextLogEntry(there(), CHAT, ENTERING));
+            log.log(new BasicStringLogEntry(there(), CHAT, "Entering"));
         }
     }
 
@@ -72,9 +71,8 @@ public class Logger extends AutoOrigin {
      * Logs a method exit at log level CHAT.
      */
     protected void leave() {
-        if (LEAVING == null) LEAVING = LocalizedText.define("Leaving");
         if (log.logsAt(CHAT)) {
-            log.log(new BasicTextLogEntry(there(), CHAT, LEAVING));
+            log.log(new BasicStringLogEntry(there(), CHAT, "Leaving"));
         }
     }
 

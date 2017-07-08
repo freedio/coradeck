@@ -30,6 +30,7 @@ import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.ctrl.Factory;
 import com.coradec.coracore.model.State;
+import com.coradec.coracore.trouble.OperationInterruptedException;
 import com.coradec.coracore.util.ClassUtil;
 import com.coradec.coractrl.com.ExecuteStateTransitionRequest;
 import com.coradec.coractrl.com.StartStateMachineRequest;
@@ -63,7 +64,7 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
     private final Recipient agent;
     @SuppressWarnings("WeakerAccess") State currentState, targetState;
     private final Set<StateTransition> transitions = new HashSet<>();
-    private final Set<Trajectory> trajectories = new HashSet<>();
+    @SuppressWarnings("WeakerAccess") final Set<Trajectory> trajectories = new HashSet<>();
 
     /**
      * Initializes a new instance of BasicStateMachine on behalf of the specified recipient.
@@ -84,7 +85,7 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
     }
 
     @Override public void initialize(final State state) {
-        currentState = targetState = state;
+        execute(() -> currentState = targetState = state);
     }
 
     private Set<StateTransition> getTransitions() {
@@ -92,18 +93,26 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
     }
 
     @Override public void addTransitions(final Collection<StateTransition> transitions) {
-        stop();
-        this.transitions.addAll(transitions);
+        execute(() -> {
+            stop();
+            this.transitions.addAll(transitions);
+        });
     }
 
     @Override public void setTargetState(final State state) {
-        stop();
-        this.targetState = state;
+        execute(() -> {
+            stop();
+            this.targetState = state;
+        });
     }
 
     private void doStart(InternalStartMachineRequest request) {
-        checkPrerequisites();
-        computeTrajectories();
+        try {
+            checkPrerequisites();
+            computeTrajectories();
+        } catch (Exception e) {
+            request.fail(e);
+        }
         proceed(request);
     }
 
@@ -117,19 +126,27 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
         return inject(new InternalStartMachineRequest());
     }
 
-    Set<Trajectory> getTrajectories() {
-        if (trajectories.isEmpty()) {
-            checkPrerequisites();
-            computeTrajectories();
-        }
-        return trajectories;
-    }
-
     /**
      * Stops the state machine.
      */
     private void stop() {
 
+    }
+
+    Set<Trajectory> getTrajectories() {
+        if (trajectories.isEmpty()) {
+            try {
+                execute(() -> {
+                    final long millis = System.currentTimeMillis();
+                    checkPrerequisites();
+                    computeTrajectories();
+                    debug("Trajectories took %d millis", System.currentTimeMillis() - millis);
+                }).standby();
+            } catch (InterruptedException e) {
+                throw new OperationInterruptedException();
+            }
+        }
+        return trajectories;
     }
 
     /**
@@ -200,22 +217,20 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
      *
      * @param request the request.
      */
-    private void proceed(final InternalStartMachineRequest request)
-            throws StateMachineStalledException {
+    private void proceed(final InternalStartMachineRequest request) {
         while (getCurrentState() != getTargetState()) {
-            debug("Proceeding from %s to %s", getCurrentState(), getTargetState());
+//            debug("Proceeding from %s to %s", getCurrentState(), getTargetState());
             final State state = getCurrentState();
             request.addState(state);
             try {
                 final StateTransition transition = //
-                        getTrajectories().stream()
-                                         .filter(t -> t.isViable(request, state))
-                                         .map(ty -> ty.transitionFor(state).orElse(null))
-                                         .filter(Objects::nonNull)
-                                         .sorted()
-                                         .findFirst()
-                                         .orElseThrow(
-                                                 () -> new StateMachineStalledException(state));
+                        trajectories.stream()
+                                    .filter(t -> t.isViable(request, state))
+                                    .map(ty -> ty.transitionFor(state).orElse(null))
+                                    .filter(Objects::nonNull)
+                                    .sorted()
+                                    .findFirst()
+                                    .orElseThrow(() -> new StateMachineStalledException(state));
 //            debug("Proceeding from %s to %s", transition.getInitialState(),
 //                    transition.getTerminalState());
                 inject(new InternalExecuteStateTransitionRequest(agent, transition)).andThen(() -> {
@@ -223,7 +238,7 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
                     final State newState = transition.getTerminalState();
                     setCurrentState(newState);
                     if (newState == getTargetState()) {
-                        debug("Trajectory successful, reached state %s", newState);
+//                        debug("Trajectory successful, reached state %s", newState);
                         request.addState(newState);
                         request.succeed();
                     }
@@ -241,9 +256,9 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
     }
 
     private void blockTransition(final Request request, final StateTransition transition) {
-        getTrajectories().stream()
-                         .filter(trajectory -> trajectory.contains(transition))
-                         .forEach(trajectory -> trajectory.block(request));
+        trajectories.stream()
+                    .filter(trajectory -> trajectory.contains(transition))
+                    .forEach(trajectory -> trajectory.block(request));
     }
 
     @Override public String toString() {
@@ -264,7 +279,7 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
          */
         InternalStartMachineRequest() {
             super(BasicStateMachine.this);
-            getTrajectories().clear();
+            trajectories.clear();
         }
 
         void addState(final State state) {

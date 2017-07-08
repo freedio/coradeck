@@ -52,9 +52,10 @@ public class CentralMessageQueueTest {
 
     public static final String SYSLOG_LEVEL = "INFORMATION";
     private static final int AGENT_WORKTIME = 5;
+    static final Random RANDOM = new Random();
 
     static {
-        Syslog.setLevel(SYSLOG_LEVEL);
+        if (!SYSLOG_LEVEL.equals("INFORMATION")) Syslog.setLevel(SYSLOG_LEVEL);
     }
 
     static final AtomicInteger ID = new AtomicInteger(0);
@@ -62,24 +63,25 @@ public class CentralMessageQueueTest {
     static AtomicInteger APPROVED = new AtomicInteger(0);
     static AtomicInteger GENERATED = new AtomicInteger(0);
     static AtomicInteger DISPATCHED = new AtomicInteger(0);
-    static Queue<TestAgent> agents = new ConcurrentLinkedQueue<>();
-    static int nAgents;
+    static Queue<LoadTestAgent> LOAD_TEST_AGENTS = new ConcurrentLinkedQueue<>();
+    static Queue<SequenceTestAgent> SEQUENCE_TEST_AGENTS = new ConcurrentLinkedQueue<>();
+    static StringBuilder COLLECTOR = new StringBuilder();
+    static StringBuilder SEQUENCE = new StringBuilder();
 
-    @SuppressWarnings("PackageVisibleField")
-    @Inject
-    MultiThreadedMessageQueue CMQ;
+    @SuppressWarnings("PackageVisibleField") @Inject MultiThreadedMessageQueue CMQ;
 
     @AfterClass public static void teardownSuite() {
         SysControl.terminate();
     }
 
     /**
-     * Runs 100 test agents in parallel, each sending 10..500 messages to itself.
+     * Runs 100 test LOAD_TEST_AGENTS in parallel, each sending 10..500 messages to itself.
      */
-    @Test public void testCMQ() throws InterruptedException {
-        nAgents = 100;
+    @Test public void testLoad() throws InterruptedException {
+        Syslog.info("Performing the load test ... (takes less than 50 seconds)");
+        int nAgents = 100;
         long elapsed = System.currentTimeMillis();
-        new TestExecutor().launch();
+        new LoadTestExecutor().launch(nAgents);
         termLock.tryAcquire(nAgents, 50, TimeUnit.SECONDS);
         elapsed = System.currentTimeMillis() - elapsed;
         final int approved = APPROVED.get();
@@ -87,8 +89,9 @@ public class CentralMessageQueueTest {
         final int dispatched = DISPATCHED.get();
         Syslog.info("Approved: %d, generated: %d, dispatched: %d.", approved, generated,
                 dispatched);
-        Syslog.info("Total time elapsed: %d ms with %d−%d message processors.", elapsed,
-                CMQ.getLowWaterMark(), CMQ.getHighWaterMark());
+        final int maxUsed = CMQ.getMaxUsed();
+        Syslog.info("Total time elapsed: %d ms with %d active message processor%s.", elapsed,
+                maxUsed, maxUsed == 1 ? "" : "s");
         Syslog.info("Throughput: %.3f ms/msg @ %d ms of work/msg.", (double)elapsed / dispatched,
                 AGENT_WORKTIME);
         assertThat(elapsed < 50000, is(true));
@@ -97,8 +100,42 @@ public class CentralMessageQueueTest {
         assertThat(termLock.availablePermits(), is(0)); // All tests reported finished.
     }
 
+    @Test public void testSequence() throws InterruptedException {
+        Syslog.info("Performing the sequence test ... (takes less than 50 seconds)");
+        CMQ.resetUsage();
+        long elapsed = System.currentTimeMillis();
+        final int rounds = 50000;
+        final SequenceTestAgent agent = new SequenceTestAgent();
+        new SequenceTestExecutor().launch(rounds, agent);
+        termLock.tryAcquire(rounds, 50, TimeUnit.SECONDS);
+        elapsed = System.currentTimeMillis() - elapsed;
+        final String result = COLLECTOR.toString();
+        final int maxUsed = CMQ.getMaxUsed();
+        Syslog.info("Total time elapsed: %d ms with %d active message processor%s.", elapsed,
+                maxUsed, maxUsed == 1 ? "" : "s");
+        Syslog.info("Throughput: %.3f ms/msg.", (double)elapsed / rounds);
+        Syslog.info("Result: %s",
+                result.length() > 100 ? result.substring(0, 100) + "..." : result);
+        final String seq = SEQUENCE.toString();
+        Syslog.info("Expect: %s", seq.length() > 100 ? seq.substring(0, 100) + "..." : seq);
+        assertThat(elapsed < 50000, is(true));
+        assertThat(result.length(), is(seq.length()));
+//        int differences = 0;
+//        for (int i = 0; i < seq.length(); ++i) {
+//            char c1 = seq.charAt(i);
+//            char c2 = result.charAt(i);
+//            if (c1 != c2) {
+//                Syslog.info("Difference at index %d", i);
+//                ++differences;
+//            }
+//        }
+//        assertThat(differences, is(0));
+        assertThat(result, is(equalTo(seq)));
+        assertThat(termLock.availablePermits(), is(0)); // All tests reported finished.
+    }
+
     @SuppressWarnings("ClassHasNoToStringMethod")
-    private final class TestAgent extends Logger implements Sender, Recipient {
+    private final class LoadTestAgent extends Logger implements Sender, Recipient {
 
         private final int id;
         private final int genSize;
@@ -106,7 +143,7 @@ public class CentralMessageQueueTest {
         private final ConcurrentLinkedQueue<Message> messages;
         private final AtomicBoolean sent;
 
-        TestAgent() {
+        LoadTestAgent() {
             id = ID.incrementAndGet();
             genSize = random.nextInt(490) + 10;
             APPROVED.addAndGet(genSize);
@@ -115,7 +152,7 @@ public class CentralMessageQueueTest {
         }
 
         @Override public String represent() {
-            return String.format("TestAgent#%d", id);
+            return String.format("LoadTestAgent#%d", id);
         }
 
         @Override public URI toURI() {
@@ -162,38 +199,37 @@ public class CentralMessageQueueTest {
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")
-    private class ExecuteAgentCommand extends AbstractCommand {
+    private class ExecuteLoadTestAgentCommand extends AbstractCommand {
 
-        private final TestAgent testAgent;
+        private final LoadTestAgent agent;
 
-        public ExecuteAgentCommand(final Sender sender, final TestAgent testAgent) {
+        public ExecuteLoadTestAgentCommand(final Sender sender, final LoadTestAgent agent) {
             super(sender);
-            this.testAgent = testAgent;
-            agents.add(testAgent);
+            this.agent = agent;
+            LOAD_TEST_AGENTS.add(agent);
         }
 
         @Override public void execute() {
-            testAgent.run();
+            agent.run();
         }
     }
 
-    private class TestExecutor extends AutoOrigin implements Sender, Recipient {
+    private class LoadTestExecutor extends AutoOrigin implements Sender, Recipient {
 
         @Override public String represent() {
-            return "TestExecutor";
+            return getClass().getSimpleName();
         }
 
         @Override public void onMessage(final Message message) {
-            if (message instanceof ExecuteAgentCommand) {
-                final ExecuteAgentCommand command = (ExecuteAgentCommand)message;
+            if (message instanceof ExecuteLoadTestAgentCommand) {
+                final ExecuteLoadTestAgentCommand command = (ExecuteLoadTestAgentCommand)message;
                 try {
                     command.execute();
                     command.succeed();
                 } catch (Exception e) {
                     command.fail(e);
                 }
-            }
-            else Syslog.error("Invalid message: " + message);
+            } else Syslog.error("Invalid message: " + message);
         }
 
         @Override public URI toURI() {
@@ -201,12 +237,12 @@ public class CentralMessageQueueTest {
         }
 
         @Override public void bounce(final Message message) {
-            Syslog.error(message.toString());
+            Syslog.error("Message bounced: %s", message.toString());
         }
 
-        void launch() throws InterruptedException {
+        void launch(final int nAgents) throws InterruptedException {
             for (int i = 0; i < nAgents; ++i) {
-                CMQ.inject(new ExecuteAgentCommand(this, new TestAgent()));
+                CMQ.inject(new ExecuteLoadTestAgentCommand(this, new LoadTestAgent()));
             }
         }
     }
@@ -224,4 +260,54 @@ public class CentralMessageQueueTest {
 
     }
 
+    private class SequenceTestAgent extends AutoOrigin implements Recipient {
+
+        @Override public void onMessage(final Message message) {
+            if (message instanceof AddCharacterCommand) {
+                ((AddCharacterCommand)message).execute();
+            } else Syslog.error("Cannot process message %s", message);
+        }
+    }
+
+    @SuppressWarnings("ClassHasNoToStringMethod")
+    private class AddCharacterCommand extends AbstractCommand {
+
+        private final char c;
+
+        public AddCharacterCommand(final Sender sender, Recipient recipient, final char c) {
+            super(sender, recipient);
+            this.c = c;
+        }
+
+        @Override public void execute() {
+            COLLECTOR.append(c);
+            termLock.release();
+        }
+
+    }
+
+    private class SequenceTestExecutor implements Sender {
+
+        void launch(final int rounds, final Recipient agent) {
+            for (int i = 0; i < rounds; ++i) {
+                final int range = 100/*Character.MAX_VALUE + 1*/;
+                final char offset = ' ';
+                char c = (char)(offset + RANDOM.nextInt(range));
+                SEQUENCE.append(c);
+                CMQ.inject(new AddCharacterCommand(this, agent, c));
+            }
+        }
+
+        @Override public String represent() {
+            return getClass().getSimpleName();
+        }
+
+        @Override public URI toURI() {
+            return URI.create(represent());
+        }
+
+        @Override public void bounce(final Message message) {
+            Syslog.error("Message bounced: %s", message.toString());
+        }
+    }
 }

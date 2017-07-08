@@ -1,0 +1,4 @@
+# Localized text base for default locale of class BasicStateMachine
+
+NoTransitions: State machine has no transitions when trying to calculate the trajectories!
+InvalidState: The state machine has no initial (n)or target state set when trying to calculate the trajectories!
