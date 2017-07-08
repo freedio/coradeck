@@ -35,4 +35,5 @@ public interface BusNode {
      * @return the node's current state.
      */
     NodeState getState();
+
 }

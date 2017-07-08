@@ -18,24 +18,13 @@
  *
  */
 
-package com.coradec.corabus.model.impl;
-
-import static com.coradec.corabus.model.HubState.*;
-
-import com.coradec.corajet.test.CoradeckJUnit4TestRunner;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+package com.coradec.corabus.model;
 
 /**
- * ​​Test suite for the BasicHub.
+ * ​An application running on a bus system.
+ * <p>
+ * Applications are hub processes.
  */
-@RunWith(CoradeckJUnit4TestRunner.class)
-public class BasicHubTest extends BasicBusTest {
-
-    private final BasicHub testee = new BasicHub();
-
-    @Test public void normalSetupAndShutdownShouldWork() throws InterruptedException {
-        testNormalSetupAndShutdown(testee, LOADED);
-    }
+public interface BusApplication extends BusHub, BusProcess {
 
 }

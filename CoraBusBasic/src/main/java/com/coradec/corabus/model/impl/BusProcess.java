@@ -20,22 +20,10 @@
 
 package com.coradec.corabus.model.impl;
 
-import static com.coradec.corabus.model.HubState.*;
-
-import com.coradec.corajet.test.CoradeckJUnit4TestRunner;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 /**
- * ​​Test suite for the BasicHub.
+ * ​Basic implementation of a bus process.
  */
-@RunWith(CoradeckJUnit4TestRunner.class)
-public class BasicHubTest extends BasicBusTest {
-
-    private final BasicHub testee = new BasicHub();
-
-    @Test public void normalSetupAndShutdownShouldWork() throws InterruptedException {
-        testNormalSetupAndShutdown(testee, LOADED);
-    }
+@SuppressWarnings("WeakerAccess")
+public interface BusProcess {
 
 }

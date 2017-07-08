@@ -29,7 +29,6 @@ import com.coradec.corabus.trouble.NodeAlreadyAttachedException;
 import com.coradec.corabus.view.BusContext;
 import com.coradec.corabus.view.Member;
 import com.coradec.coracom.model.Request;
-import com.coradec.coracom.model.Sender;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.ctrl.Factory;
@@ -72,7 +71,7 @@ public class BasicNode extends BasicAgent implements BusNode {
         return state;
     }
 
-    protected void setState(NodeState state) {
+    @SuppressWarnings("WeakerAccess") protected void setState(NodeState state) {
         this.state = state;
     }
 
@@ -135,7 +134,6 @@ public class BasicNode extends BasicAgent implements BusNode {
     }
 
     @SuppressWarnings("WeakerAccess") private void invite(final Invitation invitation) {
-        final Sender sender = invitation.getSender();
         Session session = invitation.getSession();
         BusContext context = invitation.getContext();
         stateMachine.addTransitions(getSetupTransitions(session, context, invitation));

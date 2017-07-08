@@ -50,7 +50,7 @@ import java.util.Optional;
 /**
  * ​​Base class of all bus tests.
  */
-@SuppressWarnings("ClassHasNoToStringMethod")
+@SuppressWarnings({"ClassHasNoToStringMethod", "ProtectedField"})
 class BasicBusTest extends Logger {
 
     @SuppressWarnings("WeakerAccess") public static final String SYSLOG_LEVEL = "INFORMATION";
@@ -66,7 +66,8 @@ class BasicBusTest extends Logger {
             LocalizedText.define("MessageBounced");
 
     @SuppressWarnings("WeakerAccess")
-    protected void testNormalSetupAndShutdown(final BasicNode testee, final NodeState terminalState)
+    protected void testNormalSetupAndShutdown(final BasicNode testee, final NodeState terminalState,
+                                              final Inbetween... inBetweens)
             throws InterruptedException {
         final Session session = sessionFactory.create();
         final BusContext dummyContext = new TestBusContext();
@@ -74,19 +75,26 @@ class BasicBusTest extends Logger {
         MatcherAssert.assertThat(testee.getState(), is(UNATTACHED));
         final Invitation invitation = MQ.inject(
                 invitationFactory.create(session, dummyContext, testEnv, new Recipient[] {testee}));
-        invitation.standby(1000, SECONDS).andThen(() -> {
+        invitation.standby(1, SECONDS).andThen(() -> {
             assertThat(dummyContext.getNode().orElse(null), is(equalTo(testee)));
             MatcherAssert.assertThat(testee.getState(), is(terminalState));
         }).orElse(problem -> Assert.fail("Invitation failed with " + problem));
+        for (final Inbetween inBetween : inBetweens) {
+            inBetween.execute(session, testEnv, testee);
+        }
         final Request dismissal = invitation.getMember().dismiss();
-        dismissal.standby(1000, SECONDS).andThen(() -> {
+        dismissal.standby(1, SECONDS).andThen(() -> {
             assertThat(dummyContext.getNode().orElse(null), is(nullValue()));
             MatcherAssert.assertThat(testee.getState(), is(DETACHED));
         }).orElse(problem -> Assert.fail("Dismissal failed with " + problem));
     }
 
+    @SuppressWarnings("WeakerAccess") protected <M extends Message> M inject(M message) {
+        return MQ.inject(message);
+    }
+
     @SuppressWarnings("ClassHasNoToStringMethod")
-    private class TestBusContext implements BusContext {
+    protected class TestBusContext implements BusContext {
 
         private BusNode node;
 
@@ -105,7 +113,7 @@ class BasicBusTest extends Logger {
         }
     }
 
-    private class TestEnvironment implements Sender {
+    protected class TestEnvironment implements Sender {
 
         @Override public String represent() {
             return "TestEnvironment";
@@ -119,4 +127,12 @@ class BasicBusTest extends Logger {
             error(TEXT_MESSAGE_BOUNCED, message);
         }
     }
+
+    protected abstract class Inbetween {
+
+        protected abstract void execute(final Session session, final Sender sender,
+                                        final Recipient... recipients) throws InterruptedException;
+
+    }
+
 }

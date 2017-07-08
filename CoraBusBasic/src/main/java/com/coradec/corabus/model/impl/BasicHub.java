@@ -24,7 +24,6 @@ import static com.coradec.corabus.model.HubState.*;
 
 import com.coradec.corabus.com.Invitation;
 import com.coradec.corabus.model.BusHub;
-import com.coradec.corabus.model.NodeState;
 import com.coradec.corabus.view.BusContext;
 import com.coradec.coracore.model.State;
 import com.coradec.coractrl.model.StateTransition;
@@ -56,11 +55,6 @@ public class BasicHub extends BasicNode implements BusHub {
         Collections.addAll(result, new Unloading(session), new Unloaded(session),
                 new Terminating(session));
         return result;
-    }
-
-    @Override protected void setState(final NodeState state) {
-//        debug("Setting state to %s", state);
-        super.setState(state);
     }
 
     @Override protected State getReadyState() {
@@ -146,7 +140,6 @@ public class BasicHub extends BasicNode implements BusHub {
 
     }
 
-    @SuppressWarnings("ClassHasNoToStringMethod")
     private class Loaded extends NodeStateTransition {
 
         Loaded(final Session session) {
@@ -158,7 +151,6 @@ public class BasicHub extends BasicNode implements BusHub {
         }
     }
 
-    @SuppressWarnings("ClassHasNoToStringMethod")
     private class Unloading extends NodeStateTransition {
 
         Unloading(final Session session) {
@@ -170,7 +162,6 @@ public class BasicHub extends BasicNode implements BusHub {
         }
     }
 
-    @SuppressWarnings("ClassHasNoToStringMethod")
     private class Unloaded extends NodeStateTransition {
 
         Unloaded(final Session session) {
@@ -182,7 +173,6 @@ public class BasicHub extends BasicNode implements BusHub {
         }
     }
 
-    @SuppressWarnings("ClassHasNoToStringMethod")
     private class Terminating extends NodeStateTransition {
 
         Terminating(final Session session) {

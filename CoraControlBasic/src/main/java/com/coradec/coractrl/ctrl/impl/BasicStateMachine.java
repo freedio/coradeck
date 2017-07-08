@@ -107,13 +107,14 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
     }
 
     private void doStart(InternalStartMachineRequest request) {
-        try {
+        if (getCurrentState() == getTargetState()) request.succeed();
+        else try {
             checkPrerequisites();
             computeTrajectories();
+            proceed(request);
         } catch (Exception e) {
             request.fail(e);
         }
-        proceed(request);
     }
 
     private void checkPrerequisites() {

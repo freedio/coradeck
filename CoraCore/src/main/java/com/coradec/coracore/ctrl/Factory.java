@@ -20,8 +20,18 @@
 
 package com.coradec.coracore.ctrl;
 
+import com.coradec.coracore.annotation.Inject;
+
 /**
  * API of an object factory.
+ * <p>
+ * Factories are needed to
+ * <ol>
+ * <li>create anonymous instances of implementations, i. e. where a
+ * field annotated with @{@link Inject} is not enough or not suitable.</li>
+ * <li>create implementations which lack no-arg
+ * constructors.</li>
+ * </ol>
  *
  * @param <G> the generated object type.
  */
@@ -30,7 +40,7 @@ public interface Factory<G> {
     /**
      * Returns an instance of the requested type, supplying the specified arguments for
      * construction or selection.
-     *
+     * <p>
      * If CoreJet picks a singleton to satisfy the request, an already existing instance will be
      * returned, otherwise a new object will be created.
      *
@@ -42,7 +52,7 @@ public interface Factory<G> {
     /**
      * Returns a new instance of the requested type, supplying the specified arguments for
      * construction or selection.
-     *
+     * <p>
      * This method is the same as {@link #get(Object...)}, but it will always create a new instance,
      * i.e. it will never pick a singleton instance.
      *

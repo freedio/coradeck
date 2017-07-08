@@ -18,24 +18,13 @@
  *
  */
 
-package com.coradec.corabus.model.impl;
+package com.coradec.corabus.com;
 
-import static com.coradec.corabus.model.HubState.*;
-
-import com.coradec.corajet.test.CoradeckJUnit4TestRunner;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import com.coradec.coracom.model.SessionRequest;
 
 /**
- * ​​Test suite for the BasicHub.
+ * ​Request to suspend a process.
  */
-@RunWith(CoradeckJUnit4TestRunner.class)
-public class BasicHubTest extends BasicBusTest {
-
-    private final BasicHub testee = new BasicHub();
-
-    @Test public void normalSetupAndShutdownShouldWork() throws InterruptedException {
-        testNormalSetupAndShutdown(testee, LOADED);
-    }
+public interface Resumption extends SessionRequest {
 
 }

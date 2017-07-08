@@ -27,11 +27,12 @@ package com.coradec.corabus.model;
 public class HubState extends NodeState {
 
     public static final NodeState LOADING = new HubState("LOADING", 1000);
-    public static final NodeState LOADED = new HubState("LOADED", 1010);
+    public static final NodeState LOADED = new HubState("LOADED", 1100);
     public static final NodeState UNLOADING = new HubState("UNLOADING", 8000);
-    public static final NodeState UNLOADED = new HubState("UNLOADED", 8010);
+    public static final NodeState UNLOADED = new HubState("UNLOADED", 8100);
 
     protected HubState(final String name, final int rank) {
         super(name, rank);
     }
+
 }

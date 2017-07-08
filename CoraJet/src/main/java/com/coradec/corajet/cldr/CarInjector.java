@@ -479,8 +479,10 @@ public class CarInjector {
                         Class<?> klass = (Class<?>)para;
                         if (klass.isPrimitive()) klass = ClassUtil.getBoxingType(klass);
                         Object value;
-                        if (values.length > i && klass.isInstance(values[i])) value = values[i];
-                        else try {
+                        if (values.length > i) {
+                            if (klass.isInstance(values[i])) value = values[i];
+                            else continue outer;
+                        } else try {
                             value = implementationFor((Class<?>)para, Collections.EMPTY_LIST);
                         } catch (ImplementationNotFoundException | ObjectInstantiationFailure e) {
                             continue outer;
@@ -519,9 +521,19 @@ public class CarInjector {
                     conScope = scope;
                 }
             }
-            if (constructor == null) throw new ObjectInstantiationFailure(klass, String.format(
-                    "No suitable public constructor found for type args %s and arguments %s!",
-                    StringUtil.toString(types), StringUtil.toString(values)));
+            if (constructor == null) {
+                String message;
+                if (types == null || types.isEmpty()) {
+                    message =
+                            String.format("Found no suitable public constructor with arguments %s!",
+                                    StringUtil.toString(values));
+                } else {
+                    message = String.format(
+                            "No suitable public constructor found for type args %s and arguments " +
+                            "%s!", StringUtil.toString(types), StringUtil.toString(values));
+                }
+                throw new ObjectInstantiationFailure(klass, message);
+            }
             try {
                 Syslog.trace("Using %s with %s in scope %s", constructor, StringUtil.toString(args),
                         conScope);
