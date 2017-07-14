@@ -72,7 +72,7 @@ public final class SysControl extends Logger {
     }
 
     private void addShutdownHook(final Runnable hook) {
-        shutdownHooks.add(hook);
+        shutdownHooks.add(0, hook);
     }
 
     private class ShutdownHook extends Thread {

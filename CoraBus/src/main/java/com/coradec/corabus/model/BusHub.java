@@ -20,10 +20,24 @@
 
 package com.coradec.corabus.model;
 
+import com.coradec.coracom.model.Request;
+import com.coradec.corasession.model.Session;
+
 /**
  * The focal point of a couple of nodes working together; as such, a hub is the bus; as node, it is
  * an element of yet another hierarchically higher bus layer.
  */
 public interface BusHub extends BusNode {
+
+    /**
+     * Adds the specified node to the hub under the specified name in the context of the specified
+     * session.
+     *
+     * @param session the session context.
+     * @param name    the name.
+     * @param node    the node to add.
+     * @return a request to track progress of the operation.
+     */
+    Request add(Session session, String name, BusNode node);
 
 }

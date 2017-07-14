@@ -20,19 +20,19 @@
 
 package com.coradec.corabus.model.impl;
 
-import static com.coradec.corabus.model.NodeState.*;
+import static com.coradec.corabus.state.NodeState.*;
 
 import com.coradec.corajet.test.CoradeckJUnit4TestRunner;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @RunWith(CoradeckJUnit4TestRunner.class)
-public class BasicNodeTest extends BasicBusTest {
+public class BasicNodeTest extends BasicBusTestInfrastructure {
 
     private final BasicNode testee = new BasicNode();
 
     @Test public void normalSetupAndShutdownShouldSucceed() throws InterruptedException {
-        testNormalSetupAndShutdown(testee, INITIALIZED);
+        testNormalSetupAndShutdown(testee, INITIALIZED, 5);
     }
 
 }

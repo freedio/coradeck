@@ -22,7 +22,7 @@ package com.coradec.coratext.model;
 
 import static com.coradec.coracore.util.ExecUtil.*;
 
-import com.coradec.coracore.ctrl.Factory;
+import com.coradec.coracore.model.Factory;
 import com.coradec.coracore.model.GenericFactory;
 
 /**

@@ -24,7 +24,7 @@ import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.*;
 
 import com.coradec.coracore.annotation.Inject;
-import com.coradec.coracore.ctrl.Factory;
+import com.coradec.coracore.model.Factory;
 import com.coradec.corajet.cldr.data.GenericInterface;
 import com.coradec.corajet.cldr.data.MultiGenericInterface;
 import com.coradec.corajet.cldr.data.SingletonInterface;

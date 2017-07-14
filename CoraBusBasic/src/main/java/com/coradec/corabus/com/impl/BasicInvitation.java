@@ -40,6 +40,7 @@ import com.coradec.corasession.model.Session;
 @Implementation
 public class BasicInvitation extends BasicSessionRequest implements Invitation {
 
+    private final String name;
     private final BusContext context;
     private @Nullable Member member;
 
@@ -51,10 +52,15 @@ public class BasicInvitation extends BasicSessionRequest implements Invitation {
      * @param sender     the sender.
      * @param recipients the list of recipients
      */
-    public BasicInvitation(final Session session, final BusContext context, final Sender sender,
-                           final Recipient... recipients) {
+    public BasicInvitation(final Session session, final String name, final BusContext context,
+            final Sender sender, final Recipient... recipients) {
         super(session, sender, recipients);
+        this.name = name;
         this.context = context;
+    }
+
+    @Override @ToString public String getName() {
+        return name;
     }
 
     @Override @ToString public BusContext getContext() {

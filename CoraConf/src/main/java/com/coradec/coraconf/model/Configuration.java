@@ -20,7 +20,7 @@
 
 package com.coradec.coraconf.model;
 
-import com.coradec.coracore.ctrl.Factory;
+import com.coradec.coracore.model.Factory;
 import com.coradec.coracore.model.GenericFactory;
 import com.coradec.coracore.model.GenericType;
 

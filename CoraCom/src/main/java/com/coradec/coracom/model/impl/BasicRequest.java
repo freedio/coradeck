@@ -23,11 +23,11 @@ package com.coradec.coracom.model.impl;
 import static com.coradec.coracom.state.RequestState.*;
 
 import com.coradec.coracom.com.RequestCompleteEvent;
+import com.coradec.coracom.ctrl.MessageQueue;
 import com.coradec.coracom.ctrl.Observer;
-import com.coradec.coracom.ctrl.impl.SimpleMessageQueue;
 import com.coradec.coracom.model.Asynchronous;
 import com.coradec.coracom.model.Command;
-import com.coradec.coracom.model.Event;
+import com.coradec.coracom.model.Information;
 import com.coradec.coracom.model.Message;
 import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Request;
@@ -35,8 +35,10 @@ import com.coradec.coracom.model.Sender;
 import com.coradec.coracom.state.RequestState;
 import com.coradec.coracom.trouble.RequestFailedException;
 import com.coradec.coracore.annotation.Implementation;
+import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
+import com.coradec.coracore.model.Factory;
 import com.coradec.coracore.trouble.OperationInterruptedException;
 import com.coradec.coracore.trouble.OperationTimedoutException;
 import com.coradec.coratext.model.LocalizedText;
@@ -56,11 +58,11 @@ import java.util.function.Consumer;
  */
 @SuppressWarnings({"ClassHasNoToStringMethod", "PackageVisibleField", "WeakerAccess"})
 @Implementation
-public class BasicRequest extends BasicEvent implements Request, Asynchronous {
+public class BasicRequest extends BasicMessage implements Request, Asynchronous {
 
     private static final Text TEXT_MESSAGE_BOUNCED = LocalizedText.define("MessageBounced");
     private static final Text TEXT_NOT_EXECUTING = LocalizedText.define("NotExecuting");
-    private static final SimpleMessageQueue MQ = new SimpleMessageQueue();
+    @Inject private static Factory<MessageQueue> MQ;
     private static final Text TEXT_CANNOT_HANDLE_MESSAGE =
             LocalizedText.define("CannotHandleMessage");
 
@@ -134,11 +136,11 @@ public class BasicRequest extends BasicEvent implements Request, Asynchronous {
         }
     }
 
-    private RequestState getRequestState() {
+    @Override @ToString public RequestState getRequestState() {
         return requestState;
     }
 
-    private Set<RequestState> getStates() {
+    @Override @ToString public Set<RequestState> getStates() {
         return states;
     }
 
@@ -204,7 +206,11 @@ public class BasicRequest extends BasicEvent implements Request, Asynchronous {
     }
 
     @Override public void reportCompletionTo(final Observer observer) {
-        MQ.inject(new AddCompletionObserverCommand(observer));
+        inject(new AddCompletionObserverCommand(observer));
+    }
+
+    protected <I extends Information> I inject(final I info) {
+        return MQ.get().inject(info);
     }
 
     @Override public Request andThen(final Runnable action) {
@@ -250,14 +256,16 @@ public class BasicRequest extends BasicEvent implements Request, Asynchronous {
         error(TEXT_MESSAGE_BOUNCED, message);
     }
 
-    @Override public boolean notify(final Event event) {
-        if (event instanceof RequestCompleteEvent) {
-            final Request request = ((RequestCompleteEvent)event).getRequest();
-            if (request.isSuccessful()) succeed();
-            if (request.isCancelled()) cancel();
-            if (request.isFailed()) fail(getProblem());
-        }
+    @Override public boolean notify(final Information info) {
+        final Request request = ((RequestCompleteEvent)info).getRequest();
+        if (request.isSuccessful()) succeed();
+        else if (request.isCancelled()) cancel();
+        else if (request.isFailed()) fail(request.getProblem());
         return true;
+    }
+
+    @Override public boolean wants(final Information info) {
+        return info instanceof RequestCompleteEvent;
     }
 
     private abstract class InternalCommand extends AbstractCommand {
@@ -315,4 +323,9 @@ public class BasicRequest extends BasicEvent implements Request, Asynchronous {
 
     }
 
+    @Override public Request renew() {
+        states.clear();
+        setRequestState(NEW);
+        return (Request)super.renew();
+    }
 }

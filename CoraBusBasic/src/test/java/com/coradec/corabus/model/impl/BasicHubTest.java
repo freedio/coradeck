@@ -20,22 +20,62 @@
 
 package com.coradec.corabus.model.impl;
 
-import static com.coradec.corabus.model.HubState.*;
+import static com.coradec.corabus.state.HubState.*;
+import static com.coradec.corabus.state.MetaState.*;
+import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.MatcherAssert.*;
 
+import com.coradec.coracom.model.Recipient;
+import com.coradec.coracom.model.Sender;
+import com.coradec.coracore.annotation.Inject;
 import com.coradec.corajet.test.CoradeckJUnit4TestRunner;
+import com.coradec.corasession.model.Session;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 /**
  * ​​Test suite for the BasicHub.
  */
+@SuppressWarnings("WeakerAccess")
 @RunWith(CoradeckJUnit4TestRunner.class)
-public class BasicHubTest extends BasicBusTest {
+public class BasicHubTest extends BasicBusTestInfrastructure {
 
-    private final BasicHub testee = new BasicHub();
+    final BasicHub testee = new BasicHub();
+    final BasicNode member = new BasicNode();
+    @Inject Session initialSession;
 
     @Test public void normalSetupAndShutdownShouldWork() throws InterruptedException {
-        testNormalSetupAndShutdown(testee, LOADED);
+        testNormalSetupAndShutdown(testee, LOADED, 5);
     }
 
+    @Test public void normalSetupAndShutdownWithMemberPreloadingShouldWork()
+            throws InterruptedException {
+        testee.add(initialSession, "member", member);
+        testNormalSetupAndShutdown(testee, LOADED, 5);
+    }
+
+    @Test public void normalSetupAndShutdownWithMemberPostloadingShouldWork()
+            throws InterruptedException {
+        assertThat(member.getState(), is(UNATTACHED));
+        assertThat(member.getMetaState(), is(DOWN));
+        testNormalSetupAndShutdown(testee, LOADED, 5, new LoadMember(), new WaitAbit());
+        assertThat(member.getState(), is(DETACHED));
+        assertThat(member.getMetaState(), is(DOWN));
+    }
+
+    private class LoadMember extends Inbetween {
+
+        @Override protected void execute(final Session session, final Sender sender,
+                final Recipient... recipients) throws InterruptedException {
+            testee.add(initialSession, "member", member);
+        }
+    }
+
+    private class WaitAbit extends Inbetween {
+
+        @Override protected void execute(final Session session, final Sender sender,
+                final Recipient... recipients) throws InterruptedException {
+            Thread.sleep(1000);
+        }
+    }
 }

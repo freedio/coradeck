@@ -113,7 +113,7 @@ public class CarClassLoader extends ClassLoader {
                     Syslog.error(e);
                 }
             });
-            Syslog.info("Ready.");
+            Syslog.info("Ready.%n");
             Syslog.debug("Collected components: %s", components);
             Syslog.debug("Collected implementations: %s", implementations);
         } catch (Exception e) {

@@ -20,7 +20,7 @@
 
 package com.coradec.coracom.ctrl;
 
-import com.coradec.coracom.model.Event;
+import com.coradec.coracom.model.Information;
 
 /**
  * ​An object that observes (and gets notified about) state changes in another object.
@@ -28,18 +28,28 @@ import com.coradec.coracom.model.Event;
 public interface Observer {
 
     /**
-     * Notifies the observer of the specified event.
+     * Notifies the observer of the specified information.
      * <p>
-     * <span style="color:yellow; background:red">Important Note:</span> Event notifications are
+     * <span style="color:yellow; background:red">Important Note:</span> Notifications are
      * asynchronous by virtue and thus can subtly infect an otherwise clean environment with
      * concurrency.  This will not be a problem if you strictly keep from making modifications on
      * the caller thread, instead using the message queue to trigger modifications on a message
      * processor thread.
      *
-     * @param event the event.
+     * @param info the information.
      * @return {@code true} if the observer is to be removed after the notification ("one-shot
      * trigger"), {@code false} if it continues to observe.
      */
-    boolean notify(Event event);
+    boolean notify(Information info);
+
+    /**
+     * Checks if the observer wants the specified information.  This can be a very cheap operation
+     * as opposed to marshal an information and sending it over the wire only to find that the
+     * observer is not interested in this kind of info.
+     *
+     * @param info the information.
+     * @return {@code true} if the observer should be notified about the information.
+     */
+    boolean wants(Information info);
 
 }

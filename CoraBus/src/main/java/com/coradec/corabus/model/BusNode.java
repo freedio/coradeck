@@ -20,6 +20,13 @@
 
 package com.coradec.corabus.model;
 
+import com.coradec.corabus.state.MetaState;
+import com.coradec.corabus.state.NodeState;
+import com.coradec.coracom.model.Recipient;
+import com.coradec.coradir.model.Path;
+
+import java.net.URI;
+
 /**
  * ​A node in the bus system.  A node is like a cell: self-contained, but dependant on its hub to
  * exchange information and fulfill its purpose.
@@ -27,7 +34,7 @@ package com.coradec.corabus.model;
  * A node can be attached to a hub in two ways:  either the node sends a request to a hub to add it,
  * or the hub invites the node to join it.  The first way actually only triggers the second way.
  */
-public interface BusNode {
+public interface BusNode extends Recipient {
 
     /**
      * Returns the node's current state (last achieved state).
@@ -36,4 +43,24 @@ public interface BusNode {
      */
     NodeState getState();
 
+    /**
+     * Returns the node's meta-state.
+     *
+     * @return the meta-state.
+     */
+    MetaState getMetaState();
+
+    /**
+     * Returns the identifier of the node.
+     *
+     * @return the node identifier.
+     */
+    URI getIdentifier();
+
+    /**
+     * Returns the current path of the node.
+     *
+     * @return the path.
+     */
+    Path getPath();
 }

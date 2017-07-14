@@ -20,7 +20,7 @@
 
 package com.coradec.coracore.time;
 
-import com.coradec.coracore.ctrl.Factory;
+import com.coradec.coracore.model.Factory;
 import com.coradec.coracore.model.GenericFactory;
 
 import java.util.concurrent.TimeUnit;
@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
  */
 public interface Duration {
 
-    Factory<Duration> FACTORY = new GenericFactory<>(Duration.class);
+    Factory<Duration> DURATION = new GenericFactory<>(Duration.class);
 
     /**
      * Creates a suitable duration with the specified amount of the specified time unit.
@@ -39,7 +39,7 @@ public interface Duration {
      * @param unit   the time unit.
      */
     static Duration of(long amount, TimeUnit unit) {
-        return FACTORY.create(amount, unit);
+        return DURATION.create(amount, unit);
     }
 
     /**
@@ -56,4 +56,8 @@ public interface Duration {
      */
     TimeUnit getUnit();
 
+    /**
+     * Returns this duration in milliseconds.
+     */
+    long toMillis();
 }

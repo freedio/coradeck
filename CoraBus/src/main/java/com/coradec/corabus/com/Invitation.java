@@ -31,6 +31,13 @@ import com.coradec.coracom.model.SessionRequest;
 public interface Invitation extends SessionRequest {
 
     /**
+     * Returns the name under which the node is invited.
+     *
+     * @return the name.
+     */
+    String getName();
+
+    /**
      * Returns the bus context to attach to.
      *
      * @return the bus context.

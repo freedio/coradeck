@@ -21,7 +21,7 @@
 package com.coradec.coracar;
 
 import com.coradec.coracore.annotation.Nullable;
-import com.coradec.coracore.ctrl.Factory;
+import com.coradec.coracore.model.Factory;
 
 import java.util.Random;
 

@@ -20,7 +20,7 @@
 
 package com.coradec.coracom.ctrl;
 
-import com.coradec.coracom.model.Message;
+import com.coradec.coracom.model.Information;
 import com.coradec.coracom.trouble.QueueException;
 
 /**
@@ -29,12 +29,26 @@ import com.coradec.coracom.trouble.QueueException;
 public interface MessageQueue {
 
     /**
-     * Injects a message into the queue.
+     * Injects an information into the queue.
      *
-     * @param message the message to inject.
-     * @return the injected message.
-     * @throws QueueException if the message could not be injected.
+     * @param info the information to inject.
+     * @return the injected information.
+     * @throws QueueException if the information could not be injected.
      */
-    <M extends Message> M inject(M message) throws QueueException;
+    <I extends Information> I inject(I info) throws QueueException;
+
+    /**
+     * Subscribes the specified observer for information from the queue.
+     *
+     * @param observer the observer.
+     */
+    void subscribe(Observer observer);
+
+    /**
+     * Unsubscribes the specified observer for information from the queue.
+     *
+     * @param observer the observer to unsubscribe.
+     */
+    void unsubscribe(Observer observer);
 
 }

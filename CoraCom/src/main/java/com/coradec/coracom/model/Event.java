@@ -23,6 +23,6 @@ package com.coradec.coracom.model;
 /**
  * ​A message about something that happened (or will happen) which might be relevant to others.
  */
-public interface Event extends Message {
+public interface Event extends Information {
 
 }

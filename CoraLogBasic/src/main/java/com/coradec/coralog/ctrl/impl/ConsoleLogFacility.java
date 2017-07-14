@@ -20,6 +20,8 @@
 
 package com.coradec.coralog.ctrl.impl;
 
+import static com.coradec.coracore.model.Scope.*;
+
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.util.ClassUtil;
@@ -40,7 +42,7 @@ import java.util.function.Function;
  * ​​Basic implementation of a log facility.
  */
 @SuppressWarnings({"UseOfSystemOutOrSystemErr", "ClassHasNoToStringMethod"})
-@Implementation
+@Implementation(SINGLETON)
 public class ConsoleLogFacility implements LogFacility {
 
     private static final Text TEXT_DATE = LocalizedText.define("Date");

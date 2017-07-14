@@ -22,7 +22,7 @@ package com.coradec.coracar;
 
 import static com.coradec.coracore.model.Scope.*;
 
-import com.coradec.coracore.ctrl.Factory;
+import com.coradec.coracore.model.Factory;
 import com.coradec.coracore.util.ClassUtil;
 
 /**

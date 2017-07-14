@@ -23,7 +23,6 @@ package com.coradec.coracore.model;
 import static com.coradec.coracore.model.InjectionMode.*;
 
 import com.coradec.coracore.annotation.Inject;
-import com.coradec.coracore.ctrl.Factory;
 
 /**
  * ​​Generic implementation of a factory.

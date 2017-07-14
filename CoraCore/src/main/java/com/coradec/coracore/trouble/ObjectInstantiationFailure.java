@@ -23,6 +23,8 @@ package com.coradec.coracore.trouble;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
 
+import java.lang.reflect.InvocationTargetException;
+
 /**
  * ​​Indicates a failure to create an instance of a particular class.
  */
@@ -31,7 +33,7 @@ public class ObjectInstantiationFailure extends BasicException {
     private final Class<?> type;
 
     public ObjectInstantiationFailure(final Class<?> type, final @Nullable Throwable problem) {
-        super(problem);
+        super(problem instanceof InvocationTargetException ? problem.getCause() : problem);
         this.type = type;
     }
 

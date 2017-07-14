@@ -20,16 +20,26 @@
 
 package com.coradec.coractrl.ctrl;
 
+import static java.util.concurrent.TimeUnit.*;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.*;
 
+import com.coradec.coracom.ctrl.Observer;
+import com.coradec.coracom.model.Information;
 import com.coradec.coracom.model.Message;
 import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Sender;
 import com.coradec.coracom.model.impl.AbstractCommand;
+import com.coradec.coracom.model.impl.BasicEvent;
+import com.coradec.coracom.model.impl.BasicInformation;
 import com.coradec.coracom.model.impl.BasicMessage;
 import com.coradec.coracore.annotation.Inject;
+import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.ctrl.AutoOrigin;
+import com.coradec.coracore.model.Origin;
+import com.coradec.coracore.trouble.OperationTimedoutException;
+import com.coradec.coracore.util.ClassUtil;
+import com.coradec.coractrl.ctrl.impl.BasicAgent;
 import com.coradec.corajet.cldr.Syslog;
 import com.coradec.corajet.test.CoradeckJUnit4TestRunner;
 import com.coradec.coralog.ctrl.impl.Logger;
@@ -38,11 +48,12 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -57,6 +68,10 @@ public class CentralMessageQueueTest {
     static {
         if (!SYSLOG_LEVEL.equals("INFORMATION")) Syslog.setLevel(SYSLOG_LEVEL);
     }
+
+    static final Class<?>[] INFO_TYPES = {
+            Info0.class, Info1.class, Info2.class
+    };
 
     static final AtomicInteger ID = new AtomicInteger(0);
     static final Semaphore termLock = new Semaphore(0);
@@ -78,11 +93,14 @@ public class CentralMessageQueueTest {
      * Runs 100 test LOAD_TEST_AGENTS in parallel, each sending 10..500 messages to itself.
      */
     @Test public void testLoad() throws InterruptedException {
+        APPROVED.set(0);
+        GENERATED.set(0);
+        APPROVED.set(0);
         Syslog.info("Performing the load test ... (takes less than 50 seconds)");
         int nAgents = 100;
         long elapsed = System.currentTimeMillis();
         new LoadTestExecutor().launch(nAgents);
-        termLock.tryAcquire(nAgents, 50, TimeUnit.SECONDS);
+        termLock.tryAcquire(nAgents, 50, SECONDS);
         elapsed = System.currentTimeMillis() - elapsed;
         final int approved = APPROVED.get();
         final int generated = GENERATED.get();
@@ -107,7 +125,7 @@ public class CentralMessageQueueTest {
         final int rounds = 50000;
         final SequenceTestAgent agent = new SequenceTestAgent();
         new SequenceTestExecutor().launch(rounds, agent);
-        termLock.tryAcquire(rounds, 50, TimeUnit.SECONDS);
+        termLock.tryAcquire(rounds, 50, SECONDS);
         elapsed = System.currentTimeMillis() - elapsed;
         final String result = COLLECTOR.toString();
         final int maxUsed = CMQ.getMaxUsed();
@@ -132,6 +150,24 @@ public class CentralMessageQueueTest {
 //        assertThat(differences, is(0));
         assertThat(result, is(equalTo(seq)));
         assertThat(termLock.availablePermits(), is(0)); // All tests reported finished.
+    }
+
+    @Test public void testInformationDispatch() throws InterruptedException {
+        Syslog.info("Performing the information delivery test.");
+        APPROVED.set(0);
+        GENERATED.set(0);
+        APPROVED.set(0);
+        CMQ.resetUsage();
+        final int nAgents = 1000;
+        final int nMessages = 10000;
+        long elapsed = System.currentTimeMillis();
+        new InfoTestExecutor().launch(nAgents, nMessages);
+//        termLock.tryAcquire(nAgents, 50, SECONDS);
+        elapsed = System.currentTimeMillis() - elapsed;
+        Syslog.info("Total time elapsed for %d notifications to %d agents: %d ms.", nMessages,
+                nAgents, elapsed);
+        Syslog.info("Throughput: %.3f μs/msg.", elapsed * 1000.0 / (nAgents * nMessages));
+        assertThat(elapsed < 50000, is(true));
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")
@@ -214,7 +250,7 @@ public class CentralMessageQueueTest {
         }
     }
 
-    private class LoadTestExecutor extends AutoOrigin implements Sender, Recipient {
+    private class LoadTestExecutor implements Sender, Recipient {
 
         @Override public String represent() {
             return getClass().getSimpleName();
@@ -290,7 +326,7 @@ public class CentralMessageQueueTest {
 
         void launch(final int rounds, final Recipient agent) {
             for (int i = 0; i < rounds; ++i) {
-                final int range = 100/*Character.MAX_VALUE + 1*/;
+                final int range = Character.MAX_VALUE + 1;
                 final char offset = ' ';
                 char c = (char)(offset + RANDOM.nextInt(range));
                 SEQUENCE.append(c);
@@ -308,6 +344,156 @@ public class CentralMessageQueueTest {
 
         @Override public void bounce(final Message message) {
             Syslog.error("Message bounced: %s", message.toString());
+        }
+    }
+
+    @SuppressWarnings("ClassHasNoToStringMethod")
+    private class InfoTestExecutor implements Sender {
+
+        private final List<InfoTestAgent> agents = new ArrayList<>();
+        private final int[] distribution = new int[3];
+
+        void launch(final int nAgents, final int nMessages) throws InterruptedException {
+            for (int i = 0; i < nAgents; ++i) {
+                final InfoTestAgent testAgent = new InfoTestAgent();
+                agents.add(testAgent);
+                CMQ.subscribe(testAgent);
+            }
+            Syslog.info("Sending %d notifications expected to be picked up by %d agents.",
+                    nMessages, nAgents);
+            for (int i = 0; i < nMessages; ++i) {
+                final int mtype = RANDOM.nextInt(3);
+                try {
+                    CMQ.inject((Information)INFO_TYPES[mtype].getConstructor(Origin.class)
+                                                             .newInstance(this));
+                } catch (Exception e) {
+                    Syslog.error(e);
+                }
+                ++distribution[mtype];
+            }
+            Syslog.info("Sending the stop event.");
+            CMQ.inject(new StopEvent(this));
+            if (!termLock.tryAcquire(nAgents, 50, SECONDS)) {
+                Syslog.warn("Only %d/%d locks available!", termLock.availablePermits(), nAgents);
+                throw new OperationTimedoutException();
+            }
+            int totalMisses = 0;
+            for (final InfoTestAgent agent : agents) {
+                final StatRecord statistics = agent.getStatistics();
+                totalMisses += statistics.getMisses();
+                final int hits = statistics.getHits();
+                final Class<Information> interested = statistics.getInterestedIn();
+                for (int i = 0; i < 3; ++i) {
+                    if (interested == INFO_TYPES[i]) {
+                        assertThat(hits, is(distribution[i]));
+                        break;
+                    }
+                }
+            }
+            assertThat(totalMisses, is(0));
+        }
+
+        @Override public String represent() {
+            return getClass().getSimpleName();
+        }
+
+        @Override public URI toURI() {
+            return URI.create(represent());
+        }
+
+        @Override public void bounce(final Message message) {
+            Syslog.error("Message bounced: %s", message.toString());
+        }
+
+    }
+
+    @SuppressWarnings("ClassHasNoToStringMethod")
+    private static class InfoTestAgent extends BasicAgent implements Observer {
+
+        private final Class<Information> interestedIn;
+        private int match;
+        private int mismatch;
+
+        InfoTestAgent() {
+            //noinspection unchecked
+            interestedIn = (Class<Information>)INFO_TYPES[RANDOM.nextInt(3)];
+        }
+
+        @Override public boolean notify(final Information info) {
+            if (info instanceof StopEvent) {
+                termLock.release();
+                return false;
+            }
+            if (!interestedIn.isInstance(info)) ++mismatch;
+            else ++match;
+            return false;
+        }
+
+        @Override public boolean wants(final Information info) {
+            return interestedIn.isInstance(info) || info instanceof StopEvent;
+        }
+
+        public StatRecord getStatistics() {
+            return new StatRecord(interestedIn, match, mismatch);
+        }
+
+    }
+
+    private static class Info0 extends BasicInformation {
+
+        public Info0(final Origin origin) {
+            super(origin);
+        }
+    }
+
+    private static class Info1 extends BasicInformation {
+
+        public Info1(final Origin origin) {
+            super(origin);
+        }
+    }
+
+    private static class Info2 extends BasicInformation {
+
+        public Info2(final Origin origin) {
+            super(origin);
+        }
+    }
+
+    private static class StatRecord {
+
+        private final Class<Information> interestedIn;
+        private final int match;
+        private final int mismatch;
+
+        public StatRecord(final Class<Information> interestedIn, final int match,
+                final int mismatch) {
+            this.interestedIn = interestedIn;
+            this.match = match;
+            this.mismatch = mismatch;
+        }
+
+        @ToString public Class<Information> getInterestedIn() {
+            return interestedIn;
+        }
+
+        @ToString public int getHits() {
+            return match;
+        }
+
+        @ToString public int getMisses() {
+            return mismatch;
+        }
+
+        @Override public String toString() {
+            return ClassUtil.toString(this);
+        }
+    }
+
+    private class StopEvent extends BasicEvent {
+
+        public StopEvent(final Origin origin) {
+            super(origin);
         }
     }
 }

@@ -96,6 +96,11 @@
         <dependency>
             <groupId>com.coradec.coradeck</groupId>
             <artifactId>coracom-basic</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.coradec.coradeck</groupId>
+            <artifactId>coradir-basic</artifactId>
         </dependency>
         <dependency>
             <groupId>junit</groupId>

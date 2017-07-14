@@ -1,0 +1,6 @@
+# Localized text base for default locale of class BasicAgent
+
+MessageBounced: Message «%s» bounced!
+CommandNotApproved: Command %s not approved!
+MessageUnprocessed: Message «%s» not processed by %s!
+RouteAlreadySet: Route for selector %s already set! (use replaceRoute to replace it)

@@ -20,9 +20,7 @@
 
 package com.coradec.corabus.view;
 
-import com.coradec.corabus.model.BusNode;
-
-import java.util.Optional;
+import com.coradec.coradir.model.Path;
 
 /**
  * ​Context for an attachment between a member node and its bus hub.
@@ -32,22 +30,31 @@ public interface BusContext {
     /**
      * Callback invoked when the specified node is has left the context.
      *
-     * @param node the leaving node.
+     * @param name the name of the leaving node.
      */
-    void left(BusNode node);
+    void left(String name);
 
     /**
-     * Callback invoked when the specified node has joined the context.
+     * Callback invoked when the specified node has joined the context with the specified name.
      *
-     * @param node the joining node.
+     * @param name   the name.
+     * @param member the joining node.
      */
-    void joined(BusNode node);
+    void joined(String name, Member member);
 
     /**
-     * Returns the currently attached node, if any.
+     * Checks if the context contains the specified node.
      *
-     * @return the currently attached node.
+     * @param member the node.
+     * @return {@code true} if the context contains the node, otherwise {@code false}.
      */
-    Optional<BusNode> getNode();
+    boolean contains(Member member);
+
+    /**
+     * Returns the path of the member with the specified name.
+     *
+     * @return the member path.
+     */
+    Path getPath(String name);
 
 }

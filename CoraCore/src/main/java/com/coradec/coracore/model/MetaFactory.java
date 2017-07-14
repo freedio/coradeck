@@ -20,8 +20,6 @@
 
 package com.coradec.coracore.model;
 
-import com.coradec.coracore.ctrl.Factory;
-
 import java.lang.reflect.Type;
 
 /**

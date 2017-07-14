@@ -21,7 +21,7 @@
 package com.coradec.coracore.util;
 
 import com.coradec.coracore.annotation.Inject;
-import com.coradec.coracore.ctrl.Factory;
+import com.coradec.coracore.model.Factory;
 import com.coradec.coracore.model.StackFrame;
 
 import java.util.Arrays;

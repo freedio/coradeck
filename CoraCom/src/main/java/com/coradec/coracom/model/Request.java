@@ -21,10 +21,12 @@
 package com.coradec.coracom.model;
 
 import com.coradec.coracom.ctrl.Observer;
+import com.coradec.coracom.state.RequestState;
 import com.coradec.coracom.trouble.RequestFailedException;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.trouble.OperationTimedoutException;
 
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -57,6 +59,13 @@ public interface Request extends Event, Observer {
      */
     Request standby(long amount, TimeUnit unit)
             throws OperationTimedoutException, InterruptedException, RequestFailedException;
+
+    /**
+     * Returns the complete set of states the request has ever had.
+     *
+     * @return the request state history.
+     */
+    Set<RequestState> getStates();
 
     /**
      * Returns the problem in case of a failure.
@@ -139,4 +148,34 @@ public interface Request extends Event, Observer {
      * @return this request, for method chaining.
      */
     Request orElse(Consumer<Throwable> action);
+
+    @Override Request renew();
+
+    /**
+     * Checks if the request is complete.
+     *
+     * @return {@code true} if the request is complete, otherwise {@code false}.
+     */
+    boolean isComplete();
+
+    /**
+     * Returns the current request state.
+     * <p>
+     * <span style="color:red">RequestState is not to be confused with State.  RequestState is used
+     * to track progress of the request, while the simple State is used to track message processing
+     * <em>before</em> request processing starts taking place.</span>
+     * <p>
+     * After being created, the request is in state NEW.  While being processing its state
+     * changes to SUBMITTED.  If the request is cancelled, its state changes to CANCELLED (a
+     * terminal state).  If it fails during processing, it becomes FAILED (a terminal state) and the
+     * Problem attribute may receive a meaningful value.  If processing succeeds, the request
+     * becomes SUCCESSFUL (a terminal state).
+     * <p>
+     * Terminal states of a request are also broadcast as events.
+     *
+     * @return the request state.
+     * @see #getState()
+     */
+    RequestState getRequestState();
+
 }

@@ -52,6 +52,9 @@
         <module>CoraSessionBasic</module>
         <module>CoraNet</module>
         <module>CoraCoreTools</module>
+        <module>CoraBusServer</module>
+        <module>CoraDir</module>
+        <module>CoraDirBasic</module>
     </modules>
 
     <properties>
@@ -128,6 +131,11 @@
             </dependency>
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
+                <artifactId>corabus-server</artifactId>
+                <version>0.3</version>
+            </dependency>
+            <dependency>
+                <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coralog</artifactId>
                 <version>0.3</version>
             </dependency>
@@ -184,6 +192,16 @@
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coratype-basic</artifactId>
+                <version>0.3</version>
+            </dependency>
+            <dependency>
+                <groupId>com.coradec.coradeck</groupId>
+                <artifactId>coradir</artifactId>
+                <version>0.3</version>
+            </dependency>
+            <dependency>
+                <groupId>com.coradec.coradeck</groupId>
+                <artifactId>coradir-basic</artifactId>
                 <version>0.3</version>
             </dependency>
         </dependencies>

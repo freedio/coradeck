@@ -47,6 +47,10 @@ public class BasicDuration implements Duration {
         return unit;
     }
 
+    @Override public long toMillis() {
+        return unit.toMillis(amount);
+    }
+
     @Override public String toString() {
         return String.format("%d %s", getAmount(), getUnit());
     }

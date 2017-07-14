@@ -22,7 +22,7 @@ package com.coradec.coratext.ctrl.impl;
 
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.Nullable;
-import com.coradec.coracore.ctrl.Factory;
+import com.coradec.coracore.model.Factory;
 import com.coradec.coratext.model.TextBase;
 import com.coradec.coratext.trouble.TextBaseNotFoundException;
 

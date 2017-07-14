@@ -44,6 +44,11 @@
             <groupId>com.coradec.coradeck</groupId>
             <artifactId>coractrl</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.coradec.coradeck</groupId>
+            <artifactId>coradir</artifactId>
+            <version>0.3</version>
+        </dependency>
     </dependencies>
 
 </project>

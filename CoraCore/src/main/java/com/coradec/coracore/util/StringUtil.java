@@ -260,4 +260,12 @@ public final class StringUtil {
                      .collect(joining(", ", String.valueOf(start), String.valueOf(end)));
     }
 
+    public static String format(final byte[] bytes, final String delimiter) {
+        final StringBuilder collector = new StringBuilder(256);
+        for (final byte b : bytes) {
+            collector.append(delimiter).append(String.format("%02x", b));
+        }
+        return collector.substring(delimiter.length());
+    }
+
 }

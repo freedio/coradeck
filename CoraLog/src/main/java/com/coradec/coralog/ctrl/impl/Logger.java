@@ -25,7 +25,7 @@ import static com.coradec.coralog.model.LogLevel.*;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.ctrl.AutoOrigin;
-import com.coradec.coracore.ctrl.Factory;
+import com.coradec.coracore.model.Factory;
 import com.coradec.coracore.model.Origin;
 import com.coradec.coracore.trouble.BasicException;
 import com.coradec.coralog.ctrl.ClassLog;

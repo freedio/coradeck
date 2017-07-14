@@ -28,7 +28,7 @@ import com.coradec.coracom.model.impl.BasicRequest;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.ToString;
-import com.coradec.coracore.ctrl.Factory;
+import com.coradec.coracore.model.Factory;
 import com.coradec.coracore.model.State;
 import com.coradec.coracore.trouble.OperationInterruptedException;
 import com.coradec.coracore.util.ClassUtil;
@@ -49,6 +49,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
 
 /**
@@ -85,7 +86,10 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
     }
 
     @Override public void initialize(final State state) {
-        execute(() -> currentState = targetState = state);
+        execute(() -> {
+            currentState = targetState = state;
+//            debug("%s: CurrentState and TargetState initialized to %s", this, state);
+        });
     }
 
     private Set<StateTransition> getTransitions() {
@@ -109,6 +113,7 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
     private void doStart(InternalStartMachineRequest request) {
         if (getCurrentState() == getTargetState()) request.succeed();
         else try {
+//            debug("%s: request to start", this);
             checkPrerequisites();
             computeTrajectories();
             proceed(request);
@@ -141,7 +146,7 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
                     final long millis = System.currentTimeMillis();
                     checkPrerequisites();
                     computeTrajectories();
-                    debug("Trajectories took %d millis", System.currentTimeMillis() - millis);
+//                    debug("Trajectories took %d millis", System.currentTimeMillis() - millis);
                 }).standby();
             } catch (InterruptedException e) {
                 throw new OperationInterruptedException();
@@ -246,6 +251,7 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
                 }).orElse(problem -> {
 //                    debug("Proceed → fail with %s", problem);
                     blockTransition(request, transition);
+                    request.removeState(state);
                 }).standby();
             } catch (Exception e) {
                 error(e);
@@ -274,6 +280,7 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
             implements StartStateMachineRequest {
 
         private final List<State> states = new ArrayList<>();
+        private final ReentrantLock lock = new ReentrantLock();
 
         /**
          * Initializes a new instance of InternalStartMachineRequest.
@@ -284,11 +291,25 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
         }
 
         void addState(final State state) {
-            states.add(state);
+            lock.lock();
+            try {
+                states.add(state);
+            } finally {
+                lock.unlock();
+            }
         }
 
         @Override @ToString public List<State> getPassedStates() {
             return Collections.unmodifiableList(states);
+        }
+
+        void removeState(final State state) {
+            lock.lock();
+            try {
+                states.remove(state);
+            } finally {
+                lock.unlock();
+            }
         }
 
         @Override public String toString() {

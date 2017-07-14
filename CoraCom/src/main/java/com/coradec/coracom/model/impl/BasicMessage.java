@@ -30,23 +30,20 @@ import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.model.State;
 import com.coradec.coracore.util.ClassUtil;
 import com.coradec.coracore.util.CollectionUtil;
-import com.coradec.coralog.ctrl.impl.Logger;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 
 /**
  * ​​Basic implementation of a message.
  */
 @SuppressWarnings("WeakerAccess")
 @Implementation
-public class BasicMessage extends Logger implements Message {
+public class BasicMessage extends BasicEvent implements Message {
 
-    private final Sender sender;
     private final Set<Recipient> recipients;
-    private final UUID id;
-    private State state;
     private int deliveries;  // number of remaining deliveries
 
     /**
@@ -56,10 +53,8 @@ public class BasicMessage extends Logger implements Message {
      * @param recipients the recipients.
      */
     private BasicMessage(final Sender sender, final Set<Recipient> recipients) {
-        this.sender = sender;
-        this.recipients = recipients;
-        this.state = NEW;
-        this.id = UUID.randomUUID();
+        super(sender);
+        this.recipients = new HashSet<>(recipients);
         deliveries = 0; // not yet dispatched
     }
 
@@ -70,53 +65,19 @@ public class BasicMessage extends Logger implements Message {
      * @param recipients the list of recipients
      */
     public BasicMessage(final Sender sender, Recipient... recipients) {
-        this(sender, new HashSet<>(CollectionUtil.setOf(recipients)));
+        this(sender, CollectionUtil.setOf(recipients));
     }
 
-    @Override @ToString public State getState() {
-        return this.state;
-    }
-
-    /**
-     * Sets the state of the message.
-     *
-     * @param state the new state.
-     */
-    protected void setState(final State state) {
-        this.state = state;
-    }
-
-    @Override @ToString public Set<Recipient> getRecipients() {
-        return recipients;
+    @Override @ToString public Collection<Recipient> getRecipients() {
+        return Collections.unmodifiableCollection(recipients);
     }
 
     @Override public Recipient[] getRecipientList() {
         return recipients.toArray(new Recipient[recipients.size()]);
     }
 
-    @Override @ToString public Sender getSender() {
-        return sender;
-    }
-
-    @Override @ToString public UUID getId() {
-        return this.id;
-    }
-
-    @Override public void onEnqueue() throws IllegalStateException {
-        if (state != NEW) throw new IllegalStateException(
-                String.format("Message %s has illegal state %s (should be NEW)", this,
-                        state.name()));
-        setState(ENQUEUED);
-    }
-
-    @Override public void onDispatch() throws IllegalStateException {
-        if (state != ENQUEUED) throw new IllegalStateException(
-                String.format("Message %s has illegal state %s (should be ENQUEUED)", this,
-                        state.name()));
-        setState(DISPATCHED);
-    }
-
     @Override public void onDeliver() throws IllegalStateException {
+        final State state = getState();
         if (state != ENQUEUED) throw new IllegalStateException(
                 String.format("Message %s has illegal state %s (should be ENQUEUED)", this,
                         state.name()));
@@ -124,14 +85,11 @@ public class BasicMessage extends Logger implements Message {
     }
 
     @Override public void onDelivered() {
+        final State state = getState();
         if (state != ENQUEUED) throw new IllegalStateException(
                 String.format("Message %s has illegal state %s (should be ENQUEUED)", this,
                         state.name()));
         setState(DELIVERED);
-    }
-
-    @Override @ToString public boolean isUrgent() {
-        return false;
     }
 
     @Override public void setDeliveries(final int recipients) {
@@ -140,6 +98,14 @@ public class BasicMessage extends Logger implements Message {
 
     @Override public String toString() {
         return ClassUtil.toString(this);
+    }
+
+    @Override @ToString public Sender getSender() {
+        return (Sender)getOrigin();
+    }
+
+    @Override @ToString public boolean isUrgent() {
+        return false;
     }
 
 }

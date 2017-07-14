@@ -26,7 +26,7 @@ import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.collections.HashCache;
-import com.coradec.coracore.ctrl.Factory;
+import com.coradec.coracore.model.Factory;
 import com.coradec.coracore.util.ClassUtil;
 import com.coradec.coratext.ctrl.TextResolver;
 import com.coradec.coratext.model.TextBase;

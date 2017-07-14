@@ -23,14 +23,19 @@ package com.coradec.coractrl.ctrl.impl;
 import static com.coradec.coracore.model.Scope.*;
 import static java.util.concurrent.TimeUnit.*;
 
+import com.coradec.coracom.ctrl.Observer;
+import com.coradec.coracom.model.Command;
+import com.coradec.coracom.model.Information;
 import com.coradec.coracom.model.Message;
 import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Sender;
+import com.coradec.coracom.model.impl.AbstractCommand;
+import com.coradec.coracom.trouble.InformationWithoutOriginException;
 import com.coradec.coracom.trouble.MessageUndeliverableException;
-import com.coradec.coracom.trouble.MessageWithoutSenderException;
 import com.coradec.coracom.trouble.QueueException;
 import com.coradec.coraconf.model.Property;
 import com.coradec.coracore.annotation.Implementation;
+import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.time.Duration;
 import com.coradec.coracore.trouble.OperationInterruptedException;
@@ -41,43 +46,47 @@ import com.coradec.coralog.ctrl.impl.Logger;
 import com.coradec.coratext.model.LocalizedText;
 import com.coradec.coratext.model.Text;
 
+import java.net.URI;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
-import java.util.Set;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * ​​The central message queue service.
  */
 @SuppressWarnings({"ClassHasNoToStringMethod", "WeakerAccess", "PackageVisibleField"})
 @Implementation(SINGLETON)
-public class CentralMessageQueue extends Logger implements MultiThreadedMessageQueue {
+public class CentralMessageQueue extends Logger
+        implements MultiThreadedMessageQueue, Sender, Recipient {
 
     static final AtomicInteger MP_ID_GEN = new AtomicInteger(0);
+
+    private static final Text TEXT_MESSAGE_BOUNCED = LocalizedText.define("MessageBounced");
+    static final Text TEXT_OBSERVER_NASTY = LocalizedText.define("ObserverNasty");
+    private static final Text TEXT_CANNOT_PROCESS_MESSAGE =
+            LocalizedText.define("CannotProcessMessage");
+
     private static final Property<Integer> PROP_HIGH_WATER_MARK =
             Property.define("HighWaterMark", Integer.class, 20);
     private static final Property<Integer> PROP_LOW_WATER_MARK =
             Property.define("LowWaterMark", Integer.class, 3);
-    private static final Text TEXT_QUEUE_DISPATCHER_STARTED =
-            LocalizedText.define("QueueDispatcherStarted");
     static final Property<Duration> PROP_PATIENCE =
             Property.define("Patience", Duration.class, Duration.of(20, SECONDS));
-    private static final Property<Integer> PROP_QQ_SIZE =
-            Property.define("QueueQueueSize", Integer.class, 1024);
 
     private final int lowWaterMark;
     private final int highWaterMark;
-
     final Map<Recipient, RecipientQueue> queueMap;
-    final BlockingQueue<RecipientQueue> queueQueue;
-    final Semaphore queues, qman;
+    final Queue<RecipientQueue> queueQueue;
+    final Semaphore queues, qman, iq;
     final Queue<MessageProcessor> processors;
+    final Collection<Observer> observers;
     boolean running;
     AtomicInteger maxUsed = new AtomicInteger(0), currentUsed = new AtomicInteger(0);
 
@@ -85,10 +94,12 @@ public class CentralMessageQueue extends Logger implements MultiThreadedMessageQ
         lowWaterMark = PROP_LOW_WATER_MARK.value();
         highWaterMark = PROP_HIGH_WATER_MARK.value();
         queueMap = new HashMap<>();
-        queueQueue = new ArrayBlockingQueue<>(1024);
+        queueQueue = new ConcurrentLinkedQueue<>();
         queues = new Semaphore(0);
+        iq = new Semaphore(0);
         qman = new Semaphore(1);
         processors = new ConcurrentLinkedQueue<>();
+        observers = new LinkedList<>();
         for (int i = 0; i < lowWaterMark; ++i) {
             startThread();
         }
@@ -100,44 +111,55 @@ public class CentralMessageQueue extends Logger implements MultiThreadedMessageQ
         new MessageProcessor().start();
     }
 
-    @Override public <M extends Message> M inject(final M message) throws QueueException {
+    @Override public <I extends Information> I inject(final I info) throws QueueException {
         if (!running) throw new MessageQueueDisabledException();
-        if (message.getSender() == null) throw new MessageWithoutSenderException(message);
-        Set<Recipient> recipients = message.getRecipients();
-        if (recipients.isEmpty()) {
-            final Sender sender = message.getSender();
-            if (sender instanceof Recipient) recipients = Collections.singleton((Recipient)sender);
-            if (recipients.isEmpty()) throw new MessageUndeliverableException(message);
-        }
-        message.setDeliveries(recipients.size());
-//        debug("Injecting message %s", message);
-        try {
-            qman.acquire();
-            for (Recipient recipient : recipients) {
-                message.onEnqueue();
-                queueMap.computeIfAbsent(recipient, r -> {
-                    final RecipientQueue queue = new RecipientQueue(r);
-                    queueQueue.add(queue);
-                    queues.release();
-                    boost();
-                    return queue;
-                }).add(message);
+        if (info.getOrigin() == null) throw new InformationWithoutOriginException(info);
+        if (info instanceof Message) {
+            Message message = (Message)info;
+            Collection<Recipient> recipients = message.getRecipients();
+            if (recipients.isEmpty()) {
+                final Sender sender = message.getSender();
+                if (sender instanceof Recipient)
+                    recipients = Collections.singleton((Recipient)sender);
+                if (recipients.isEmpty()) throw new MessageUndeliverableException(message);
             }
-        } catch (InterruptedException e) {
-            throw new OperationInterruptedException();
-        } finally {
-            qman.release();
+            message.setDeliveries(recipients.size());
+            try {
+                qman.acquire();
+                for (Recipient recipient : recipients) {
+                    info.onEnqueue();
+                    queueMap.computeIfAbsent(recipient, r -> {
+                        final RecipientQueue queue = new RecipientQueue(r);
+                        queueQueue.add(queue);
+                        queues.release();
+                        boost();
+                        return queue;
+                    }).add(message);
+                }
+            } catch (InterruptedException e) {
+                throw new OperationInterruptedException();
+            } finally {
+                qman.release();
+            }
+        } else {
+            inject(new DispatchInfoCommand(info));
         }
-        return message;
+        return info;
+    }
+
+    @Override public void subscribe(final Observer observer) {
+        inject(new AddSubscriberCommand(observer));
+    }
+
+    @Override public void unsubscribe(final Observer observer) {
+        inject(new RemoveSubscriberCommand(observer));
     }
 
     @Override @ToString public int getLowWaterMark() {
-//        if (lowWaterMark == 0) lowWaterMark = PROP_LOW_WATER_MARK.value();
         return lowWaterMark;
     }
 
     @Override @ToString public int getHighWaterMark() {
-//        if (highWaterMark == 0) highWaterMark = PROP_HIGH_WATER_MARK.value();
         return highWaterMark;
     }
 
@@ -153,6 +175,30 @@ public class CentralMessageQueue extends Logger implements MultiThreadedMessageQ
     private void boost() {
         final int qsize = queueQueue.size();
         if (qsize > processors.size() && processors.size() < highWaterMark) startThread();
+    }
+
+    boolean isOdd() {
+        return processors.size() > lowWaterMark;
+    }
+
+    @Override public String represent() {
+        return getClass().getSimpleName();
+    }
+
+    @Override public void onMessage(final Message message) {
+        if (message instanceof DispatchInfoCommand ||
+            message instanceof AddSubscriberCommand ||
+            message instanceof RemoveSubscriberCommand) {
+            ((Command)message).execute();
+        } else error(TEXT_CANNOT_PROCESS_MESSAGE, message);
+    }
+
+    @Override public URI toURI() {
+        return URI.create(represent());
+    }
+
+    @Override public void bounce(final Message message) {
+        error(TEXT_MESSAGE_BOUNCED, message);
     }
 
     private class MessageProcessor extends Thread {
@@ -189,8 +235,8 @@ public class CentralMessageQueue extends Logger implements MultiThreadedMessageQ
 //                    debug("%s: Acquired %s", getName(), message);
                     if (message != null) {
 //                        debug("Delivering message %s to recipient %s", message, recipient);
-                        recipient.onMessage(message);
                         message.onDeliver();
+                        recipient.onMessage(message);
 //                        debug("%s: Delivered %s", getName(), message);
                         try {
                             qman.acquire();
@@ -214,37 +260,50 @@ public class CentralMessageQueue extends Logger implements MultiThreadedMessageQ
         }
     }
 
-    boolean isOdd() {
-        return processors.size() > lowWaterMark;
-    }
-
     private class RecipientQueue {
 
         private final Recipient recipient;
-        private final Queue<Message> stdQ;
-        private final Queue<Message> prioQ;
+        private final LinkedList<Message> mainQueue = new LinkedList<>();
+        private final LinkedList<Message> prioQueue = new LinkedList<>();
+        private final ReentrantLock queueLock = new ReentrantLock();
 
         public RecipientQueue(final Recipient recipient) {
             this.recipient = recipient;
-            this.stdQ = new ConcurrentLinkedQueue<>();
-            this.prioQ = new ConcurrentLinkedQueue<>();
         }
 
         @ToString public Recipient getRecipient() {
             return recipient;
         }
 
-        void add(final Message message) {
-            (message.isUrgent() ? prioQ : stdQ).add(message);
+        void add(final Message message) throws InterruptedException {
+            queueLock.lock();
+            try {
+                (message.isUrgent() ? prioQueue : mainQueue).add(message);
+            } finally {
+                queueLock.unlock();
+            }
         }
 
         boolean isEmpty() {
-            return stdQ.isEmpty() && prioQ.isEmpty();
+            queueLock.lock();
+            try {
+                return prioQueue.isEmpty() && mainQueue.isEmpty();
+            } finally {
+                queueLock.unlock();
+            }
         }
 
-        Message poll() {
-            return (prioQ.isEmpty() ? stdQ : prioQ).poll();
+        @Nullable Message poll() {
+            queueLock.lock();
+            try {
+                @Nullable Message result = prioQueue.poll();
+                if (result == null) result = mainQueue.poll();
+                return result;
+            } finally {
+                queueLock.unlock();
+            }
         }
+
     }
 
     private class ShutMeDown implements Runnable {
@@ -255,4 +314,67 @@ public class CentralMessageQueue extends Logger implements MultiThreadedMessageQ
             processors.forEach(Thread::interrupt);
         }
     }
+
+    private class DispatchInfoCommand extends AbstractCommand {
+
+        private final Information info;
+
+        public DispatchInfoCommand(final Information info) {
+            super(CentralMessageQueue.this);
+            this.info = info;
+        }
+
+        @Override public void execute() {
+            for (final Observer observer : observers)
+                try {
+                    if (observer.wants(info)) {
+                        if (observer.notify(info)) inject(new RemoveSubscriberCommand(observer));
+                    }
+                } catch (Exception e) {
+                    error(e, TEXT_OBSERVER_NASTY, observer);
+                }
+            succeed();
+        }
+    }
+
+    private class AddSubscriberCommand extends AbstractCommand {
+
+        private final Observer observer;
+
+        public AddSubscriberCommand(final Observer observer) {
+            super(CentralMessageQueue.this);
+            this.observer = observer;
+        }
+
+        @Override public void execute() {
+            observers.add(observer);
+            succeed();
+        }
+
+        @Override public boolean isUrgent() {
+            return true;
+        }
+
+    }
+
+    private class RemoveSubscriberCommand extends AbstractCommand {
+
+        private final Observer observer;
+
+        public RemoveSubscriberCommand(final Observer observer) {
+            super(CentralMessageQueue.this);
+            this.observer = observer;
+        }
+
+        @Override public void execute() {
+            observers.remove(observer);
+            succeed();
+        }
+
+        @Override public boolean isUrgent() {
+            return true;
+        }
+
+    }
+
 }

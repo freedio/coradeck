@@ -21,7 +21,7 @@
 package com.coradec.corajet.cldr;
 
 import com.coradec.coracore.annotation.Implementation;
-import com.coradec.coracore.ctrl.Factory;
+import com.coradec.coracore.model.Factory;
 import com.coradec.coracore.model.GenericType;
 import com.coradec.coracore.model.MetaFactory;
 import com.coradec.coracore.trouble.ObjectInstantiationFailure;

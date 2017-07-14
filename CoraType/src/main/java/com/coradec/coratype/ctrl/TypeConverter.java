@@ -20,7 +20,7 @@
 
 package com.coradec.coratype.ctrl;
 
-import com.coradec.coracore.ctrl.Factory;
+import com.coradec.coracore.model.Factory;
 import com.coradec.coracore.model.GenericFactory;
 import com.coradec.coracore.model.GenericType;
 import com.coradec.coratype.trouble.TypeConversionException;
@@ -40,11 +40,11 @@ public interface TypeConverter<V> {
     /**
      * Converts the specified object into an object of the target type, if possible.
      *
-     * @param obj the object to convert.
+     * @param value the object to convert.
      * @return the converted object.
      * @throws TypeConversionException if the type conversion failed.
      */
-    V convert(Object obj) throws TypeConversionException;
+    V convert(Object value) throws TypeConversionException;
 
     /**
      * Decodes the specified string into an object of the target type, if possible.

@@ -20,7 +20,7 @@
 
 package com.coradec.corabus.model.impl;
 
-import static com.coradec.corabus.model.ProcessState.*;
+import static com.coradec.corabus.state.ProcessState.*;
 import static java.util.concurrent.TimeUnit.*;
 import static org.hamcrest.CoreMatchers.*;
 
@@ -29,7 +29,7 @@ import com.coradec.corabus.com.Suspension;
 import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Sender;
 import com.coradec.coracore.annotation.Inject;
-import com.coradec.coracore.ctrl.Factory;
+import com.coradec.coracore.model.Factory;
 import com.coradec.corajet.test.CoradeckJUnit4TestRunner;
 import com.coradec.corasession.model.Session;
 import org.hamcrest.MatcherAssert;
@@ -41,7 +41,7 @@ import org.junit.runner.RunWith;
  */
 @SuppressWarnings("WeakerAccess")
 @RunWith(CoradeckJUnit4TestRunner.class)
-public class BasicBusProcessTest extends BasicBusTest {
+public class BasicBusProcessTest extends BasicBusTestInfrastructure {
 
     @Inject Factory<Suspension> suspensionFactory;
     @Inject Factory<Resumption> resumptionFactory;
@@ -49,11 +49,11 @@ public class BasicBusProcessTest extends BasicBusTest {
     final BasicBusProcess testee = new BasicBusProcess();
 
     @Test public void normalSetupAndShutdownShouldWork() throws InterruptedException {
-        testNormalSetupAndShutdown(testee, STARTED);
+        testNormalSetupAndShutdown(testee, STARTED, 5);
     }
 
     @Test public void normalSuspendAndResumeShouldWork() throws InterruptedException {
-        testNormalSetupAndShutdown(testee, STARTED, new SuspendAndResumeTest());
+        testNormalSetupAndShutdown(testee, STARTED, 5, new SuspendAndResumeTest());
     }
 
     private class SuspendAndResumeTest extends Inbetween {

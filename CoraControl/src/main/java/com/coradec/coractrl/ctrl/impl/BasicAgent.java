@@ -22,7 +22,9 @@ package com.coradec.coractrl.ctrl.impl;
 
 import com.coradec.coracom.ctrl.MessageQueue;
 import com.coradec.coracom.model.Command;
+import com.coradec.coracom.model.Information;
 import com.coradec.coracom.model.Message;
+import com.coradec.coracom.model.MultiRequest;
 import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Request;
 import com.coradec.coracom.model.Sender;
@@ -59,6 +61,7 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
     private static final Text TEXT_COMMAND_NOT_APPROVED =
             LocalizedText.define("CommandNotApproved");
     private static final Text TEXT_MESSAGE_UNPROCESSED = LocalizedText.define("MessageUnprocessed");
+    static final Text TEXT_ROUTE_ALREADY_SET = LocalizedText.define("RouteAlreadySet");
     private final int id;
 
     @Inject private MessageQueue MQ;
@@ -67,7 +70,8 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
 
     protected BasicAgent() {
         id = IDS.computeIfAbsent(getClass(), klass -> new AtomicInteger(0)).incrementAndGet();
-        approve(AddRouteCommand.class, RemoveRouteCommand.class, InternalCommandWrapper.class);
+        approve(AddRouteCommand.class, RemoveRouteCommand.class, ReplaceRouteCommand.class,
+                InternalCommandWrapper.class);
     }
 
     /**
@@ -113,6 +117,19 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
     }
 
     /**
+     * Redirects an existing route to a new message processor.  Messages of the specified type
+     * injected into the agent will be handled by the specified message consumer.
+     *
+     * @param <R>       the message type.
+     * @param selector  the message type selector.
+     * @param processor the message processor.
+     */
+    protected <R extends Message> void replaceRoute(Class<? super R> selector,
+            Consumer<R> processor) {
+        inject(new ReplaceRouteCommand<>(selector, processor));
+    }
+
+    /**
      * Removes an existing route.  Disables the established message processor for messages of the
      * specified type.
      *
@@ -124,13 +141,13 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
     }
 
     /**
-     * Injects the specified message on behalf of its sender into the central message queue.
+     * Injects the specified information into the central message queue on behalf of its sender.
      *
-     * @param message the message to inject.
+     * @param info the information to inject.
      * @return the message, for further processing.
      */
-    protected <M extends Message> M inject(final M message) {
-        return MQ.inject(message);
+    protected <I extends Information> I inject(final I info) {
+        return MQ.inject(info);
     }
 
     @Override public String represent() {
@@ -151,7 +168,7 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
                               })
                               .count() != 0;
         }
-        if (!onMessage(processed, message)) warn(TEXT_MESSAGE_UNPROCESSED, this, message);
+        if (!onMessage(processed, message)) warn(TEXT_MESSAGE_UNPROCESSED, message, this);
     }
 
     /**
@@ -168,16 +185,22 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
      * it).
      */
     protected boolean onMessage(boolean processed, final Message message) {
-        if (!processed && message instanceof Command) {
-            final Command command = (Command)message;
-            if (approved(command)) try {
-                command.execute();
-                command.succeed();
-            } catch (Exception e) {
-                command.fail(e);
+        if (!processed) {
+            if (message instanceof Command) {
+                final Command command = (Command)message;
+                if (approved(command)) try {
+                    command.execute();
+                    command.succeed();
+                } catch (Exception e) {
+                    command.fail(e);
+                }
+                else error(TEXT_COMMAND_NOT_APPROVED, command);
+                processed = true;
+            } else if (message instanceof MultiRequest) {
+                MultiRequest multi = (MultiRequest)message;
+                multi.process();
+                processed = true;
             }
-            else error(TEXT_COMMAND_NOT_APPROVED, command);
-            processed = true;
         }
         return processed;
     }
@@ -239,6 +262,33 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
         }
 
         @Override public void execute() {
+            if (getRoutes().putIfAbsent(getSelector(), getProcessor()) != null) {
+                warn(TEXT_ROUTE_ALREADY_SET, selector);
+            }
+        }
+    }
+
+    @SuppressWarnings("ClassHasNoToStringMethod")
+    private class ReplaceRouteCommand<R extends Message> extends AbstractCommand {
+
+        private final Class<? super R> selector;
+        private final Consumer<? extends Message> processor;
+
+        public ReplaceRouteCommand(final Class<? super R> selector, final Consumer<R> processor) {
+            super(BasicAgent.this);
+            this.selector = selector;
+            this.processor = processor;
+        }
+
+        @ToString public Class<? super R> getSelector() {
+            return this.selector;
+        }
+
+        @ToString public Consumer<? extends Message> getProcessor() {
+            return this.processor;
+        }
+
+        @Override public void execute() {
             getRoutes().put(getSelector(), getProcessor());
         }
     }
@@ -282,4 +332,5 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
             }
         }
     }
+
 }

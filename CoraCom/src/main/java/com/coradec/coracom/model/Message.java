@@ -21,10 +21,8 @@
 package com.coradec.coracom.model;
 
 import com.coradec.coracom.state.QueueState;
-import com.coradec.coracore.model.State;
 
-import java.util.Set;
-import java.util.UUID;
+import java.util.Collection;
 
 /**
  * An object sent from a sender to a list of recipients.  If the list of recipients is empty, the
@@ -32,21 +30,14 @@ import java.util.UUID;
  * the sender.  Messages without a valid sender should and will normally be dropped with a log
  * entry.
  */
-public interface Message {
-
-    /**
-     * Returns the message state.
-     *
-     * @return the message state.
-     */
-    State getState();
+public interface Message extends Event {
 
     /**
      * Returns the set of recipients.  The empty set denotes a broadcast message.
      *
      * @return the set of recipients.
      */
-    Set<Recipient> getRecipients();
+    Collection<Recipient> getRecipients();
 
     /**
      * Returns the recipients as an array.  The empty array denotes a broadcast message.
@@ -56,41 +47,11 @@ public interface Message {
     Recipient[] getRecipientList();
 
     /**
-     * Returns the sender of the message.
+     * Sets the number of recipients to which the message is to be delivered.
      *
-     * @return the sender.
+     * @param recipients the number of recipients.
      */
-    Sender getSender();
-
-    /**
-     * Returns the message ID.
-     *
-     * @return the message ID.
-     */
-    UUID getId();
-
-    /**
-     * Callback invoked when the message gets enqueued.
-     *
-     * @throws IllegalStateException if the current state is not {@link QueueState#NEW}.
-     */
-    void onEnqueue() throws IllegalStateException;
-
-    /**
-     * Callback invoked when the message is dispatched from the queue.
-     *
-     * @throws IllegalStateException if the current state is not {@link QueueState#NEW}.
-     */
-    void onDispatch() throws IllegalStateException;
-
-    /**
-     * Callback invoked when the message gets delivered to a recipient.
-     * <p>
-     * This callback will be invoked for each recipient.
-     *
-     * @throws IllegalStateException if the current state is not {@link QueueState#ENQUEUED}.
-     */
-    void onDeliver() throws IllegalStateException;
+    void setDeliveries(int recipients);
 
     /**
      * Callback invoked when the message has been delivered to all recipients.
@@ -100,17 +61,17 @@ public interface Message {
     void onDelivered();
 
     /**
-     * Checks if this is an urgent message.
+     * Returns the sender.
+     *
+     * @return the sender.
+     */
+    Sender getSender();
+
+    /**
+     * Checks whether the message is urgent.
      *
      * @return {@code true} if the message is urgent, {@code false} if not.
      */
     boolean isUrgent();
-
-    /**
-     * Sets the number of recipients to which the message is to be delivered.
-     *
-     * @param recipients the number of recipients.
-     */
-    void setDeliveries(int recipients);
 
 }

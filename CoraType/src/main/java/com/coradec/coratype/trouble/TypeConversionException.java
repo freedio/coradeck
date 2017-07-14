@@ -20,6 +20,7 @@
 
 package com.coradec.coratype.trouble;
 
+import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
 
 /**
@@ -27,23 +28,44 @@ import com.coradec.coracore.annotation.ToString;
  */
 public class TypeConversionException extends TypeException {
 
+    private final String representation;
     private final Class<?> fromType;
 
     public TypeConversionException(final Class<?> fromType) {
         this.fromType = fromType;
+        representation = null;
     }
 
     public TypeConversionException(final Class<?> fromType, final Throwable problem) {
         super(problem);
         this.fromType = fromType;
+        representation = null;
     }
 
     public TypeConversionException(final Class<?> fromType, final String explanation) {
         super(explanation);
         this.fromType = fromType;
+        representation = null;
+    }
+
+    public TypeConversionException(final String repr, final Class<?> fromType,
+            final Throwable problem) {
+        super(problem);
+        this.representation = repr;
+        this.fromType = fromType;
+    }
+
+    public TypeConversionException(final String repr, final Class<?> fromType) {
+        this.fromType = fromType;
+        representation = repr;
     }
 
     @ToString public Class<?> getFromType() {
         return this.fromType;
     }
+
+    @ToString @Nullable public String getRepresentation() {
+        return representation;
+    }
+
 }

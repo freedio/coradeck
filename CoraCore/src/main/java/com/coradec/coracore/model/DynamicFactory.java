@@ -21,7 +21,6 @@
 package com.coradec.coracore.model;
 
 import com.coradec.coracore.annotation.Inject;
-import com.coradec.coracore.ctrl.Factory;
 
 import java.lang.reflect.Type;
 

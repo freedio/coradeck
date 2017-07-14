@@ -4,3 +4,6 @@ QueueDispatcherStarted: Central Message Queue Dispatcher started.
 CmqInterrupted: Central Message Queue Dispatcher interrupted.
 FailedToDeliver: Failed to deliver «%s»!
 InterruptedWhileWaitingForLock: Interrupted while waiting for a lock!
+MessageBounced: %s bounced!
+ObserverNasty: Nasty observer %s threw an exception at me!
+CannotProcessMessage: Cannot process message %s!

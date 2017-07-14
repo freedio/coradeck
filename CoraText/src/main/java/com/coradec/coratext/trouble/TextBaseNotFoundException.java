@@ -20,6 +20,7 @@
 
 package com.coradec.coratext.trouble;
 
+import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
 
 /**
@@ -27,9 +28,9 @@ import com.coradec.coracore.annotation.ToString;
  */
 public class TextBaseNotFoundException extends CoraTextException {
 
-    private final String context;
+    private final @Nullable String context;
 
-    public TextBaseNotFoundException(final String context) {
+    public TextBaseNotFoundException(final @Nullable String context) {
         this.context = context;
     }
 

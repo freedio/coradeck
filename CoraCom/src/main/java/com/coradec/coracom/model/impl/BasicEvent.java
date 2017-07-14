@@ -21,25 +21,39 @@
 package com.coradec.coracom.model.impl;
 
 import com.coradec.coracom.model.Event;
-import com.coradec.coracom.model.Recipient;
-import com.coradec.coracom.model.Sender;
 import com.coradec.coracore.annotation.Implementation;
+import com.coradec.coracore.model.Origin;
+
+import java.time.LocalDateTime;
 
 /**
  * ​​Basic implementation of an event notification.
  */
-@SuppressWarnings("WeakerAccess")
+@SuppressWarnings({"WeakerAccess", "ClassHasNoToStringMethod"})
 @Implementation
-public class BasicEvent extends BasicMessage implements Event {
+public class BasicEvent extends BasicInformation implements Event {
+
+    private final LocalDateTime eventTimestamp;
 
     /**
-     * Initializes a new instance of BasicEvent with the specified sender and list of recipients.
+     * Initializes a new instance of BasicEvent from the specified origin.
      *
-     * @param sender     the sender.
-     * @param recipients the list of recipients
+     * @param origin the origin of the event.
      */
-    public BasicEvent(final Sender sender, final Recipient... recipients) {
-        super(sender, recipients);
+    public BasicEvent(final Origin origin) {
+        this(origin, LocalDateTime.now());
+    }
+
+    /**
+     * Initializes a new instance of BasicEvent with the specified event timestamp from the
+     * specified origin.
+     *
+     * @param origin         the origin.
+     * @param eventTimestamp the event timestamp.
+     */
+    public BasicEvent(final Origin origin, LocalDateTime eventTimestamp) {
+        super(origin);
+        this.eventTimestamp = eventTimestamp;
     }
 
 }

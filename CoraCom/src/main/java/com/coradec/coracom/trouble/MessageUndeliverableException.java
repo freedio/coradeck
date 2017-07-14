@@ -34,7 +34,7 @@ public class MessageUndeliverableException extends CommunicationException {
         this.message = message;
     }
 
-    @ToString private Message getFaultyMessage() {
+    @ToString public Message getFaultyMessage() {
         return message;
     }
 }
