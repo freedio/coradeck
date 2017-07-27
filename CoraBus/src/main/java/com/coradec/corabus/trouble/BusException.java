@@ -25,7 +25,6 @@ import com.coradec.coracore.trouble.BasicException;
 /**
  * Base class of all exceptions in the bus context.​​
  */
-@SuppressWarnings("WeakerAccess")
 public class BusException extends BasicException {
 
 }

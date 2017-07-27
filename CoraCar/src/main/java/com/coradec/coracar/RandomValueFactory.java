@@ -28,7 +28,6 @@ import java.util.Random;
 /**
  * ​​A factory for random values of a particular type./
  */
-@SuppressWarnings("WeakerAccess")
 public class RandomValueFactory implements Factory<Object> {
 
     private static final Random RANDOM = new Random();

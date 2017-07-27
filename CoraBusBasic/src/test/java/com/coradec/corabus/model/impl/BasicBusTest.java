@@ -30,6 +30,8 @@ import com.coradec.corabus.model.Bus;
 import com.coradec.corabus.model.BusApplication;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.model.Factory;
+import com.coradec.coractrl.ctrl.MultiThreadedMessageQueue;
+import com.coradec.coradir.model.Path;
 import com.coradec.corajet.test.CoradeckJUnit4TestRunner;
 import com.coradec.corasession.model.Session;
 import org.junit.Test;
@@ -41,16 +43,37 @@ import org.junit.runner.RunWith;
 @RunWith(CoradeckJUnit4TestRunner.class)
 public class BasicBusTest {
 
-    private final BusApplication application = new BasicBusApplication();
+    private final BusApplication application = new TestApp();
     @Inject private Bus bus;
     @Inject private Factory<Session> sessionFactory;
+    @Inject MultiThreadedMessageQueue queue;
 
     @Test public void simpleSetupAndShutdownShouldSucceed() throws InterruptedException {
         final Session session = sessionFactory.create();
-        bus.add(session, "SampleApplication", application).standby(2, SECONDS);
+        bus.add(session, Path.of("SampleApplication"), application).standby(3, SECONDS);
         assertThat(application.getState(), is(STARTED));
-        assertThat(application.getIdentifier().toString(),
-                matches("corabus://[^/]+/[^/]+/apps/SampleApplication"));
+        assertThat(application.getIdentifier().toString(), matches("corabus://[^/]+/[^/]+/apps/SampleApplication"));
+        assertThat(bus.has(session, Path.of("/net/server")), is(true));
+//        Thread.sleep(2000);
+//        bus.shutdown();
+    }
+
+    private class TestApp extends BasicBusApplication {
+
+        @Override public void run() {
+            while (!Thread.interrupted()) {
+                try {
+                    debug("Worker at work ...");
+                    queue.dumpStats();
+                    Thread.sleep(1000);
+                    checkSuspend();
+                } catch (InterruptedException e) {
+                    break;
+                }
+            }
+            debug("Worker terminated.");
+        }
+
     }
 
 }

@@ -32,7 +32,7 @@ public class BasicNodeTest extends BasicBusTestInfrastructure {
     private final BasicNode testee = new BasicNode();
 
     @Test public void normalSetupAndShutdownShouldSucceed() throws InterruptedException {
-        testNormalSetupAndShutdown(testee, INITIALIZED, 5);
+        testNormalSetupAndShutdown("node1", testee, INITIALIZED, 5);
     }
 
 }

@@ -51,4 +51,14 @@ public interface MessageQueue {
      */
     void unsubscribe(Observer observer);
 
+    /**
+     * Prevents the message queue from shutting down while an important process is running.
+     */
+    void preventShutdown();
+
+    /**
+     * Allows the message queue to shut down because an important process has finished.
+     */
+    void allowShutdown();
+
 }

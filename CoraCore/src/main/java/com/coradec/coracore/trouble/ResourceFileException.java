@@ -25,7 +25,6 @@ import com.coradec.coracore.annotation.ToString;
 /**
  * ​​Base class of all resource file problems.
  */
-@SuppressWarnings("WeakerAccess")
 public class ResourceFileException extends BasicException {
 
     private final String fileName;

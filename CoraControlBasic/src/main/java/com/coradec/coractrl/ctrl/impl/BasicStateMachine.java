@@ -20,10 +20,13 @@
 
 package com.coradec.coractrl.ctrl.impl;
 
+import static java.util.concurrent.TimeUnit.*;
 import static java.util.stream.Collectors.*;
 
 import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Request;
+import com.coradec.coracom.model.impl.BasicCommand;
+import com.coradec.coracom.model.impl.BasicEvent;
 import com.coradec.coracom.model.impl.BasicRequest;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Inject;
@@ -34,6 +37,8 @@ import com.coradec.coracore.trouble.OperationInterruptedException;
 import com.coradec.coracore.util.ClassUtil;
 import com.coradec.coractrl.com.ExecuteStateTransitionRequest;
 import com.coradec.coractrl.com.StartStateMachineRequest;
+import com.coradec.coractrl.com.StateMachineReachedStateEvent;
+import com.coradec.coractrl.ctrl.Executable;
 import com.coradec.coractrl.ctrl.StateMachine;
 import com.coradec.coractrl.ctrl.Trajectory;
 import com.coradec.coractrl.model.StateTransition;
@@ -62,23 +67,29 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
     private static final Text TEXT_INVALID_STATE = LocalizedText.define("InvalidState");
     @Inject private static Factory<Trajectory> TRAJECTORY_FACTORY;
 
-    private final Recipient agent;
-    @SuppressWarnings("WeakerAccess") State currentState, targetState;
+    final Recipient agent;
+    State currentState, targetState;
     private final Set<StateTransition> transitions = new HashSet<>();
-    @SuppressWarnings("WeakerAccess") final Set<Trajectory> trajectories = new HashSet<>();
+    volatile Set<Trajectory> trajectories;
 
     /**
      * Initializes a new instance of BasicStateMachine on behalf of the specified recipient.
      *
      * @param owner the recipient.
      */
-    @SuppressWarnings("WeakerAccess") public BasicStateMachine(Recipient owner) {
+    public BasicStateMachine(Recipient owner) {
         this.agent = owner;
         addRoute(StartStateMachineRequest.class, this::doStart);
+        approve(PerformStateTransitionCommand.class);
     }
 
     @Override @ToString public State getCurrentState() {
         return currentState;
+    }
+
+    protected void setCurrentState(final State currentState) {
+        this.currentState = currentState;
+        inject(new InternalStateMachineReachedStateEvent(currentState));
     }
 
     @Override @ToString public State getTargetState() {
@@ -87,7 +98,7 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
 
     @Override public void initialize(final State state) {
         execute(() -> {
-            currentState = targetState = state;
+            setCurrentState(targetState = state);
 //            debug("%s: CurrentState and TargetState initialized to %s", this, state);
         });
     }
@@ -98,22 +109,22 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
 
     @Override public void addTransitions(final Collection<StateTransition> transitions) {
         execute(() -> {
-            stop();
             this.transitions.addAll(transitions);
+            trajectories = null;
         });
     }
 
     @Override public void setTargetState(final State state) {
         execute(() -> {
-            stop();
             this.targetState = state;
+            trajectories = null;
         });
     }
 
     private void doStart(InternalStartMachineRequest request) {
+//        debug("%s: request to start %s → %s", this, getCurrentState(), getTargetState());
         if (getCurrentState() == getTargetState()) request.succeed();
         else try {
-//            debug("%s: request to start", this);
             checkPrerequisites();
             computeTrajectories();
             proceed(request);
@@ -132,25 +143,35 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
         return inject(new InternalStartMachineRequest());
     }
 
-    /**
-     * Stops the state machine.
-     */
-    private void stop() {
-
+    @Override public void onState(final State state, final Executable task) {
+        on(false, StateMachineReachedStateEvent.class, event -> {
+            if (event.getReachedState() == state) {
+                try {
+                    task.execute();
+                } catch (Exception e) {
+                    error(e);
+                }
+            }
+        });
     }
 
     Set<Trajectory> getTrajectories() {
-        if (trajectories.isEmpty()) {
+        if (trajectories == null) {
             try {
-                execute(() -> {
-                    final long millis = System.currentTimeMillis();
-                    checkPrerequisites();
-                    computeTrajectories();
-//                    debug("Trajectories took %d millis", System.currentTimeMillis() - millis);
-                }).standby();
+                execute(this::getTs).standby();
             } catch (InterruptedException e) {
                 throw new OperationInterruptedException();
             }
+        }
+        return trajectories;
+    }
+
+    Set<Trajectory> getTs() {
+        if (trajectories == null) {
+            final long millis = System.currentTimeMillis();
+            checkPrerequisites();
+            computeTrajectories();
+            debug("ComputeTrajectories took %d millis", System.currentTimeMillis() - millis);
         }
         return trajectories;
     }
@@ -159,6 +180,7 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
      * Computes the trajectories from the current state to the target state.
      */
     private void computeTrajectories() {
+        this.trajectories = new HashSet<>();
         final Set<Trajectory> trajectories;
         try {
             trajectories =
@@ -223,57 +245,12 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
      *
      * @param request the request.
      */
-    private void proceed(final InternalStartMachineRequest request) {
-        while (getCurrentState() != getTargetState()) {
-//            debug("Proceeding from %s to %s", getCurrentState(), getTargetState());
-            final State state = getCurrentState();
-            request.addState(state);
-            try {
-                final StateTransition transition = //
-                        trajectories.stream()
-                                    .filter(t -> t.isViable(request, state))
-                                    .map(ty -> ty.transitionFor(state).orElse(null))
-                                    .filter(Objects::nonNull)
-                                    .sorted()
-                                    .findFirst()
-                                    .orElseThrow(() -> new StateMachineStalledException(state));
-//            debug("Proceeding from %s to %s", transition.getInitialState(),
-//                    transition.getTerminalState());
-                inject(new InternalExecuteStateTransitionRequest(agent, transition)).andThen(() -> {
-//                    debug("Proceed → succees");
-                    final State newState = transition.getTerminalState();
-                    setCurrentState(newState);
-                    if (newState == getTargetState()) {
-//                        debug("Trajectory successful, reached state %s", newState);
-                        request.addState(newState);
-                        request.succeed();
-                    }
-                }).orElse(problem -> {
-//                    debug("Proceed → fail with %s", problem);
-                    blockTransition(request, transition);
-                    request.removeState(state);
-                }).standby();
-            } catch (Exception e) {
-                error(e);
-                request.fail(e);
-                break;
-            }
-//            debug("Proceed to next");
-        }
-    }
-
-    private void blockTransition(final Request request, final StateTransition transition) {
-        trajectories.stream()
-                    .filter(trajectory -> trajectory.contains(transition))
-                    .forEach(trajectory -> trajectory.block(request));
+    void proceed(final InternalStartMachineRequest request) {
+        inject(new PerformStateTransitionCommand(request));
     }
 
     @Override public String toString() {
         return ClassUtil.toString(this);
-    }
-
-    private void setCurrentState(final State state) {
-        currentState = state;
     }
 
     private class InternalStartMachineRequest extends BasicRequest
@@ -287,7 +264,6 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
          */
         InternalStartMachineRequest() {
             super(BasicStateMachine.this);
-            trajectories.clear();
         }
 
         void addState(final State state) {
@@ -324,13 +300,96 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
         private final StateTransition transition;
 
         InternalExecuteStateTransitionRequest(final Recipient agent,
-                                              final StateTransition transition) {
+                final StateTransition transition) {
             super(BasicStateMachine.this, agent);
             this.transition = transition;
         }
 
+        @ToString public Recipient getAgent() {
+            return getRecipientList()[0];
+        }
+
         @ToString public StateTransition getTransition() {
             return transition;
+        }
+
+    }
+
+    @SuppressWarnings("ClassHasNoToStringMethod")
+    private class PerformStateTransitionCommand extends BasicCommand {
+
+        private final InternalStartMachineRequest trigger;
+
+        PerformStateTransitionCommand(final InternalStartMachineRequest request) {
+            super(BasicStateMachine.this);
+            trigger = request;
+            preventMessageQueueShutdown();
+        }
+
+        @Override public void execute() {
+            if (getCurrentState() == getTargetState()) {
+                trigger.succeed();
+            }
+//            debug("Proceeding from %s to %s", getCurrentState(), getTargetState());
+            final State state = getCurrentState();
+            trigger.addState(state);
+            try {
+                final StateTransition transition = //
+                        getTs().stream()
+                               .filter(t -> t.isViable(trigger, state))
+                               .map(ty -> ty.transitionFor(state).orElse(null))
+                               .filter(Objects::nonNull)
+                               .sorted()
+                               .findFirst()
+                               .orElseThrow(() -> new StateMachineStalledException(state,
+                                       getTargetState()));
+//                debug("Proceeding from %s to %s", transition.getInitialState(),
+//                        transition.getTerminalState());
+                inject(new InternalExecuteStateTransitionRequest(agent, transition)).andThen(() -> {
+//                    debug("Proceed → succees");
+                    final State newState = transition.getTerminalState();
+                    setCurrentState(newState);
+                    if (newState == getTargetState()) {
+//                        debug("Trajectory successful, reached state %s", newState);
+                        trigger.addState(newState);
+                        trigger.succeed();
+                        allowMessageQueueShutdown();
+                    }
+                }).orElse(problem -> {
+//                    debug("Proceed → fail with %s", problem);
+                    blockTransition(trajectories, trigger, transition);
+                    trigger.removeState(state);
+                }).standby(5, SECONDS);
+                if (getCurrentState() != getTargetState()) again(this);
+            } catch (Exception e) {
+                error(e);
+                trigger.fail(e);
+                allowMessageQueueShutdown();
+            }
+        }
+
+        private void blockTransition(final Set<Trajectory> trajectories, final Request request,
+                final StateTransition transition) {
+            trajectories.stream()
+                        .filter(trajectory -> trajectory.contains(transition))
+                        .forEach(trajectory -> trajectory.block(request));
+        }
+
+    }
+
+    @SuppressWarnings("ClassHasNoToStringMethod")
+    private class InternalStateMachineReachedStateEvent extends BasicEvent
+            implements StateMachineReachedStateEvent {
+
+        private final State state;
+
+        InternalStateMachineReachedStateEvent(final State state) {
+            super(BasicStateMachine.this);
+            this.state = state;
+        }
+
+        @Override public State getReachedState() {
+            return state;
         }
 
     }

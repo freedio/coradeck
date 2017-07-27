@@ -30,26 +30,29 @@ import com.coradec.corabus.view.BusContext;
 import com.coradec.coracom.model.Request;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.model.State;
+import com.coradec.coracore.trouble.OperationInterruptedException;
 import com.coradec.coractrl.model.StateTransition;
 import com.coradec.corasession.model.Session;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.concurrent.Semaphore;
 
 /**
- * ​​Basic implementation of a bus application.
+ * Abstract implementation of a bus application.
  */
-public class BasicBusApplication extends BasicHub implements BusApplication {
+public abstract class BasicBusApplication extends BasicHub implements BusApplication {
 
-    @SuppressWarnings("WeakerAccess") public BasicBusApplication() {
+    private Thread worker;
+    private final Semaphore suspension = new Semaphore(1);
+
+    public BasicBusApplication() {
         addRoute(Suspension.class, this::suspend);
         addRoute(Resumption.class, this::resume);
     }
 
     @Override protected Collection<StateTransition> getSetupTransitions(final Session session,
-                                                                        final BusContext context,
-                                                                        final Invitation
-                                                                                invitation) {
+            final BusContext context, final Invitation invitation) {
         final Collection<StateTransition> result =
                 super.getSetupTransitions(session, context, invitation);
         Collections.addAll(result, new Starting(session), new Started(session),
@@ -82,6 +85,18 @@ public class BasicBusApplication extends BasicHub implements BusApplication {
     }
 
     /**
+     * Checks if the application is suspended.  If so, the method will wait until it is resumed.
+     *
+     * @throws InterruptedException if the method was interrupted while waiting for the suspension
+     *                              to be terminate.  The application should exit immediately on
+     *                              this exception.
+     */
+    protected void checkSuspend() throws InterruptedException {
+        suspension.acquire();
+        suspension.release();
+    }
+
+    /**
      * Interceptor invoked during the state transition from LOADED to STARTING.
      * <p>
      * Can be used to do preliminary start checks.
@@ -89,11 +104,11 @@ public class BasicBusApplication extends BasicHub implements BusApplication {
      * The base method invokes START on all runnable children.
      * <p>
      * Subclasses can wrap this method early (i.e. override it and invoke the superclass method as
-     * soon as possible.
+     * soon as possible).
      *
      * @param session the session context.
      */
-    @SuppressWarnings("WeakerAccess") protected @Nullable Request onStarting(
+    protected @Nullable Request onStarting(
             final Session session) {
         setState(STARTING);
         return null;
@@ -107,11 +122,14 @@ public class BasicBusApplication extends BasicHub implements BusApplication {
      * The base method waits until all runnable children have started.
      * <p>
      * Subclasses can wrap this method early (i.e. override it and invoke the superclass method as
-     * soon as possible.
+     * soon as possible).
      *
      * @param session the session context.
      */
-    @SuppressWarnings("WeakerAccess") protected @Nullable Request onStart(final Session session) {
+    protected @Nullable Request onStart(final Session session) {
+        worker = new Thread(this);
+        worker.setDaemon(true);
+        worker.start();
         setState(STARTED);
         return null;
     }
@@ -124,11 +142,11 @@ public class BasicBusApplication extends BasicHub implements BusApplication {
      * The base method invokes stop on all children.
      * <p>
      * Subclasses can wrap this method late (i.e. override it and invoke the superclass method as
-     * late as possible.
+     * late as possible).
      *
      * @param session the session context.
      */
-    @SuppressWarnings("WeakerAccess") protected @Nullable Request onStopping(
+    protected @Nullable Request onStopping(
             final Session session) {
         setState(STOPPING);
         return null;
@@ -142,47 +160,13 @@ public class BasicBusApplication extends BasicHub implements BusApplication {
      * The base method waits until all children have stopped.
      * <p>
      * Subclasses can wrap this method late (i.e. override it and invoke the superclass method as
-     * late as possible.
+     * late as possible).
      *
      * @param session the session context.
      */
-    @SuppressWarnings("WeakerAccess") protected @Nullable Request onStop(final Session session) {
+    protected @Nullable Request onStop(final Session session) {
+        worker.interrupt();
         setState(STOPPED);
-        return null;
-    }
-
-    /**
-     * Interceptor invoked during the state transition from SUSPENDED to RESUMING.
-     * <p>
-     * Can be used to do preliminary resume checks.
-     * <p>
-     * The base method invokes RESUME on all runnable children.
-     * <p>
-     * Subclasses can wrap this method early (i.e. override it and invoke the superclass method as
-     * soon as possible.
-     *
-     * @param session the session context.
-     */
-    @SuppressWarnings("WeakerAccess") protected @Nullable Request onResuming(
-            final Session session) {
-        setState(RESUMING);
-        return null;
-    }
-
-    /**
-     * Interceptor invoked during the state transition from RESUMING to RESUMED.
-     * <p>
-     * Can be used to do after-resume setup.
-     * <p>
-     * The base method waits until all runnable children have started.
-     * <p>
-     * Subclasses can wrap this method early (i.e. override it and invoke the superclass method as
-     * soon as possible.
-     *
-     * @param session the session context.
-     */
-    @SuppressWarnings("WeakerAccess") protected @Nullable Request onResume(final Session session) {
-        setState(RESUMED);
         return null;
     }
 
@@ -194,11 +178,11 @@ public class BasicBusApplication extends BasicHub implements BusApplication {
      * The base method invokes SUSPEND on all children.
      * <p>
      * Subclasses can wrap this method late (i.e. override it and invoke the superclass method as
-     * late as possible.
+     * late as possible).
      *
      * @param session the session context.
      */
-    @SuppressWarnings("WeakerAccess") protected @Nullable Request onSuspending(
+    protected @Nullable Request onSuspending(
             final Session session) {
         setState(SUSPENDING);
         return null;
@@ -212,12 +196,53 @@ public class BasicBusApplication extends BasicHub implements BusApplication {
      * The base method waits until all children are suspended.
      * <p>
      * Subclasses can wrap this method late (i.e. override it and invoke the superclass method as
-     * late as possible.
+     * late as possible).
      *
      * @param session the session context.
      */
-    @SuppressWarnings("WeakerAccess") protected @Nullable Request onSuspend(final Session session) {
+    protected @Nullable Request onSuspend(final Session session) {
+        try {
+            suspension.acquire();
+        } catch (InterruptedException e) {
+            throw new OperationInterruptedException();
+        }
         setState(SUSPENDED);
+        return null;
+    }
+
+    /**
+     * Interceptor invoked during the state transition from SUSPENDED to RESUMING.
+     * <p>
+     * Can be used to do preliminary resume checks.
+     * <p>
+     * The base method invokes RESUME on all runnable children.
+     * <p>
+     * Subclasses can wrap this method early (i.e. override it and invoke the superclass method as
+     * soon as possible).
+     *
+     * @param session the session context.
+     */
+    protected @Nullable Request onResuming(
+            final Session session) {
+        setState(RESUMING);
+        return null;
+    }
+
+    /**
+     * Interceptor invoked during the state transition from RESUMING to RESUMED.
+     * <p>
+     * Can be used to do after-resume setup.
+     * <p>
+     * The base method waits until all runnable children have started.
+     * <p>
+     * Subclasses can wrap this method early (i.e. override it and invoke the superclass method as
+     * soon as possible).
+     *
+     * @param session the session context.
+     */
+    protected @Nullable Request onResume(final Session session) {
+        suspension.release();
+        setState(RESUMED);
         return null;
     }
 

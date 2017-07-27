@@ -39,21 +39,20 @@ import org.junit.runner.RunWith;
 /**
  * ​​Test suite for the BasicBusProcess.
  */
-@SuppressWarnings("WeakerAccess")
 @RunWith(CoradeckJUnit4TestRunner.class)
 public class BasicBusProcessTest extends BasicBusTestInfrastructure {
 
     @Inject Factory<Suspension> suspensionFactory;
     @Inject Factory<Resumption> resumptionFactory;
 
-    final BasicBusProcess testee = new BasicBusProcess();
+    final BasicBusProcess testee = new TestApplication();
 
     @Test public void normalSetupAndShutdownShouldWork() throws InterruptedException {
-        testNormalSetupAndShutdown(testee, STARTED, 5);
+        testNormalSetupAndShutdown("proc1", testee, STARTED, 5);
     }
 
     @Test public void normalSuspendAndResumeShouldWork() throws InterruptedException {
-        testNormalSetupAndShutdown(testee, STARTED, 5, new SuspendAndResumeTest());
+        testNormalSetupAndShutdown("proc2", testee, STARTED, 5, new SuspendAndResumeTest());
     }
 
     private class SuspendAndResumeTest extends Inbetween {
@@ -68,6 +67,23 @@ public class BasicBusProcessTest extends BasicBusTestInfrastructure {
             resumption.standby(1, SECONDS)
                       .andThen(() -> MatcherAssert.assertThat(testee.getState(), is(STARTED)));
         }
+    }
+
+    private class TestApplication extends BasicBusProcess {
+
+        @Override public void run() {
+            while (!Thread.interrupted()) {
+                try {
+                    debug("Worker at work ...");
+                    Thread.sleep(1000);
+                    checkSuspend();
+                } catch (InterruptedException e) {
+                    break;
+                }
+            }
+            debug("Worker terminated.");
+        }
+
     }
 
 }

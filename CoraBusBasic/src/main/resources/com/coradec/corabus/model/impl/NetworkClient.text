@@ -1,0 +1,6 @@
+# Localized text base for default locale of class NetClient
+
+ClientDisconnected: Client has been disconnected.
+NoProtocol: No or invalid protocol!
+NoAddress: No or invalid address!
+NoPort: No or invalid port!

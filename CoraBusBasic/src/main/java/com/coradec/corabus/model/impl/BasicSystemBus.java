@@ -25,9 +25,11 @@ import static com.coradec.corabus.state.NodeState.*;
 import com.coradec.corabus.model.SystemBus;
 import com.coradec.coraconf.model.Property;
 import com.coradec.coracore.time.Duration;
-import com.coradec.coracore.util.SystemUtil;
+import com.coradec.coracore.util.NetworkUtil;
 import com.coradec.coractrl.com.StartStateMachineRequest;
 import com.coradec.corasession.model.Session;
+import com.coradec.coratext.model.LocalizedText;
+import com.coradec.coratext.model.Text;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -39,17 +41,19 @@ import java.util.concurrent.TimeUnit;
  * ​​Abstract implementation of a system bus.  Use {@link #create()} to get a suitable system bus
  * instance.
  */
-public class BasicSystemBus extends BasicHub implements SystemBus {
+public abstract class BasicSystemBus extends BasicHub implements SystemBus {
 
     private static final Property<Integer> PROP_SYSTEM_BUS_PORT =
             Property.define("SystemBusPort", Integer.class, 10);
     private static final Property<Duration> PROP_SYSTEM_BUS_TIMEOUT =
             Property.define("SystemBusTimeout", Duration.class, Duration.of(1, TimeUnit.SECONDS));
 
+    private static final Text TEXT_BUS_READY = LocalizedText.define("BusReady");
+
     public static SystemBus create() {
         SocketAddress server = null;
         try {
-            server = new InetSocketAddress(SystemUtil.getLocalAddress(),
+            server = new InetSocketAddress(NetworkUtil.getLocalAddress(),
                     PROP_SYSTEM_BUS_PORT.value());
             final Socket socket = new Socket();
             socket.connect(server, (int)PROP_SYSTEM_BUS_TIMEOUT.value().toMillis());
@@ -61,9 +65,18 @@ public class BasicSystemBus extends BasicHub implements SystemBus {
         }
     }
 
+    static int getServerSocketPort() {
+        return PROP_SYSTEM_BUS_PORT.value();
+    }
+
     @Override public StartStateMachineRequest shutdown(final Session session) {
         stateMachine.setTargetState(DETACHED);
         return stateMachine.start();
+    }
+
+    @Override protected void onReady() {
+        super.onReady();
+        info(TEXT_BUS_READY);
     }
 
 }

@@ -20,6 +20,7 @@
 
 package com.coradec.coradir.model;
 
+import com.coradec.coraconf.model.Property;
 import com.coradec.coracore.model.Factory;
 import com.coradec.coracore.model.GenericFactory;
 import com.coradec.coracore.model.Representable;
@@ -32,15 +33,16 @@ import java.net.URI;
 public interface Path extends Representable {
 
     Factory<Path> PATH = new GenericFactory<>(Path.class);
+    Property<String> PROP_SEPARATOR = Property.define("Separator", String.class, "/");
 
     /**
-     * Returns a relative path consisting of the specified name.
+     * Returns a path consisting of the specified path representation.
      *
-     * @param name the name.
+     * @param path the path.
      * @return a path.
      */
-    static Path of(final String name) {
-        return PATH.create((Object)new String[] {name});
+    static Path of(final String path) {
+        return PATH.create((Object[])(path.split(PROP_SEPARATOR.value())));
     }
 
     /**
@@ -75,5 +77,35 @@ public interface Path extends Representable {
      * @return a new path consisting of this path with the specified name appended.
      */
     Path add(String name);
+
+    /**
+     * Checks if the path is empty (has no elements).
+     * <p>
+     * Note: A path containing an empty string as its sole element is a singleton, not empty.
+     *
+     * @return {@code true} if the path is empty, {@code false} if not.
+     */
+    boolean isEmpty();
+
+    /**
+     * Checks if the path is a name (has only one element).
+     *
+     * @return {@code true} if the path is a name, {@code false} if not.
+     */
+    boolean isName();
+
+    /**
+     * Returns the first element of the path.
+     *
+     * @return the head.
+     */
+    String head();
+
+    /**
+     * Returns this path without its head.
+     *
+     * @return the tail of this path.
+     */
+    Path tail();
 
 }

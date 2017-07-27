@@ -23,7 +23,6 @@ package com.coradec.corabus.trouble;
 /**
  * ​​Base class of all membership related exceptions.
  */
-@SuppressWarnings("WeakerAccess")
 public class MembershipException extends BusException {
 
 }

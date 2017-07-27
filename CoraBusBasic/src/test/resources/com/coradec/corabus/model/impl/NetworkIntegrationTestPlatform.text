@@ -1,0 +1,7 @@
+# Localized text base for default locale of class NetworkIntegrationTestPlatform
+
+StartingServer: Starting the server...
+StartingClient: Starting the client...
+ClientStarted: Client started.
+ServerStarted: Server started.
+MessageBounced: Message %s bounced!

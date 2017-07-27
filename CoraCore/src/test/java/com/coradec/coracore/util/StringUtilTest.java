@@ -108,6 +108,36 @@ public class StringUtilTest {
             }
     };
 
+    private static final Object[][] testData2 = {
+            {"Athabasca", "Athabasca"}, //
+            {123, "123"}, {12.5f, "12.5"}, //
+            {123.456, "123.456"}, //
+            {Optional.empty(), StringUtil.NULL_REPR}, //
+            {Optional.empty(), StringUtil.NULL_REPR}, //
+            {Optional.of("abc"), "abc"}, {'ä', "ä"}, //
+            {
+                    Arrays.asList("a", "b", "c"), "[a, b, c]"
+            }, {
+                    new HashSet<>(Arrays.asList("a", "b", "c")), "(a, b, c)"
+            }, {
+                    createMap("a", 1, "b", 12, "C", 123), "{a: 1, b: 12, C: 123}"
+            }, {
+                    new Boolean[] {true, false, true, false}, "[true, false, true, false]"
+            }, {
+                    new boolean[] {true, false, true, false}, "[true, false, true, false]"
+            }, {
+                    new Character[] {'a', 'b', 'c'}, "[a, b, c]"
+            }, {
+                    new char[] {'a', 'b', 'c'}, "[a, b, c]"
+            }, {
+                    new Byte[] {1, 10, 100}, "[1, 10, 100]"
+            }, {
+                    new byte[] {1, 10, 100}, "[01, 0a, 64]"
+            }, {
+                    TestState.TESTSTATE, "TEST(0)", "Test"
+            }
+    };
+
     @Test public void testConstants() {
         assertThat(String.valueOf(StringUtil.EMPTY), is(equalTo("")));
         assertThat(String.valueOf(StringUtil.NULL_REPR), is(equalTo("NIL")));
@@ -119,7 +149,7 @@ public class StringUtilTest {
     }
 
     @Test public void testRepresent() throws Exception {
-        for (final Object[] testDatum : testData) {
+        for (final Object[] testDatum : testData2) {
             final Object repr = testDatum.length > 2 ? testDatum[2] : testDatum[1];
             assertThat(StringUtil.represent(testDatum[0]), is(equalTo(repr)));
         }

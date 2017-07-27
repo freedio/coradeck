@@ -21,11 +21,9 @@
 package com.coradec.corajet.cldr;
 
 import org.junit.FixMethodOrder;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
-import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
@@ -38,15 +36,6 @@ import java.lang.reflect.Method;
 public class CarClassLoaderTest {
 
     private static final String PROP_CLASS_PATH = "java.class.path";
-
-    @Ignore @Test public void aa_showClassPath() {
-//        System.getProperties().forEach((key, value) -> System.out.printf("%s: %s%n", key, value));
-        final String classPath = System.getProperty(PROP_CLASS_PATH);
-        System.out.println("ClassPath:");
-        for (final String element : classPath.split(File.pathSeparator)) {
-            System.out.printf("• %s%n", element);
-        }
-    }
 
     @Test public void ab_testImplementationInjector()
             throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException,

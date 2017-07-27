@@ -34,10 +34,14 @@ import java.util.List;
 /**
  * ​​A JUnit 4 test runner for coradeck modules.
  */
+@SuppressWarnings("ClassHasNoToStringMethod")
 public class CoradeckJUnit4TestRunner extends BlockJUnit4ClassRunner {
 
     private static CarClassLoader CLASS_LOADER;
     private static Class<? extends Annotation> TEST_ANNOTATION;
+    private static Class<? extends Annotation> IGNORED_ANNOTATION;
+
+    private final Class<?> originalClass;
 
     private static CarClassLoader getClassLoader() {
         if (CLASS_LOADER == null) CLASS_LOADER = new CarClassLoader();
@@ -51,6 +55,13 @@ public class CoradeckJUnit4TestRunner extends BlockJUnit4ClassRunner {
         return TEST_ANNOTATION;
     }
 
+    @SuppressWarnings("unchecked") private static Class<? extends Annotation> getIgnoredAnnotation()
+            throws ClassNotFoundException {
+        if (IGNORED_ANNOTATION == null) IGNORED_ANNOTATION =
+                (Class<? extends Annotation>)getClassLoader().findClass("org.junit.Ignore");
+        return IGNORED_ANNOTATION;
+    }
+
     /**
      * Creates a CoradeckJUnit4TestRunner to run {@code klass}
      *
@@ -60,6 +71,7 @@ public class CoradeckJUnit4TestRunner extends BlockJUnit4ClassRunner {
     public CoradeckJUnit4TestRunner(final Class<?> klass)
             throws InitializationError, ClassNotFoundException {
         super(getClassLoader().findClass(klass.getName()));
+        this.originalClass = klass;
         try {
             final Field syslog_level = klass.getField("SYSLOG_LEVEL");
             final String level = String.valueOf(syslog_level.get(null));
@@ -71,12 +83,7 @@ public class CoradeckJUnit4TestRunner extends BlockJUnit4ClassRunner {
         }
     }
 
-    /**
-     * Adds to {@code errors} for each method annotated with {@code @Test}that
-     * is not a public, void instance method with no arguments.
-     */
-
-    protected void validateTestMethods(List<Throwable> errors) {
+    @Override protected void validateTestMethods(List<Throwable> errors) {
         try {
             validatePublicVoidNoArgMethods(getTestAnnotation(), false, errors);
         } catch (ClassNotFoundException e) {
@@ -84,16 +91,19 @@ public class CoradeckJUnit4TestRunner extends BlockJUnit4ClassRunner {
         }
     }
 
-    /**
-     * Returns the methods that run tests. Default implementation returns all
-     * methods annotated with {@code @Test} on this class and superclasses that
-     * are not overridden.
-     */
-    protected List<FrameworkMethod> computeTestMethods() {
+    @Override protected List<FrameworkMethod> computeTestMethods() {
         try {
             return getTestClass().getAnnotatedMethods(getTestAnnotation());
         } catch (ClassNotFoundException e) {
             return Collections.emptyList();
+        }
+    }
+
+    @Override protected boolean isIgnored(final FrameworkMethod child) {
+        try {
+            return getTestClass().getAnnotatedMethods(getIgnoredAnnotation()).contains(child);
+        } catch (ClassNotFoundException e) {
+            return false;
         }
     }
 

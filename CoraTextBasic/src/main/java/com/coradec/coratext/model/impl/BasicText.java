@@ -45,7 +45,7 @@ public class BasicText implements Text {
      *
      * @param name the literal name.
      */
-    @SuppressWarnings("WeakerAccess") public BasicText(final String name) {
+    public BasicText(final String name) {
         this.name = name;
     }
 

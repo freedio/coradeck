@@ -103,7 +103,7 @@ public class ConsoleLogFacility implements LogFacility {
             this.function = f;
         }
 
-        @SuppressWarnings("WeakerAccess") @ToString public String getTag() {
+        @ToString public String getTag() {
             return this.tag;
         }
 

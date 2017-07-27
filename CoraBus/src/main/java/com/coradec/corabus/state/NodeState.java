@@ -26,7 +26,6 @@ import com.coradec.coracore.util.ClassUtil;
 /**
  * ​​Type-safe extensible enumeration of node states.
  */
-@SuppressWarnings("WeakerAccess")
 public class NodeState implements State {
 
     public static final NodeState UNATTACHED = new NodeState("UNATTACHED", 0);

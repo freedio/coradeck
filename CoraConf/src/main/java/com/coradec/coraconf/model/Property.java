@@ -20,7 +20,7 @@
 
 package com.coradec.coraconf.model;
 
-import com.coradec.coracore.model.DynamicFactory;
+import com.coradec.coraconf.module.CoraConf;
 import com.coradec.coracore.model.GenericType;
 import com.coradec.coracore.util.ExecUtil;
 
@@ -29,22 +29,24 @@ import com.coradec.coracore.util.ExecUtil;
  */
 public interface Property<T> {
 
-    DynamicFactory<Property<?>> FACTORY = new DynamicFactory<>();
-
-    @SuppressWarnings("unchecked")
     static <X, D extends X> Property<X> define(final String name, final Class<X> type,
-                                               final D dflt) {
-        return (Property<X>)FACTORY.of(Property.class, type)
-                                   .get(type, ExecUtil.getCallerStackFrame().getClassFileName(),
-                                           name, dflt);
+            final D dflt) {
+        return CoraConf.define(ExecUtil.getCallerStackFrame().getClassFileName(), name,
+                GenericType.of(type), dflt);
     }
 
-    @SuppressWarnings("unchecked")
     static <X, D extends X> Property<X> define(final String name, final GenericType<X> type,
-                                               final D dflt) {
-        return (Property<X>)FACTORY.of(Property.class, type)
-                                   .get(type, ExecUtil.getCallerStackFrame().getClassFileName(),
-                                           name, dflt);
+            final D dflt) {
+        return CoraConf.define(ExecUtil.getCallerStackFrame().getClassFileName(), name, type, dflt);
+    }
+
+    static <X> Property<X> define(String name, Class<X> type) {
+        return CoraConf.define(ExecUtil.getCallerStackFrame().getClassFileName(), name,
+                GenericType.of(type));
+    }
+
+    static <X> Property<X> define(String name, GenericType<X> type) {
+        return CoraConf.define(ExecUtil.getCallerStackFrame().getClassFileName(), name, type);
     }
 
     /**
@@ -63,10 +65,9 @@ public interface Property<T> {
 
     /**
      * Returns the value of the property, converted from the raw value after fitting the latter one
-     * with the specified arguments..
+     * with the specified arguments.
      *
      * @param args arguments to fit into the value template.
      */
     T value(Object... args);
-
 }

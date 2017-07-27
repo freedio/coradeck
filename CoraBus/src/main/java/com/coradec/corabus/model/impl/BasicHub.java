@@ -26,24 +26,35 @@ import static java.util.stream.Collectors.*;
 import com.coradec.corabus.com.Invitation;
 import com.coradec.corabus.model.BusHub;
 import com.coradec.corabus.model.BusNode;
+import com.coradec.corabus.model.ServiceProvider;
+import com.coradec.corabus.trouble.MemberNotFoundException;
+import com.coradec.corabus.trouble.MemberTypeInvalidException;
+import com.coradec.corabus.trouble.MountPointUndefinedException;
 import com.coradec.corabus.view.BusContext;
+import com.coradec.corabus.view.BusService;
 import com.coradec.corabus.view.Member;
 import com.coradec.corabus.view.impl.BasicBusContext;
 import com.coradec.coracom.model.Message;
 import com.coradec.coracom.model.ParallelMultiRequest;
 import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Request;
-import com.coradec.coracom.model.impl.AbstractSessionCommand;
+import com.coradec.coracom.model.SerialMultiRequest;
+import com.coradec.coracom.model.impl.BasicSessionCommand;
 import com.coradec.coracom.model.impl.BasicSessionRequest;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.model.Factory;
 import com.coradec.coracore.model.State;
+import com.coradec.coracore.trouble.ServiceNotAvailableException;
 import com.coradec.coracore.util.ClassUtil;
 import com.coradec.coractrl.model.StateTransition;
 import com.coradec.coradir.model.Path;
+import com.coradec.coradir.trouble.PathAbsoluteException;
+import com.coradec.coradir.trouble.PathEmptyException;
 import com.coradec.corasession.model.Session;
+import com.coradec.coratext.model.LocalizedText;
+import com.coradec.coratext.model.Text;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -51,6 +62,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Basic implementation of a bus hub.​​
@@ -58,19 +70,20 @@ import java.util.Map;
 @SuppressWarnings("ClassHasNoToStringMethod")
 public class BasicHub extends BasicNode implements BusHub {
 
+    private static final Text TEXT_EMPTY_PATH = LocalizedText.define("EmptyPath");
     @Inject private static Factory<Invitation> INVITATION;
-    @Inject private static Factory<ParallelMultiRequest> MULTIREQUEST;
+    @Inject private static Factory<SerialMultiRequest> SERIALMRQ;
+    @Inject private static Factory<ParallelMultiRequest> PARALLELMRQ;
 
     private final List<AddMemberRequest> candidates = new ArrayList<>();
     private final Map<String, Member> members = new LinkedHashMap<>();
-    private final BusContext busContext = new InternalBusContext();
 
-    @SuppressWarnings("WeakerAccess") public BasicHub() {
+    public BasicHub() {
         addRoute(AddMemberRequest.class, this::addCandidate);
         approve(AddMemberCommand.class);
     }
 
-    @SuppressWarnings("WeakerAccess") Map<String, Member> getMembers() {
+    Map<String, Member> getMembers() {
         return members;
     }
 
@@ -111,11 +124,11 @@ public class BasicHub extends BasicNode implements BusHub {
      * machine will wait for the request to complete before moving on.
      * <p>
      * Subclasses can wrap this method early (i.e. override it and invoke the superclass method as
-     * soon as possible.
+     * soon as possible).
      *
      * @param session the session context.
      */
-    @SuppressWarnings("WeakerAccess") protected @Nullable Request onLoading(final Session session) {
+    protected @Nullable Request onLoading(final Session session) {
         setState(LOADING);
         return null;
     }
@@ -130,13 +143,14 @@ public class BasicHub extends BasicNode implements BusHub {
      * be asked to join in their candidate order.
      * <p>
      * Subclasses can wrap this method early (i.e. override it and invoke the superclass method as
-     * soon as possible.
+     * soon as possible).
      *
      * @param session the session context.
      */
-    @SuppressWarnings("WeakerAccess") protected @Nullable Request onLoad(final Session session) {
+    protected @Nullable Request onLoad(final Session session) {
         replaceRoute(AddMemberRequest.class, this::addMember);
-        final Request result = inject(MULTIREQUEST.create(candidates, this));
+        final @Nullable Request result =
+                candidates.isEmpty() ? null : inject(SERIALMRQ.create(candidates, this));
         setState(LOADED);
         return result;
     }
@@ -153,11 +167,11 @@ public class BasicHub extends BasicNode implements BusHub {
      * machine will wait for the request to complete before moving on.
      * <p>
      * Subclasses can wrap this method late (i.e. override it and invoke the superclass method as
-     * late as possible.
+     * late as possible).
      *
      * @param session the session context.
      */
-    @SuppressWarnings("WeakerAccess") @Nullable Request onUnloading(final Session session) {
+    @Nullable Request onUnloading(final Session session) {
         setState(UNLOADING);
         return null;
     }
@@ -170,16 +184,16 @@ public class BasicHub extends BasicNode implements BusHub {
      * The base method invokes the shutdown procedure on all members.
      * <p>
      * Subclasses can wrap this method late (i.e. override it and invoke the superclass method as
-     * late as possible.
+     * late as possible).
      *
      * @param session the session context.
      */
-    @SuppressWarnings("WeakerAccess") @Nullable <R extends Message> Request onUnload(
+    @Nullable <R extends Message> Request onUnload(
             final Session session) {
         final Map<String, Member> members = getMembers();
         final int memberCount = members.size();
-//        debug("Unloading %d member%s.", memberCount, memberCount == 1 ? "" : "s");
-        final ParallelMultiRequest result = inject(MULTIREQUEST.create(
+        debug("Unloading %d member%s.", memberCount, memberCount == 1 ? "" : "s");
+        final Request result = memberCount == 0 ? null : inject(PARALLELMRQ.create(
                 members.values().stream().map(Member::dismiss).collect(toList()), this,
                 new Object[] {}));
         setState(UNLOADED);
@@ -191,7 +205,57 @@ public class BasicHub extends BasicNode implements BusHub {
     }
 
     @Override public Request add(final Session session, final String name, final BusNode node) {
-        return inject(new AddMemberRequest(session, name, node));
+        return inject(new AddMemberRequest(session, Path.of(name), node));
+    }
+
+    @Override public Request add(final Session session, final Path path, final BusNode node) {
+        return inject(new AddMemberRequest(session, path, node));
+    }
+
+    @Override public Optional<BusNode> lookup(final Session session, final Path path) {
+        if (path.isEmpty()) return Optional.of(this);
+        if (path.isAbsolute()) throw new PathAbsoluteException();
+        if (path.isName()) {
+            final Member member = getMembers().get(path.represent());
+            return Optional.ofNullable(member == null ? null : member.getNode());
+        }
+        final String head = path.head();
+        final Member member = getMembers().get(head);
+        if (member == null)
+            throw new MemberNotFoundException(path.represent().replace(head, '→' + head + '←'));
+        if (member instanceof BusHub)
+            return ((BusHub)member.getNode()).lookup(session, path.tail());
+        return Optional.empty();
+    }
+
+    @Override public BusNode get(final Session session, final Path path)
+            throws MemberNotFoundException {
+        return lookup(session, path).orElseThrow(() -> new MemberNotFoundException(path));
+    }
+
+    @Override public boolean has(final Session session, final Path path) {
+        if (path.isAbsolute()) throw new PathAbsoluteException();
+        final Map<String, Member> members = getMembers();
+        final Member member;
+        final BusNode node;
+        return path.isEmpty() ||
+               path.isName() && members.containsKey(path.represent()) ||
+               (member = members.get(path.head())) != null &&
+               (node = member.getNode()) instanceof BusHub &&
+               ((BusHub)node).has(session, path.tail());
+    }
+
+    /**
+     * Returns the member (which must be a hub) with the specified name.
+     *
+     * @param name the member name.
+     * @return a hub.
+     */
+    private BusHub getMemberHub(final String name) {
+        final Member member = getMembers().get(name);
+        final BusNode node = member.getNode();
+        if (node instanceof BusHub) return (BusHub)node;
+        throw new MemberTypeInvalidException(BusHub.class, node.getClass());
     }
 
     private void addCandidate(final AddMemberRequest request) {
@@ -199,27 +263,75 @@ public class BasicHub extends BasicNode implements BusHub {
 //        debug("%s: added candidate %s as \"%s\"", this, request.getNode(), request.getName());
     }
 
-    @SuppressWarnings("WeakerAccess") void addMember(final AddMemberRequest request) {
-//        debug("%s: received addMemberRequest for %s <<%s>>", this, request.getName(),
-//                request.getNode());
+    void addMember(final AddMemberRequest request) {
         final Session session = request.getSession();
-        final Invitation invitation =
-                inject(INVITATION.create(session, request.getName(), getBusContext(), this,
-                        new Recipient[] {
-                                request.getNode()
-                        }));
-        invitation.andThen(() -> inject(new AddMemberCommand(session, request.getName(),
-                invitation.getMember())).reportCompletionTo(request)).orElse(request::fail);
-    }
-
-    private BusContext getBusContext() {
-        return busContext;
+        final Path path = request.getPath();
+        final BusNode node = request.getNode();
+        try {
+            if (path.isEmpty()) throw new PathEmptyException();
+            if (path.isAbsolute()) throw new PathAbsoluteException();
+            if (path.isName()) {
+                final String name = path.represent();
+                final Invitation invitation =
+                        inject(INVITATION.create(session, name, new InternalBusContext(session),
+                                this, new Recipient[] {
+                                        request.getNode()
+                                }));
+                invitation.andThen(() -> inject(new AddMemberCommand(session, name,
+                        invitation.getMember())).reportCompletionTo(request)).orElse(request::fail);
+            } else {
+                final String head = path.head();
+                final Member member = getMembers().get(head);
+                if (member == null) throw new MemberNotFoundException(
+                        path.represent().replace(head, '→' + head + '←'));
+                BusNode hub = member.getNode();
+                if (node instanceof BusHub)
+                    ((BusHub)hub).add(session, path.tail(), node).reportCompletionTo(request);
+                else throw new MountPointUndefinedException(path, node);
+            }
+        } catch (RuntimeException e) {
+            request.fail(e);
+            throw e;
+        }
     }
 
     private class InternalBusContext extends BasicBusContext {
 
+        InternalBusContext(Session session) {
+            super(session);
+        }
+
         @Override public Path getPath(final String name) {
             return BasicHub.this.getPath().add(name);
+        }
+
+        @Override public <S extends BusService> boolean provides(final Class<? super S> type,
+                final Object... args) {
+            return BasicHub.this.getMembers()
+                                .values()
+                                .stream()
+                                .anyMatch(member -> member instanceof ServiceProvider &&
+                                                    ((ServiceProvider)member).provides(getSession(),
+                                                            type, args));
+        }
+
+        @Override public <S extends BusService> Optional<S> findService(final Class<? super S> type,
+                final Object... args) {
+            return getMembers().values()
+                               .stream()
+                               .filter(member -> member instanceof ServiceProvider &&
+                                                 ((ServiceProvider)member).provides(getSession(),
+                                                         type, args))
+                               .findFirst()
+                               .map(member -> {
+                                   try {
+                                       return ((ServiceProvider)member).getService(getSession(),
+                                               type, args);
+                                   } catch (ServiceNotAvailableException e) {
+                                       error(e);
+                                       return null;
+                                   }
+                               });
         }
 
     }
@@ -284,37 +396,34 @@ public class BasicHub extends BasicNode implements BusHub {
 
     private class AddMemberRequest extends BasicSessionRequest {
 
-        private final String name;
+        private final Path path;
         private final BusNode node;
 
         /**
          * Initializes a new instance of AddMemberRequest for the specified member with the
-         * specified requested name in the context of the specified session.
+         * specified requested relative path in the context of the specified session.
          *
          * @param session the session context.
-         * @param name    the member name.
+         * @param path    the member path.
          * @param node    the member node.
          */
-        AddMemberRequest(final Session session, final String name, final BusNode node) {
+        AddMemberRequest(final Session session, final Path path, final BusNode node) {
             super(session, BasicHub.this);
-            this.name = name;
+            this.path = path;
             this.node = node;
         }
 
-        @ToString public String getName() {
-            return name;
+        @ToString public Path getPath() {
+            return path;
         }
 
         @ToString public BusNode getNode() {
             return node;
         }
 
-        @Override public String toString() {
-            return ClassUtil.toString(this);
-        }
     }
 
-    private class AddMemberCommand extends AbstractSessionCommand {
+    private class AddMemberCommand extends BasicSessionCommand {
 
         private final String name;
         private final Member member;
@@ -340,6 +449,7 @@ public class BasicHub extends BasicNode implements BusHub {
         @Override public String toString() {
             return ClassUtil.toString(this);
         }
+
     }
 
 }

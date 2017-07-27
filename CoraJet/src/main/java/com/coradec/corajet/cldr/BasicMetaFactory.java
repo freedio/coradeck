@@ -39,10 +39,10 @@ import java.util.List;
 @Implementation
 public class BasicMetaFactory<G> implements MetaFactory<G> {
 
-    private final ClassLoader loader;
+    private final CarClassLoader loader;
 
     public BasicMetaFactory() {
-        loader = getClass().getClassLoader();
+        loader = (CarClassLoader)getClass().getClassLoader();
         if (!loader.getClass()
                    .getName()
                    .equals(getClass().getPackage().getName() + ".CarClassLoader"))
@@ -63,20 +63,21 @@ public class BasicMetaFactory<G> implements MetaFactory<G> {
             return new ImplementationFactory<>(loader, (Class<? super G>)genericType.getRawType(),
                     genericType.getActualTypeArguments());
         } catch (NoSuchMethodException e) {
+            Syslog.error(e);
             throw new IllegalStateException("UnsuitableClassLoader (requires CarClassLoader): " +
-                                            getClass().getClassLoader());
+                                            getClass().getClassLoader(), e);
         }
     }
 
     @SuppressWarnings("unchecked")
     private class ImplementationFactory<I> implements Factory<I> {
 
-        private final ClassLoader loader;
+        private final CarClassLoader loader;
         private final Class<? super I> klass;
         private final List<Type> typeArgs;
         private final Method implement;
 
-        ImplementationFactory(final ClassLoader loader, final Class<? super I> klass,
+        ImplementationFactory(final CarClassLoader loader, final Class<? super I> klass,
                               final Type... typeArgs) throws NoSuchMethodException {
             this.loader = loader;
             this.implement = loader.getClass()

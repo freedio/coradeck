@@ -20,6 +20,12 @@
 
 package com.coradec.corabus.model.impl;
 
+import com.coradec.coracom.model.Request;
+import com.coradec.coracore.annotation.Inject;
+import com.coradec.coracore.annotation.Nullable;
+import com.coradec.coradir.model.Path;
+import com.coradec.corasession.model.Session;
+
 import java.net.SocketAddress;
 
 /**
@@ -29,9 +35,17 @@ import java.net.SocketAddress;
 class LocalSystemBus extends BasicSystemBus {
 
     private final SocketAddress server;
+    @Inject private Session initSession;
 
-    LocalSystemBus(final SocketAddress server) {
-        this.server = server;
+    LocalSystemBus(final SocketAddress socket) {
+        this.server = socket;
     }
 
+    @Override protected @Nullable Request onInitialize(final Session session) {
+        final Request request = super.onInitialize(session);
+        add(initSession, Path.of("net"), new Network());
+        add(initSession, Path.of("net/server"), new NetworkServer());
+        add(initSession, Path.of("console"), new ServerConsole());
+        return request;
+    }
 }

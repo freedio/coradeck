@@ -1,0 +1,4 @@
+# Localized text base for default locale of class BasicNetworkServiceProvider
+
+CannotDeriveSocketAddress: Can't derive socket address from arguments %s!
+NetworkClientNotAvailable: Network client not available!

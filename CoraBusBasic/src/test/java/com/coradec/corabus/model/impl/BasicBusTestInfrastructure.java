@@ -29,6 +29,7 @@ import static org.hamcrest.MatcherAssert.*;
 import com.coradec.corabus.com.Invitation;
 import com.coradec.corabus.state.NodeState;
 import com.coradec.corabus.view.BusContext;
+import com.coradec.corabus.view.BusService;
 import com.coradec.corabus.view.impl.BasicBusContext;
 import com.coradec.coracom.ctrl.MessageQueue;
 import com.coradec.coracom.model.Information;
@@ -46,6 +47,7 @@ import com.coradec.coratext.model.Text;
 import org.junit.Assert;
 
 import java.net.URI;
+import java.util.Optional;
 
 /**
  * ​​Base class of all bus tests.
@@ -53,27 +55,28 @@ import java.net.URI;
 @SuppressWarnings({"ClassHasNoToStringMethod", "ProtectedField"})
 class BasicBusTestInfrastructure extends Logger {
 
-    @SuppressWarnings("WeakerAccess") public static final String SYSLOG_LEVEL = "INFORMATION";
+    public static final String SYSLOG_LEVEL = "INFORMATION";
 
     static {
+        //noinspection ConstantConditions
         if (!SYSLOG_LEVEL.equals("INFORMATION")) Syslog.setLevel(SYSLOG_LEVEL);
     }
 
     @Inject private Factory<Invitation> invitationFactory;
     @Inject private Factory<Session> sessionFactory;
-    @Inject private static MessageQueue MQ;
-    @SuppressWarnings("WeakerAccess") static final Text TEXT_MESSAGE_BOUNCED =
+    @Inject private MessageQueue MQ;
+    static final Text TEXT_MESSAGE_BOUNCED =
             LocalizedText.define("MessageBounced");
 
-    @SuppressWarnings("WeakerAccess")
-    protected void testNormalSetupAndShutdown(final BasicNode testee, final NodeState terminalState,
+    protected void testNormalSetupAndShutdown(final String name, final BasicNode testee,
+            final NodeState terminalState,
             final int timeoutSeconds, final Inbetween... inBetweens) throws InterruptedException {
         final Session session = sessionFactory.create();
-        final BusContext dummyContext = new BasicBusContext();
+        final BusContext dummyContext = new TestBusContext(session);
         final Sender testEnv = new TestEnvironment();
         assertThat(testee.getState(), is(UNATTACHED));
         final Invitation invitation = MQ.inject(
-                invitationFactory.create(session, "name", dummyContext, testEnv,
+                invitationFactory.create(session, name, dummyContext, testEnv,
                         new Recipient[] {testee}));
         invitation.standby(timeoutSeconds, SECONDS).andThen(() -> {
             assertThat(dummyContext.contains(invitation.getMember()), is(true));
@@ -91,7 +94,7 @@ class BasicBusTestInfrastructure extends Logger {
         }).orElse(problem -> Assert.fail("Dismissal failed with " + problem));
     }
 
-    @SuppressWarnings("WeakerAccess") protected <I extends Information> I inject(I info) {
+    protected <I extends Information> I inject(I info) {
         return MQ.inject(info);
     }
 
@@ -117,4 +120,21 @@ class BasicBusTestInfrastructure extends Logger {
 
     }
 
+    private static class TestBusContext extends BasicBusContext {
+
+        public TestBusContext(final Session session) {
+            super(session);
+        }
+
+        @Override public <S extends BusService> boolean provides(final Class<? super S> type,
+                final Object... args) {
+            return false;
+        }
+
+        @Override public <S extends BusService> Optional<S> findService(final Class<? super S> type,
+                final Object... args) {
+            return Optional.empty();
+        }
+
+    }
 }

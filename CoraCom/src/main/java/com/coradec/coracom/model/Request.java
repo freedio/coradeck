@@ -29,6 +29,7 @@ import com.coradec.coracore.trouble.OperationTimedoutException;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * ​An event that needs permission to happen.
@@ -135,6 +136,30 @@ public interface Request extends Event, Observer {
     Request andThen(Runnable action);
 
     /**
+     * Returns a serial multi-request containing this and the specified request, which both must
+     * succeed for the request to succeed.
+     * <p>
+     * For reasons of convenience, the specified request may be {@code null}, in which case this
+     * request is returned.
+     *
+     * @param request the request to add.
+     * @return a serial multi-request, or this request in the absence of an argument.
+     */
+    Request andThen(Request request);
+
+    /**
+     * Returns a parallel multi-request containing this and the specified request, which both must
+     * succeed for the result to succeed.
+     * <p>
+     * For reasons of convenience, the specified request may be {@code null}, in which case this
+     * request is returned.
+     *
+     * @param request the request to add.
+     * @return a parallel multi-request, or this request in the absence of an argument.
+     */
+    Request and(@Nullable Request request);
+
+    /**
      * Performs the specified action when the request failed.  The action takes a failure reason
      * which me be absent.
      * <p>
@@ -165,11 +190,11 @@ public interface Request extends Event, Observer {
      * to track progress of the request, while the simple State is used to track message processing
      * <em>before</em> request processing starts taking place.</span>
      * <p>
-     * After being created, the request is in state NEW.  While being processing its state
-     * changes to SUBMITTED.  If the request is cancelled, its state changes to CANCELLED (a
-     * terminal state).  If it fails during processing, it becomes FAILED (a terminal state) and the
-     * Problem attribute may receive a meaningful value.  If processing succeeds, the request
-     * becomes SUCCESSFUL (a terminal state).
+     * After being created, the request is in state NEW.  While being processing its state changes
+     * to SUBMITTED.  If the request is cancelled, its state changes to CANCELLED (a terminal
+     * state).  If it fails during processing, it becomes FAILED (a terminal state) and the Problem
+     * attribute may receive a meaningful value.  If processing succeeds, the request becomes
+     * SUCCESSFUL (a terminal state).
      * <p>
      * Terminal states of a request are also broadcast as events.
      *
@@ -177,5 +202,16 @@ public interface Request extends Event, Observer {
      * @see #getState()
      */
     RequestState getRequestState();
+
+    /**
+     * Fail the request with a timeout if it has not become successful after the specified amount of
+     * time.
+     *
+     * @param amount the amount of time.
+     * @param unit   the unit of time.
+     * @param reason the reason for failing.
+     * @return this request, for method chaining.
+     */
+    Request hold(long amount, TimeUnit unit, final Supplier<Exception> reason);
 
 }

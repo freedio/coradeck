@@ -25,7 +25,6 @@ import com.coradec.coracore.trouble.BasicException;
 /**
  * ​​Base class of all exceptions related to configurations.
  */
-@SuppressWarnings("WeakerAccess")
 public class ConfigurationException extends BasicException {
 
     /**

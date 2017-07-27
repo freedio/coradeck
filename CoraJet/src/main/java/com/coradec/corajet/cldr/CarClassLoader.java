@@ -23,9 +23,6 @@ package com.coradec.corajet.cldr;
 import static java.nio.file.StandardOpenOption.*;
 
 import com.coradec.coracore.annotation.Nullable;
-import com.coradec.coracore.collections.impl.BasicHashCache;
-import com.coradec.coracore.trouble.BasicException;
-import com.coradec.coracore.trouble.ObjectInstantiationFailure;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -58,7 +55,7 @@ import java.util.zip.ZipInputStream;
 /**
  * ​​Implementation of the Comprehensive ARchive class loader.
  */
-@SuppressWarnings({"ClassHasNoToStringMethod", "WeakerAccess"})
+@SuppressWarnings("ClassHasNoToStringMethod")
 public class CarClassLoader extends ClassLoader {
 
     private static final String PROP_ENV_CLASSPATH = "java.class.path";
@@ -74,7 +71,7 @@ public class CarClassLoader extends ClassLoader {
     private final Method embed, analyze, implement;
     private final Map<String, List<URL>> resourceMap;
     private final Map<String, Class<?>> classes = new HashMap<>();
-    private final Map<String, byte[]> classData = new BasicHashCache<>();
+    private final Map<String, byte[]> classData = new HashMap<>();
     private final Set<String> components = new HashSet<>();
     private final Set<String> implementations = new HashSet<>();
     private final List<String> fileList = new LinkedList<>();
@@ -86,6 +83,7 @@ public class CarClassLoader extends ClassLoader {
 
     CarClassLoader(final ClassLoader parent) {
         super(parent);
+        Syslog.info("CarClassLoader initializing...");
         final String propOutput = System.getProperty("output.injected.files");
         outputInjectedFiles = propOutput != null && propOutput.equals("true");
         resourceMap = createResourceMap();
@@ -147,7 +145,7 @@ public class CarClassLoader extends ClassLoader {
      * @throws IOException if a file was not found or a read error occurred.
      */
     private void collectResources(final Map<String, List<URL>> resourceMap,
-                                  final String[] classPath) throws IOException {
+            final String[] classPath) throws IOException {
         Syslog.info("Collecting resources ...");
         registerProtocols();
         for (final String path : classPath) {
@@ -171,14 +169,13 @@ public class CarClassLoader extends ClassLoader {
     }
 
     private static void addResource(final Map<String, List<URL>> resourceMap, final String path,
-                                    final URL url) {
+            final URL url) {
         Syslog.trace("Adding %s → %s", path, url);
         resourceMap.computeIfAbsent(path, k -> new ArrayList<>()).add(url);
     }
 
     private void searchDirectory(final Map<String, List<URL>> resourceMap, final URI prefix,
-                                 final @Nullable File[] files, final int fprefix)
-            throws IOException {
+            final @Nullable File[] files, final int fprefix) throws IOException {
         if (files != null) {
             for (final File file : files) {
                 InputStream in = null;
@@ -218,7 +215,7 @@ public class CarClassLoader extends ClassLoader {
     }
 
     private void searchZipFile(final Map<String, List<URL>> resourceMap, final String prefix,
-                               final ZipInputStream zipFile) throws IOException {
+            final ZipInputStream zipFile) throws IOException {
         for (ZipEntry entry = zipFile.getNextEntry();
              entry != null;
              entry = zipFile.getNextEntry()) {
@@ -233,8 +230,7 @@ public class CarClassLoader extends ClassLoader {
     }
 
     private void searchJarFile(final Map<String, List<URL>> resourceMap, final String prefix,
-                               final JarInputStream jarFile, final boolean flat)
-            throws IOException {
+            final JarInputStream jarFile, final boolean flat) throws IOException {
         final Manifest manifest = jarFile.getManifest();
         Set<String> classPath = null;
         if (manifest != null) {
@@ -356,7 +352,8 @@ public class CarClassLoader extends ClassLoader {
     }
 
     @Override public Class<?> findClass(final String name) throws ClassNotFoundException {
-        if (name.startsWith("java.") || name.startsWith("sun.")) return super.findClass(name);
+        if (name.startsWith("java.") || name.startsWith("sun.") || name.startsWith("javax."))
+            return super.findClass(name);
         final Exception[] problem = new Exception[1];
         final Class<?> result = classes.computeIfAbsent(name, k -> {
             URL location = findResource(toResourceName(name));
@@ -366,13 +363,13 @@ public class CarClassLoader extends ClassLoader {
             } catch (Exception e) {
                 Syslog.error(e);
                 problem[0] = e;
-                throw BasicException.wrapIfNecessary(e);
             }
+            return null;
         });
         if (problem[0] != null) {
             if (problem[0] instanceof ClassNotFoundException)
                 throw (ClassNotFoundException)problem[0];
-            else throw new ClassNotFoundException("Failed to load clas", problem[0]);
+            else throw new ClassNotFoundException("Failed to load class", problem[0]);
         }
         return result;
     }
@@ -389,12 +386,12 @@ public class CarClassLoader extends ClassLoader {
      * @return a suitable instance of an implementation class..
      */
     @SuppressWarnings("unchecked") public <T> T implement(final Class<? super T> type,
-                                                          final List<Type> types, Object... args) {
+            final List<Type> types, Object... args) throws ClassNotFoundException {
         if (injector == null) throw new IllegalStateException("No injector!");
         try {
             return (T)implement.invoke(injector, type, types, args);
         } catch (final Exception e) {
-            throw new ObjectInstantiationFailure(type, e);
+            throw new ClassNotFoundException(type.getName(), e);
         }
     }
 
@@ -414,7 +411,7 @@ public class CarClassLoader extends ClassLoader {
     }
 
     private byte[] readClass(final String name, final URL location, final boolean doEmbed,
-                             final boolean doAnalyze) throws InstantiationException {
+            final boolean doAnalyze) throws InstantiationException {
 //        Syslog.info("Reading class %s for %s", name,
 //                doEmbed ? "embedding" : doAnalyze ? "analysis" : "loading");
         final InstantiationException[] problems = new InstantiationException[1];
@@ -475,17 +472,6 @@ public class CarClassLoader extends ClassLoader {
 
     private static String toResourceName(final String name) {
         return name.replace('.', '/') + ".class";
-    }
-
-    public Class<?> load(final Class<?> klass) {
-        Class<?> result;
-        try {
-            result = findClass(klass.getName());
-        } catch (ClassNotFoundException e) {
-            Syslog.error("Class not found: %s", klass.getName());
-            result = klass;
-        }
-        return result;
     }
 
     public void showImplementations() {

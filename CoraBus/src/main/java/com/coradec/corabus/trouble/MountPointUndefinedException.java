@@ -22,22 +22,27 @@ package com.coradec.corabus.trouble;
 
 import com.coradec.corabus.model.BusNode;
 import com.coradec.coracore.annotation.ToString;
+import com.coradec.coradir.model.Path;
 
 /**
  * ​​Indicates an attempt to attach a node without a predefined mount mount.
  */
 public class MountPointUndefinedException extends BusException {
 
-    private final String name;
+    private final Path path;
     private final BusNode node;
 
     public MountPointUndefinedException(final String name, final BusNode node) {
-        this.name = name;
+        this(Path.of(name), node);
+    }
+
+    public MountPointUndefinedException(final Path path, final BusNode node) {
+        this.path = path;
         this.node = node;
     }
 
-    @ToString public String getName() {
-        return name;
+    @ToString public Path getPath() {
+        return path;
     }
 
     @ToString public BusNode getNode() {

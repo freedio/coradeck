@@ -29,7 +29,7 @@ import com.coradec.coracom.model.Information;
 import com.coradec.coracom.model.Message;
 import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Sender;
-import com.coradec.coracom.model.impl.AbstractCommand;
+import com.coradec.coracom.model.impl.BasicCommand;
 import com.coradec.coracom.model.impl.BasicEvent;
 import com.coradec.coracom.model.impl.BasicInformation;
 import com.coradec.coracom.model.impl.BasicMessage;
@@ -44,8 +44,10 @@ import com.coradec.corajet.cldr.Syslog;
 import com.coradec.corajet.test.CoradeckJUnit4TestRunner;
 import com.coradec.coralog.ctrl.impl.Logger;
 import org.junit.AfterClass;
+import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.junit.runners.MethodSorters;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -57,8 +59,9 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-@SuppressWarnings({"WeakerAccess", "PackageVisibleField"})
+@SuppressWarnings("PackageVisibleField")
 @RunWith(CoradeckJUnit4TestRunner.class)
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class CentralMessageQueueTest {
 
     public static final String SYSLOG_LEVEL = "INFORMATION";
@@ -66,6 +69,7 @@ public class CentralMessageQueueTest {
     static final Random RANDOM = new Random();
 
     static {
+        //noinspection ConstantConditions
         if (!SYSLOG_LEVEL.equals("INFORMATION")) Syslog.setLevel(SYSLOG_LEVEL);
     }
 
@@ -92,11 +96,11 @@ public class CentralMessageQueueTest {
     /**
      * Runs 100 test LOAD_TEST_AGENTS in parallel, each sending 10..500 messages to itself.
      */
-    @Test public void testLoad() throws InterruptedException {
+    @Test public void aa_testLoad() throws InterruptedException {
         APPROVED.set(0);
         GENERATED.set(0);
         APPROVED.set(0);
-        Syslog.info("Performing the load test ... (takes less than 50 seconds)");
+        Syslog.info("Performing the load test ... (should take less than 50 seconds)");
         int nAgents = 100;
         long elapsed = System.currentTimeMillis();
         new LoadTestExecutor().launch(nAgents);
@@ -107,7 +111,7 @@ public class CentralMessageQueueTest {
         final int dispatched = DISPATCHED.get();
         Syslog.info("Approved: %d, generated: %d, dispatched: %d.", approved, generated,
                 dispatched);
-        final int maxUsed = CMQ.getMaxUsed();
+        final int maxUsed = CMQ.getMaxWorkerCount();
         Syslog.info("Total time elapsed: %d ms with %d active message processor%s.", elapsed,
                 maxUsed, maxUsed == 1 ? "" : "s");
         Syslog.info("Throughput: %.3f ms/msg @ %d ms of work/msg.", (double)elapsed / dispatched,
@@ -118,17 +122,17 @@ public class CentralMessageQueueTest {
         assertThat(termLock.availablePermits(), is(0)); // All tests reported finished.
     }
 
-    @Test public void testSequence() throws InterruptedException {
-        Syslog.info("Performing the sequence test ... (takes less than 50 seconds)");
+    @Test public void bb_testSequence() throws InterruptedException {
+        Syslog.info("Performing the sequence test ... (should take less than 50 seconds)");
         CMQ.resetUsage();
         long elapsed = System.currentTimeMillis();
-        final int rounds = 50000;
+        final int rounds = 30000;
         final SequenceTestAgent agent = new SequenceTestAgent();
         new SequenceTestExecutor().launch(rounds, agent);
         termLock.tryAcquire(rounds, 50, SECONDS);
         elapsed = System.currentTimeMillis() - elapsed;
         final String result = COLLECTOR.toString();
-        final int maxUsed = CMQ.getMaxUsed();
+        final int maxUsed = CMQ.getMaxWorkerCount();
         Syslog.info("Total time elapsed: %d ms with %d active message processor%s.", elapsed,
                 maxUsed, maxUsed == 1 ? "" : "s");
         Syslog.info("Throughput: %.3f ms/msg.", (double)elapsed / rounds);
@@ -152,8 +156,9 @@ public class CentralMessageQueueTest {
         assertThat(termLock.availablePermits(), is(0)); // All tests reported finished.
     }
 
-    @Test public void testInformationDispatch() throws InterruptedException {
-        Syslog.info("Performing the information delivery test.");
+    @Test public void cc_testInformationDispatch() throws InterruptedException {
+        Syslog.info(
+                "Performing the information delivery test ... (should take less than 50 seconds)");
         APPROVED.set(0);
         GENERATED.set(0);
         APPROVED.set(0);
@@ -235,7 +240,7 @@ public class CentralMessageQueueTest {
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")
-    private class ExecuteLoadTestAgentCommand extends AbstractCommand {
+    private class ExecuteLoadTestAgentCommand extends BasicCommand {
 
         private final LoadTestAgent agent;
 
@@ -306,7 +311,7 @@ public class CentralMessageQueueTest {
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")
-    private class AddCharacterCommand extends AbstractCommand {
+    private class AddCharacterCommand extends BasicCommand {
 
         private final char c;
 

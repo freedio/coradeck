@@ -29,7 +29,7 @@ import java.time.LocalDateTime;
 /**
  * ​​Basic implementation of an event notification.
  */
-@SuppressWarnings({"WeakerAccess", "ClassHasNoToStringMethod"})
+@SuppressWarnings("ClassHasNoToStringMethod")
 @Implementation
 public class BasicEvent extends BasicInformation implements Event {
 

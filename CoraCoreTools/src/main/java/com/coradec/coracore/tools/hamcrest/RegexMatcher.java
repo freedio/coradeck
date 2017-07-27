@@ -28,7 +28,7 @@ import org.hamcrest.TypeSafeMatcher;
 /**
  * ​​Implementation of a hamcrest regex matcher.
  */
-@SuppressWarnings({"ClassHasNoToStringMethod", "WeakerAccess"})
+@SuppressWarnings("ClassHasNoToStringMethod")
 public class RegexMatcher extends TypeSafeMatcher<String> {
 
     private final String pattern;

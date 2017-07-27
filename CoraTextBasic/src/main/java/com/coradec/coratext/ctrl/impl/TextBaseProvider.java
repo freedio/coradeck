@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Manages different text bases.
  */
-@SuppressWarnings({"ClassHasNoToStringMethod", "WeakerAccess"})
+@SuppressWarnings("ClassHasNoToStringMethod")
 public class TextBaseProvider {
 
     @Inject

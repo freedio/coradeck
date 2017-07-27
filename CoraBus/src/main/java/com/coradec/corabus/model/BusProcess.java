@@ -23,7 +23,6 @@ package com.coradec.corabus.model;
 /**
  * ​​An active bus node.
  */
-@SuppressWarnings("WeakerAccess")
-public interface BusProcess extends BusNode {
+public interface BusProcess extends BusNode, Runnable {
 
 }

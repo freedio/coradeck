@@ -22,8 +22,7 @@ package com.coradec.coractrl.ctrl.impl;
 
 import static java.util.concurrent.TimeUnit.*;
 import static org.hamcrest.CoreMatchers.*;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.*;
 
 import com.coradec.coracom.model.Message;
 import com.coradec.coracom.model.Recipient;
@@ -39,6 +38,8 @@ import com.coradec.coractrl.model.impl.AbstractStateTransition;
 import com.coradec.coractrl.trouble.StateMachineStalledException;
 import com.coradec.corajet.cldr.Syslog;
 import com.coradec.corajet.test.CoradeckJUnit4TestRunner;
+import com.coradec.coralog.ctrl.impl.InternalLogger;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -49,12 +50,12 @@ import java.util.Optional;
 import java.util.Set;
 
 @RunWith(CoradeckJUnit4TestRunner.class)
-public class BasicStateMachineTest implements Recipient {
+public class BasicStateMachineTest extends InternalLogger implements Recipient {
 
     private final BasicStateMachine testee = new BasicStateMachine(this);
 
     @Test public void directTrajectoryShouldYield1() {
-        Syslog.info("directTrajectoryShouldYield1");
+        info("directTrajectoryShouldYield1");
         testee.initialize(TestState.A);
         testee.addTransitions(Collections.singletonList(new TAD()));
         testee.setTargetState(TestState.D);
@@ -64,7 +65,7 @@ public class BasicStateMachineTest implements Recipient {
     }
 
     @Test public void directTrajectoryShouldExecute() throws InterruptedException {
-        Syslog.info("directTrajectoryShouldExecute");
+        info("directTrajectoryShouldExecute");
         testee.initialize(TestState.A);
         testee.addTransitions(Collections.singletonList(new TAD()));
         testee.setTargetState(TestState.D);
@@ -73,7 +74,7 @@ public class BasicStateMachineTest implements Recipient {
     }
 
     @Test public void simpleContinuousSeriesShouldYield1() {
-        Syslog.info("simpleContinuousSeriesShouldYield1");
+        info("simpleContinuousSeriesShouldYield1");
         testee.initialize(TestState.A);
         testee.addTransitions(Arrays.asList(new TAB(), new TBC(), new TCD()));
         testee.setTargetState(TestState.D);
@@ -83,7 +84,7 @@ public class BasicStateMachineTest implements Recipient {
     }
 
     @Test public void simpleContinuousTrajectoryShouldExecute() throws InterruptedException {
-        Syslog.info("simpleContinuousTrajectoryShouldExecute");
+        info("simpleContinuousTrajectoryShouldExecute");
         testee.initialize(TestState.A);
         testee.addTransitions(Arrays.asList(new TAB(), new TBC(), new TCD()));
         testee.setTargetState(TestState.D);
@@ -92,7 +93,7 @@ public class BasicStateMachineTest implements Recipient {
     }
 
     @Test public void simpleContinuousSeriesWithDuplicatesShouldYield1() {
-        Syslog.info("simpleContinuousSeriesWithDuplicatesShouldYield1");
+        info("simpleContinuousSeriesWithDuplicatesShouldYield1");
         testee.initialize(TestState.A);
         testee.addTransitions(Arrays.asList(new TAB(), new TBC(), new TBC2(), new TCD()));
         testee.setTargetState(TestState.D);
@@ -103,7 +104,7 @@ public class BasicStateMachineTest implements Recipient {
 
     @Test public void simpleContinuousTrajectoryWithDuplicatesShouldExecute()
             throws InterruptedException {
-        Syslog.info("simpleContinuousTrajectoryWithDuplicatesShouldExecute");
+        info("simpleContinuousTrajectoryWithDuplicatesShouldExecute");
         testee.initialize(TestState.A);
         testee.addTransitions(Arrays.asList(new TAB(), new TBC(), new TBC2(), new TCD()));
         testee.setTargetState(TestState.D);
@@ -112,7 +113,7 @@ public class BasicStateMachineTest implements Recipient {
     }
 
     @Test public void simpleNoncontinousSeriesShouldYield0() {
-        Syslog.info("simpleNoncontinousSeriesShouldYield0");
+        info("simpleNoncontinousSeriesShouldYield0");
         testee.initialize(TestState.A);
         testee.addTransitions(Arrays.asList(new TAB(), new TBC(), new TDE()));
         testee.setTargetState(TestState.E);
@@ -122,13 +123,13 @@ public class BasicStateMachineTest implements Recipient {
     }
 
     @Test public void simpleNonContinuousShouldStall() throws InterruptedException {
-        Syslog.info("simpleNonContinuousShouldStall");
+        info("simpleNonContinuousShouldStall");
         testee.initialize(TestState.A);
         testee.addTransitions(Arrays.asList(new TAB(), new TBC(), new TDE()));
         testee.setTargetState(TestState.D);
         try {
             testee.start().standby(1, SECONDS);
-            fail("Expected RequestFailedException due to StateMachineStalledException");
+            Assert.fail("Expected RequestFailedException due to StateMachineStalledException");
         } catch (RequestFailedException e) {
             // expected that
             assertThat(e.getCause(), is(instanceOf(StateMachineStalledException.class)));
@@ -136,7 +137,7 @@ public class BasicStateMachineTest implements Recipient {
     }
 
     @Test public void simpleContinuousSeriesNotContainingTargetStateShouldYield0() {
-        Syslog.info("simpleContinuousSeriesNotContainingTargetStateShouldYield0");
+        info("simpleContinuousSeriesNotContainingTargetStateShouldYield0");
         testee.initialize(TestState.A);
         testee.addTransitions(Arrays.asList(new TAB(), new TBC(), new TCD()));
         testee.setTargetState(TestState.E);
@@ -147,13 +148,13 @@ public class BasicStateMachineTest implements Recipient {
 
     @Test public void simpleContinuousSeriesNotContainingTargetStateShouldStall()
             throws InterruptedException {
-        Syslog.info("simpleContinuousSeriesNotContainingTargetStateShouldStall");
+        info("simpleContinuousSeriesNotContainingTargetStateShouldStall");
         testee.initialize(TestState.A);
         testee.addTransitions(Arrays.asList(new TAB(), new TBC(), new TCD()));
         testee.setTargetState(TestState.E);
         try {
             testee.start().standby(1, SECONDS);
-            fail("Expected RequestFailedException due to StateMachineStalledException");
+            Assert.fail("Expected RequestFailedException due to StateMachineStalledException");
         } catch (RequestFailedException e) {
             // expected that
             assertThat(e.getCause(), is(instanceOf(StateMachineStalledException.class)));
@@ -161,7 +162,7 @@ public class BasicStateMachineTest implements Recipient {
     }
 
     @Test public void simpleContinuousSeriesNotContainingInitialStateShouldYield0() {
-        Syslog.info("simpleContinuousSeriesNotContainingInitialStateShouldYield0");
+        info("simpleContinuousSeriesNotContainingInitialStateShouldYield0");
         testee.initialize(TestState.A);
         testee.addTransitions(Arrays.asList(new TBC(), new TDE()));
         testee.setTargetState(TestState.E);
@@ -172,13 +173,13 @@ public class BasicStateMachineTest implements Recipient {
 
     @Test public void simpleContinuousSeriesNotContainingInitialStateShouldStall()
             throws InterruptedException {
-        Syslog.info("simpleContinuousSeriesNotContainingInitialStateShouldStall");
+        info("simpleContinuousSeriesNotContainingInitialStateShouldStall");
         testee.initialize(TestState.A);
         testee.addTransitions(Arrays.asList(new TBC(), new TDE()));
         testee.setTargetState(TestState.E);
         try {
             testee.start().standby(1, SECONDS);
-            fail("Expected RequestFailedException due to StateMachineStalledException");
+            Assert.fail("Expected RequestFailedException due to StateMachineStalledException");
         } catch (RequestFailedException e) {
             // expected that
             assertThat(e.getCause(), is(instanceOf(StateMachineStalledException.class)));
@@ -186,7 +187,7 @@ public class BasicStateMachineTest implements Recipient {
     }
 
     @Test public void simpleCyclicSeriesShouldYield1Straight() {
-        Syslog.info("simpleCyclicSeriesShouldYield1Straight");
+        info("simpleCyclicSeriesShouldYield1Straight");
         testee.initialize(TestState.A);
         testee.addTransitions(Arrays.asList(new TAB(), new TBC(), new TCA(), new TCD()));
         testee.setTargetState(TestState.D);
@@ -197,7 +198,7 @@ public class BasicStateMachineTest implements Recipient {
     }
 
     @Test public void simpleCyclicSeriesShouldExecute() throws InterruptedException {
-        Syslog.info("simpleCyclicSeriesShouldExecute");
+        info("simpleCyclicSeriesShouldExecute");
         testee.initialize(TestState.A);
         testee.addTransitions(Arrays.asList(new TAB(), new TBC(), new TCA(), new TCD()));
         testee.setTargetState(TestState.D);
@@ -206,7 +207,7 @@ public class BasicStateMachineTest implements Recipient {
     }
 
     @Test public void branchedContinuousSeriesShouldYieldMultiple() {
-        Syslog.info("branchedContinuousSeriesShouldYieldMultiple");
+        info("branchedContinuousSeriesShouldYieldMultiple");
         testee.initialize(TestState.A);
         testee.addTransitions(Arrays.asList(new TAB(), new TBC(), new TAC(), new TCD()));
         testee.setTargetState(TestState.D);
@@ -216,7 +217,7 @@ public class BasicStateMachineTest implements Recipient {
     }
 
     @Test public void branchedContinuousSeriesShouldTakeShortcut() throws InterruptedException {
-        Syslog.info("branchedContinuousSeriesShouldTakeShortcut");
+        info("branchedContinuousSeriesShouldTakeShortcut");
         testee.initialize(TestState.A);
         testee.addTransitions(Arrays.asList(new TAB(), new TBC(), new TAC(), new TCD()));
         testee.setTargetState(TestState.D);
@@ -227,7 +228,7 @@ public class BasicStateMachineTest implements Recipient {
     }
 
     @Test public void multibranchedContinuousSeriesWithShortcutShouldYieldMultiple() {
-        Syslog.info("multibranchedContinuousSeriesWithShortcutShouldYieldMultiple");
+        info("multibranchedContinuousSeriesWithShortcutShouldYieldMultiple");
         testee.initialize(TestState.A);
         testee.addTransitions(
                 Arrays.asList(new TAB(), new TBC(), new TBD(), new TCD(), new TAD(), new TDE()));
@@ -239,7 +240,7 @@ public class BasicStateMachineTest implements Recipient {
 
     @Test public void multibranchedContinuousSeriesWithShortcutShouldTakeShortcut()
             throws InterruptedException {
-        Syslog.info("multibranchedContinuousSeriesWithShortcutShouldTakeShortcut");
+        info("multibranchedContinuousSeriesWithShortcutShouldTakeShortcut");
         testee.initialize(TestState.A);
         testee.addTransitions(
                 Arrays.asList(new TAB(), new TBC(), new TBD(), new TCD(), new TAD(), new TDE()));
@@ -251,7 +252,7 @@ public class BasicStateMachineTest implements Recipient {
     }
 
     @Test public void multibranchedContinuousSeries2WithShortcutShouldYieldMultiple() {
-        Syslog.info("multibranchedContinuousSeries2WithShortcutShouldYieldMultiple");
+        info("multibranchedContinuousSeries2WithShortcutShouldYieldMultiple");
         testee.initialize(TestState.A);
         testee.addTransitions(
                 Arrays.asList(new TAB(), new TBC(), new TBE(), new TCD(), new TAE(), new TDE()));
@@ -263,7 +264,7 @@ public class BasicStateMachineTest implements Recipient {
 
     @Test public void multibranchedContinuousSeries2WithShortcutShouldTakeShortcut()
             throws InterruptedException {
-        Syslog.info("multibranchedContinuousSeries2WithShortcutShouldTakeShortcut");
+        info("multibranchedContinuousSeries2WithShortcutShouldTakeShortcut");
         testee.initialize(TestState.A);
         testee.addTransitions(
                 Arrays.asList(new TAB(), new TBC(), new TBE(), new TCD(), new TAE(), new TDE()));
@@ -272,6 +273,21 @@ public class BasicStateMachineTest implements Recipient {
         start.standby(1, SECONDS);
         assertThat(testee.getCurrentState(), is(equalTo(TestState.E)));
         assertThat(start.getPassedStates().size(), is(2));
+    }
+
+    @Test public void interruptionShouldSwitchGracefullyIfContinuous() throws InterruptedException {
+        info("interruptionShouldSwitchGracefullyIfContinuous");
+        testee.initialize(TestState.A);
+        testee.addTransitions(Arrays.asList(new TAB(), new TBC(), new TCD(), new TDE(), new TCA()));
+        testee.setTargetState(TestState.E);
+        final StartStateMachineRequest start = testee.start();
+        testee.onState(TestState.B, () -> {
+            info("Triggered!");
+            testee.setTargetState(TestState.A);
+        });
+        start.standby();
+        assertThat(testee.getCurrentState(), is(equalTo(TestState.A)));
+        assertThat(start.getPassedStates().size(), is(4));
     }
 
     @Override public void onMessage(final Message message) {

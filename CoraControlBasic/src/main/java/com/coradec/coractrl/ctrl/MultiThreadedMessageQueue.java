@@ -42,14 +42,26 @@ public interface MultiThreadedMessageQueue extends MessageQueue {
     int getHighWaterMark();
 
     /**
-     * Returns the maximum number of processors used.
+     * Returns the maximum number of processors in use.
      *
-     * @return the maximum number of processors used.
+     * @return the maximum number of processors in use.
      */
-    int getMaxUsed();
+    int getMaxWorkerCount();
 
     /**
-     * Resets the maximum number of processors used.
+     * Returns the current number of processors in use.
+     *
+     * @return the current number of processors in use.
+     */
+    int getActiveWorkerCount();
+
+    /**
+     * Resets the maximum number of processors in use.
      */
     void resetUsage();
+
+    /**
+     * Dumps the message queue statistics.
+     */
+    void dumpStats();
 }

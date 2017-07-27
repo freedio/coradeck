@@ -38,7 +38,7 @@ public abstract class BasicTypeConverter<T> implements TypeConverter<T> {
      *
      * @param type the target type (required).
      */
-    @SuppressWarnings("WeakerAccess") protected BasicTypeConverter(final GenericType<T> type) {
+    protected BasicTypeConverter(final GenericType<T> type) {
         this.type = type;
     }
 

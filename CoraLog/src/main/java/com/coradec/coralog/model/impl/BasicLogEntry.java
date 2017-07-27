@@ -39,7 +39,6 @@ public abstract class BasicLogEntry<C> implements LogEntry<C> {
     private final Origin origin;
     private final LogLevel level;
 
-    @SuppressWarnings("WeakerAccess")
     protected BasicLogEntry(final Origin origin, final LogLevel level) {
         this.timestamp = LocalDateTime.now();
         this.origin = origin;

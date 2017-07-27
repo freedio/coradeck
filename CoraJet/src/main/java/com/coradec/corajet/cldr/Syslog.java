@@ -29,7 +29,7 @@ import java.util.Optional;
 /**
  * ​​A simple static log facility for the boot loader.
  */
-@SuppressWarnings({"UseOfSystemOutOrSystemErr", "WeakerAccess"})
+@SuppressWarnings("UseOfSystemOutOrSystemErr")
 public final class Syslog {
 
     private static final Syslog ME = new Syslog();
@@ -50,7 +50,7 @@ public final class Syslog {
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")
-    private enum LogLevel {
+    enum LogLevel {
         TRACE("TRACE"),
         DEBUG("DEBUG"),
         INFORMATION("INFO "),

@@ -46,7 +46,6 @@ public class BasicTrajectory implements Trajectory {
     private final List<StateTransition> transitions;
     private @Nullable Set<Request> blockedRequests;
 
-    @SuppressWarnings("WeakerAccess")
     public BasicTrajectory(final StateTransition first, final StateTransition... rest) {
         transitions = new ArrayList<>();
         transitions.add(first);
@@ -87,8 +86,7 @@ public class BasicTrajectory implements Trajectory {
     @Override public boolean connects(final State s1, final State s2) {
         final StateTransition first = transitions.get(0);
         final StateTransition last = transitions.get(transitions.size() - 1);
-        return !transitions.isEmpty() &&
-               (first.getInitialState() == s1 && last.getTerminalState() == s2 ||
+        return (first.getInitialState() == s1 && last.getTerminalState() == s2 ||
                 first.getInitialState() == s2 && last.getTerminalState() == s1);
     }
 

@@ -30,31 +30,34 @@ import com.coradec.corabus.view.BusContext;
 import com.coradec.coracom.model.Request;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.model.State;
+import com.coradec.coracore.trouble.OperationInterruptedException;
 import com.coradec.coractrl.model.StateTransition;
 import com.coradec.corasession.model.Session;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.concurrent.Semaphore;
 
 /**
  * ​​Basic implementation of a bus process.
  */
-public class BasicBusProcess extends BasicNode implements BusProcess {
+public abstract class BasicBusProcess extends BasicNode implements BusProcess {
 
-    @SuppressWarnings("WeakerAccess") public BasicBusProcess() {
+    private Thread worker;
+    private final Semaphore suspension = new Semaphore(1);
+
+    public BasicBusProcess() {
         addRoute(Suspension.class, this::suspend);
         addRoute(Resumption.class, this::resume);
     }
 
     @Override protected Collection<StateTransition> getSetupTransitions(final Session session,
-                                                                        final BusContext context,
-                                                                        final Invitation
-                                                                                invitation) {
+            final BusContext context, final Invitation invitation) {
         final Collection<StateTransition> result =
                 super.getSetupTransitions(session, context, invitation);
         Collections.addAll(result, new Starting(session), new Started(session),
                 new Suspending(session), new Suspended(session), new Resuming(session),
-                new Resumed(session), new Running(session));
+                new Resumed(session), new Restarted(session));
         return result;
     }
 
@@ -82,6 +85,18 @@ public class BasicBusProcess extends BasicNode implements BusProcess {
     }
 
     /**
+     * Checks if the application is suspended.  If so, the method will wait until it is resumed.
+     *
+     * @throws InterruptedException if the method was interrupted while waiting for the suspension
+     *                              to be terminate.  The application should exit immediately on
+     *                              this exception.
+     */
+    protected void checkSuspend() throws InterruptedException {
+        suspension.acquire();
+        suspension.release();
+    }
+
+    /**
      * Interceptor invoked during the state transition from INITIALIZED to STARTING.
      * <p>
      * Can be used to do preliminary start checks.
@@ -89,7 +104,7 @@ public class BasicBusProcess extends BasicNode implements BusProcess {
      * The base method invokes START on all runnable children.
      * <p>
      * Subclasses can wrap this method early (i.e. override it and invoke the superclass method as
-     * soon as possible.
+     * soon as possible).
      * <p>
      * This method usually returns {@code null}; if however some asynchronous work needs to be done
      * in order for it to succeed, the corresponding request can be returned here.  The state
@@ -97,8 +112,9 @@ public class BasicBusProcess extends BasicNode implements BusProcess {
      *
      * @param session the session context.
      */
-    @SuppressWarnings("WeakerAccess") protected void onStarting(final Session session) {
+    protected @Nullable Request onStarting(final Session session) {
         setState(STARTING);
+        return null;
     }
 
     /**
@@ -109,7 +125,7 @@ public class BasicBusProcess extends BasicNode implements BusProcess {
      * The base method waits until all runnable children have started.
      * <p>
      * Subclasses can wrap this method early (i.e. override it and invoke the superclass method as
-     * soon as possible.
+     * soon as possible).
      * <p>
      * This method usually returns {@code null}; if however some asynchronous work needs to be done
      * in order for it to succeed, the corresponding request can be returned here.  The state
@@ -117,8 +133,32 @@ public class BasicBusProcess extends BasicNode implements BusProcess {
      *
      * @param session the session context.
      */
-    @SuppressWarnings("WeakerAccess") protected void onStart(final Session session) {
+    protected @Nullable Request onStart(final Session session) {
+        worker = new Thread(this);
+        worker.start();
         setState(STARTED);
+        return null;
+    }
+
+    /**
+     * Interceptor invoked during the state transition from STARTED to RUNNING.
+     * <p>
+     * Used to wait for the actual process to terminate.
+     * <p>
+     * The base method waits until the run method returns.
+     * <p>
+     * Subclasses can wrap this method early (i.e. override it and invoke the superclass method as
+     * soon as possible).
+     *
+     * @param session the session context.
+     */
+    protected void onExecute(final Session session) {
+        setState(RUNNING);
+        try {
+            worker.join();
+        } catch (InterruptedException e) {
+            throw new OperationInterruptedException();
+        }
     }
 
     /**
@@ -129,7 +169,7 @@ public class BasicBusProcess extends BasicNode implements BusProcess {
      * The base method invokes stop on all children.
      * <p>
      * Subclasses can wrap this method late (i.e. override it and invoke the superclass method as
-     * late as possible.
+     * late as possible).
      * <p>
      * This method usually returns {@code null}; if however some asynchronous work needs to be done
      * in order for it to succeed, the corresponding request can be returned here.  The state
@@ -137,8 +177,9 @@ public class BasicBusProcess extends BasicNode implements BusProcess {
      *
      * @param session the session context.
      */
-    @SuppressWarnings("WeakerAccess") void onStopping(final Session session) {
+    @Nullable Request onStopping(final Session session) {
         setState(STOPPING);
+        return null;
     }
 
     /**
@@ -149,7 +190,7 @@ public class BasicBusProcess extends BasicNode implements BusProcess {
      * The base method waits until all children have stopped.
      * <p>
      * Subclasses can wrap this method late (i.e. override it and invoke the superclass method as
-     * late as possible.
+     * late as possible).
      * <p>
      * This method usually returns {@code null}; if however some asynchronous work needs to be done
      * in order for it to succeed, the corresponding request can be returned here.  The state
@@ -157,48 +198,10 @@ public class BasicBusProcess extends BasicNode implements BusProcess {
      *
      * @param session the session context.
      */
-    @SuppressWarnings("WeakerAccess") void onStop(final Session session) {
+    @Nullable Request onStop(final Session session) {
+        worker.interrupt();
         setState(STOPPED);
-    }
-
-    /**
-     * Interceptor invoked during the state transition from SUSPENDED to RESUMING.
-     * <p>
-     * Can be used to do preliminary resume checks.
-     * <p>
-     * The base method invokes RESUME on all runnable children.
-     * <p>
-     * Subclasses can wrap this method early (i.e. override it and invoke the superclass method as
-     * soon as possible.
-     * <p>
-     * This method usually returns {@code null}; if however some asynchronous work needs to be done
-     * in order for it to succeed, the corresponding request can be returned here.  The state
-     * machine will wait for the request to complete before moving on.
-     *
-     * @param session the session context.
-     */
-    @SuppressWarnings("WeakerAccess") protected void onResuming(final Session session) {
-        setState(RESUMING);
-    }
-
-    /**
-     * Interceptor invoked during the state transition from RESUMING to RESUMED.
-     * <p>
-     * Can be used to do after-resume setup.
-     * <p>
-     * The base method waits until all runnable children have started.
-     * <p>
-     * Subclasses can wrap this method early (i.e. override it and invoke the superclass method as
-     * soon as possible.
-     * <p>
-     * This method usually returns {@code null}; if however some asynchronous work needs to be done
-     * in order for it to succeed, the corresponding request can be returned here.  The state
-     * machine will wait for the request to complete before moving on.
-     *
-     * @param session the session context.
-     */
-    @SuppressWarnings("WeakerAccess") protected void onResume(final Session session) {
-        setState(RESUMED);
+        return null;
     }
 
     /**
@@ -209,7 +212,7 @@ public class BasicBusProcess extends BasicNode implements BusProcess {
      * The base method invokes SUSPEND on all children.
      * <p>
      * Subclasses can wrap this method late (i.e. override it and invoke the superclass method as
-     * late as possible.
+     * late as possible).
      * <p>
      * This method usually returns {@code null}; if however some asynchronous work needs to be done
      * in order for it to succeed, the corresponding request can be returned here.  The state
@@ -217,8 +220,9 @@ public class BasicBusProcess extends BasicNode implements BusProcess {
      *
      * @param session the session context.
      */
-    @SuppressWarnings("WeakerAccess") void onSuspending(final Session session) {
+    @Nullable Request onSuspending(final Session session) {
         setState(SUSPENDING);
+        return null;
     }
 
     /**
@@ -229,7 +233,7 @@ public class BasicBusProcess extends BasicNode implements BusProcess {
      * The base method waits until all children are suspended.
      * <p>
      * Subclasses can wrap this method late (i.e. override it and invoke the superclass method as
-     * late as possible.
+     * late as possible).
      * <p>
      * This method usually returns {@code null}; if however some asynchronous work needs to be done
      * in order for it to succeed, the corresponding request can be returned here.  The state
@@ -237,8 +241,57 @@ public class BasicBusProcess extends BasicNode implements BusProcess {
      *
      * @param session the session context.
      */
-    @SuppressWarnings("WeakerAccess") void onSuspend(final Session session) {
+    @Nullable Request onSuspend(final Session session) {
+        try {
+            suspension.acquire();
+        } catch (InterruptedException e) {
+            throw new OperationInterruptedException();
+        }
         setState(SUSPENDED);
+        return null;
+    }
+
+    /**
+     * Interceptor invoked during the state transition from SUSPENDED to RESUMING.
+     * <p>
+     * Can be used to do preliminary resume checks.
+     * <p>
+     * The base method invokes RESUME on all runnable children.
+     * <p>
+     * Subclasses can wrap this method early (i.e. override it and invoke the superclass method as
+     * soon as possible).
+     * <p>
+     * This method usually returns {@code null}; if however some asynchronous work needs to be done
+     * in order for it to succeed, the corresponding request can be returned here.  The state
+     * machine will wait for the request to complete before moving on.
+     *
+     * @param session the session context.
+     */
+    protected @Nullable Request onResuming(final Session session) {
+        setState(RESUMING);
+        return null;
+    }
+
+    /**
+     * Interceptor invoked during the state transition from RESUMING to RESUMED.
+     * <p>
+     * Can be used to do after-resume setup.
+     * <p>
+     * The base method waits until all runnable children have started.
+     * <p>
+     * Subclasses can wrap this method early (i.e. override it and invoke the superclass method as
+     * soon as possible).
+     * <p>
+     * This method usually returns {@code null}; if however some asynchronous work needs to be done
+     * in order for it to succeed, the corresponding request can be returned here.  The state
+     * machine will wait for the request to complete before moving on.
+     *
+     * @param session the session context.
+     */
+    protected @Nullable Request onResume(final Session session) {
+        suspension.release();
+        setState(RESUMED);
+        return null;
     }
 
     private class Starting extends NodeStateTransition {
@@ -248,8 +301,7 @@ public class BasicBusProcess extends BasicNode implements BusProcess {
         }
 
         @Override protected @Nullable Request onExecute() {
-            onStarting(getSession());
-            return null;
+            return onStarting(getSession());
         }
 
     }
@@ -261,8 +313,7 @@ public class BasicBusProcess extends BasicNode implements BusProcess {
         }
 
         @Override protected @Nullable Request onExecute() {
-            onStart(getSession());
-            return null;
+            return onStart(getSession());
         }
 
     }
@@ -274,8 +325,7 @@ public class BasicBusProcess extends BasicNode implements BusProcess {
         }
 
         @Override protected @Nullable Request onExecute() {
-            onStopping(getSession());
-            return null;
+            return onStopping(getSession());
         }
 
     }
@@ -287,8 +337,7 @@ public class BasicBusProcess extends BasicNode implements BusProcess {
         }
 
         @Override protected @Nullable Request onExecute() {
-            onStop(getSession());
-            return null;
+            return onStop(getSession());
         }
 
     }
@@ -300,8 +349,7 @@ public class BasicBusProcess extends BasicNode implements BusProcess {
         }
 
         @Override protected @Nullable Request onExecute() {
-            onSuspending(getSession());
-            return null;
+            return onSuspending(getSession());
         }
 
     }
@@ -313,8 +361,7 @@ public class BasicBusProcess extends BasicNode implements BusProcess {
         }
 
         @Override protected @Nullable Request onExecute() {
-            onSuspend(getSession());
-            return null;
+            return onSuspend(getSession());
         }
 
     }
@@ -326,8 +373,7 @@ public class BasicBusProcess extends BasicNode implements BusProcess {
         }
 
         @Override protected @Nullable Request onExecute() {
-            onResuming(getSession());
-            return null;
+            return onResuming(getSession());
         }
 
     }
@@ -339,15 +385,14 @@ public class BasicBusProcess extends BasicNode implements BusProcess {
         }
 
         @Override protected @Nullable Request onExecute() {
-            onResume(getSession());
-            return null;
+            return onResume(getSession());
         }
 
     }
 
-    private class Running extends NodeStateTransition {
+    private class Restarted extends NodeStateTransition {
 
-        Running(final Session session) {
+        Restarted(final Session session) {
             super(session, RESUMED, STARTED);
         }
 
@@ -365,8 +410,7 @@ public class BasicBusProcess extends BasicNode implements BusProcess {
         }
 
         @Override protected @Nullable Request onExecute() {
-            onTerminating(getSession());
-            return null;
+            return onTerminating(getSession());
         }
     }
 

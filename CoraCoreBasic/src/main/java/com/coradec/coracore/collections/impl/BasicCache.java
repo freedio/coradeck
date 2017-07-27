@@ -56,7 +56,7 @@ import java.util.function.Function;
                           "MethodWithMultipleLoops", "MethodParameterOfConcreteClass",
                           "ReturnOfNull", "PackageVisibleField", "NewExceptionWithoutArguments",
                           "NonStaticInnerClassInSecureContext", "ClassWithTooManyMethods",
-                          "OverlyComplexClass", "ClassWithoutLogger", "WeakerAccess"
+                          "OverlyComplexClass", "ClassWithoutLogger"
                   })
 abstract class BasicCache<K, V> implements Cache<K, V> {
 

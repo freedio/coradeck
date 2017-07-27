@@ -29,14 +29,19 @@ import com.coradec.coracore.model.State;
  */
 public class StateMachineStalledException extends ControlException {
 
-    private final State state;
+    private final State currentState;
+    private final State targetState;
 
-    public StateMachineStalledException(final State state) {
-        this.state = state;
+    public StateMachineStalledException(final State currentState, final State targetState) {
+        this.currentState = currentState;
+        this.targetState = targetState;
     }
 
-    @ToString public State getState() {
-        return state;
+    @ToString public State getCurrentState() {
+        return currentState;
     }
 
+    @ToString public State getTargetState() {
+        return targetState;
+    }
 }

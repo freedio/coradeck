@@ -20,6 +20,7 @@
 
 package com.coradec.corabus.view;
 
+import com.coradec.corabus.model.BusNode;
 import com.coradec.coracom.model.Request;
 import com.coradec.corasession.view.View;
 
@@ -35,4 +36,10 @@ public interface Member extends View {
      */
     Request dismiss();
 
+    /**
+     * Returns the member node.
+     *
+     * @return the member node.
+     */
+    BusNode getNode();
 }

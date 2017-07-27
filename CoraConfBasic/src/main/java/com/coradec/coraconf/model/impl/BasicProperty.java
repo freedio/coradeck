@@ -26,6 +26,7 @@ import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
+import com.coradec.coracore.model.Factory;
 import com.coradec.coracore.model.GenericType;
 import com.coradec.coracore.util.ClassUtil;
 
@@ -34,30 +35,26 @@ import java.util.Optional;
 /**
  * ​​Basic implementation of a property.
  */
-@SuppressWarnings({"WeakerAccess", "PackageVisibleField"})
+@SuppressWarnings("PackageVisibleField")
 @Implementation
-@Inject
 public class BasicProperty<R> implements Property<R> {
 
-    @Inject
-    static PropertyResolver RESOLVER;
+    @Inject static Factory<PropertyResolver> RESOLVER;
 
     private final @Nullable String context;
     private final String name;
     private final GenericType<R> type;
     private final R dflt;
 
-    @SuppressWarnings("WeakerAccess")
-    public <D extends R> BasicProperty(final Class<R> type, final @Nullable String context,
+    public <D extends R> BasicProperty(final GenericType<R> type, final @Nullable String context,
                                        final String name, final D dflt) {
         this.context = context;
         this.name = name;
-        this.type = GenericType.of(type);
+        this.type = type;
         this.dflt = dflt;
     }
 
-    @SuppressWarnings("WeakerAccess")
-    public <D extends R> BasicProperty(final Class<R> type, final String name, final D dflt) {
+    public <D extends R> BasicProperty(final GenericType<R> type, final String name, final D dflt) {
         this(type, null, name, dflt);
     }
 
@@ -82,7 +79,7 @@ public class BasicProperty<R> implements Property<R> {
     }
 
     private Optional<R> resolve(final Object... args) {
-        return RESOLVER.resolve(getType(), getContext(), getName(), args);
+        return RESOLVER.get().resolve(getType(), getContext(), getName(), args);
     }
 
     @Override public String toString() {

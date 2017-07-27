@@ -23,6 +23,7 @@ package com.coradec.coracore.util;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.ctrl.RecursiveObjects;
+import com.coradec.coracore.model.Representable;
 import com.coradec.coracore.model.Tuple;
 import com.coradec.coracore.trouble.UnexpectedEndOfDataException;
 
@@ -105,8 +106,10 @@ public class ClassUtil {
             if (v != null) result =
                     String.format("(%s %s%s)", nameOf(klass), StringUtil.toString(v),
                             attributes.isEmpty() ? StringUtil.EMPTY : " " + attributes);
+            else if (o instanceof Representable)
+                result = String.format("(%s %s)", nameOf(klass), ((Representable)o).represent());
             else result = String.format("(%s%s)", nameOf(klass),
-                    attributes.isEmpty() ? StringUtil.EMPTY : " " + attributes);
+                        attributes.isEmpty() ? StringUtil.EMPTY : " " + attributes);
         } finally {
             REGISTRY.remove(o);
         }
@@ -290,7 +293,7 @@ public class ClassUtil {
     }
 
     private static int decodeTypeParameters(final String signature, final StringBuilder collector,
-                                            int offset, final int length) {
+            int offset, final int length) {
         collector.append('<');
         StringBuilder suffices = new StringBuilder();
         while (offset < length) {
@@ -422,7 +425,7 @@ public class ClassUtil {
     }
 
     public static int distance(final Class<?> subclass, final Class<?> reference,
-                               final List<Type> types) {
+            final List<Type> types) {
         final Class<?>[] interfaces = subclass.getInterfaces();
         if (reference.isInterface() && interfaces.length > 0) {
             return idistance(interfaces, reference, types);
@@ -433,7 +436,7 @@ public class ClassUtil {
     }
 
     private static int idistance(final Class<?>[] subclasses, final Class<?> reference,
-                                 final List<Type> types) {
+            final List<Type> types) {
         return Stream.of(subclasses)
                      .filter(reference::isAssignableFrom)
                      .map(sc -> 1 + idistance(sc.getInterfaces(), reference, types))

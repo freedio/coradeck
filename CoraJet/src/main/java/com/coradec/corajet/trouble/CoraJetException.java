@@ -25,7 +25,6 @@ import com.coradec.coracore.trouble.BasicException;
 /**
  * ​​Base class of all exceptions thrown in the CoreJet environment.
  */
-@SuppressWarnings("WeakerAccess")
 public class CoraJetException extends BasicException {
 
     protected CoraJetException(final String explanation) {

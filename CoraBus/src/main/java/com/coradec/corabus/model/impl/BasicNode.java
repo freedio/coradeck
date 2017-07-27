@@ -25,20 +25,23 @@ import static com.coradec.corabus.state.NodeState.*;
 
 import com.coradec.corabus.com.Invitation;
 import com.coradec.corabus.com.MetaStateChangedEvent;
+import com.coradec.corabus.com.StateAchievedEvent;
 import com.coradec.corabus.model.BusNode;
 import com.coradec.corabus.state.MetaState;
 import com.coradec.corabus.state.NodeState;
 import com.coradec.corabus.trouble.MemberAlreadyPresentException;
 import com.coradec.corabus.trouble.NodeAlreadyAttachedException;
 import com.coradec.corabus.view.BusContext;
+import com.coradec.corabus.view.BusService;
 import com.coradec.corabus.view.Member;
-import com.coradec.corabus.view.impl.BasicBusContext;
 import com.coradec.coracom.model.Request;
+import com.coradec.coracom.model.impl.BasicEvent;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.model.Factory;
 import com.coradec.coracore.model.State;
+import com.coradec.coracore.trouble.ServiceNotAvailableException;
 import com.coradec.coracore.trouble.UnimplementedOperationException;
 import com.coradec.coracore.util.ClassUtil;
 import com.coradec.coractrl.com.ExecuteStateTransitionRequest;
@@ -48,14 +51,16 @@ import com.coradec.coractrl.model.StateTransition;
 import com.coradec.coractrl.model.impl.AbstractStateTransition;
 import com.coradec.coradir.model.Path;
 import com.coradec.corasession.model.Session;
-import com.coradec.corasession.view.impl.AbstractView;
+import com.coradec.corasession.view.impl.BasicView;
 
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -68,15 +73,17 @@ public class BasicNode extends BasicAgent implements BusNode {
     @Inject private static Factory<MetaStateChangedEvent> META_STATE_CHANGED_EVENT;
     private static final DefaultBusContext DEFAULT_CONTEXT = new DefaultBusContext();
 
-    @SuppressWarnings("WeakerAccess") @Inject StateMachine stateMachine;
+    @Inject StateMachine stateMachine;
     private NodeState state;
+    private final Set<NodeState> achievedStates;
     private BusContext context, contact;
     private String name;
     @SuppressWarnings("FieldCanBeLocal") private Member member;
     private MetaState metaState;
 
-    @SuppressWarnings("WeakerAccess") public BasicNode() {
-        state = UNATTACHED;
+    public BasicNode() {
+        achievedStates = new HashSet<>();
+        setState(UNATTACHED);
         context = DEFAULT_CONTEXT;
         setMetaStateFrom(state);
         name = String.format(PROP_OFFLINE_NAME_PATTERN, getClass().getSimpleName(), getId());
@@ -92,6 +99,8 @@ public class BasicNode extends BasicAgent implements BusNode {
 
     @SuppressWarnings("WeakerAccess") protected void setState(NodeState state) {
         this.state = state;
+        achievedStates.add(state);
+        inject(new InternalStateAchievedEvent(state));
         setMetaStateFrom(state);
     }
 
@@ -105,6 +114,7 @@ public class BasicNode extends BasicAgent implements BusNode {
             this.metaState = metaState;
             inject(META_STATE_CHANGED_EVENT.create(this, oldState, metaState));
         }
+        if (metaState == UP) onReady();
     }
 
     @Override @ToString public URI getIdentifier() {
@@ -115,7 +125,7 @@ public class BasicNode extends BasicAgent implements BusNode {
         return getContext().getPath(name);
     }
 
-    private BusContext getContext() {
+    protected BusContext getContext() {
         return context;
     }
 
@@ -183,6 +193,15 @@ public class BasicNode extends BasicAgent implements BusNode {
     }
 
     /**
+     * Shuts the node down.
+     */
+    protected void shutdown() {
+        debug("%s: Received request to shutdown.");
+        stateMachine.setTargetState(DETACHED);
+        stateMachine.start();
+    }
+
+    /**
      * Interceptor invoked during the state transition from UNATTACHED to ATTACHING.
      * <p>
      * Can be used to check for preconditions to attaching to the specified context in the context
@@ -195,7 +214,7 @@ public class BasicNode extends BasicAgent implements BusNode {
      * context is privileged enough to take the node aboard.
      * <p>
      * Subclasses can wrap this method early (i.e. override it and invoke the superclass method as
-     * soon as possible.
+     * soon as possible).
      * <p>
      * This method usually returns {@code null}; if however some asynchronous work needs to be done
      * in order for it to succeed, the corresponding request can be returned here.  The state
@@ -228,7 +247,7 @@ public class BasicNode extends BasicAgent implements BusNode {
      * {@link #onAttaching(Session, BusContext)}.
      * <p>
      * Subclasses can wrap this method early (i.e. override it and invoke the superclass method as
-     * soon as possible.
+     * soon as possible).
      * <p>
      * This method usually returns {@code null}; if however some asynchronous work needs to be done
      * in order for it to succeed, the corresponding request can be returned here.  The state
@@ -256,13 +275,13 @@ public class BasicNode extends BasicAgent implements BusNode {
     /**
      * Interceptor invoked during the state transition from ATTACHED to INITIALIZING.
      * <p>
-     * Can be used to do preliminary material checks, like requesting services and resources
-     * the node used, as well as announcing services and resources it provides.
+     * Can be used to do preliminary material checks, like requesting services and resources the
+     * node used, as well as announcing services and resources it provides.
      * <p>
      * The base method currently does nothing, but might do so in an advanced version.
      * <p>
      * Subclasses can wrap this method early (i.e. override it and invoke the superclass method as
-     * soon as possible.
+     * soon as possible).
      * <p>
      * This method usually returns {@code null}; if however some asynchronous work needs to be done
      * in order for it to succeed, the corresponding request can be returned here.  The state
@@ -286,7 +305,7 @@ public class BasicNode extends BasicAgent implements BusNode {
      * The base method currently does nothing, but this might change in future versions.
      * <p>
      * Subclasses can wrap this method early (i.e. override it and invoke the superclass method as
-     * soon as possible.
+     * soon as possible).
      * <p>
      * This method usually returns {@code null}; if however some asynchronous work needs to be done
      * in order for it to succeed, the corresponding request can be returned here.  The state
@@ -303,6 +322,19 @@ public class BasicNode extends BasicAgent implements BusNode {
     }
 
     /**
+     * Callback invoked when the node goes into READY meta-state.
+     * <p>
+     * Can be used to print a ready message or other announcements.
+     * <p>
+     * The base method currently does nothing, but this might change in future versions.
+     * <p>
+     * Subclasses can wrap this method anytime.
+     */
+    protected void onReady() {
+
+    }
+
+    /**
      * Interceptor invoked during the state transition from INITIALIZED to TERMINATING.
      * <p>
      * Can be used to initiate shutdown, e.g. closing resources and services.
@@ -310,7 +342,7 @@ public class BasicNode extends BasicAgent implements BusNode {
      * The base method currently does nothing, but this might change in future versions.
      * <p>
      * Subclasses can wrap this method late (i.e. override it and invoke the superclass method as
-     * late as possible, possibly from within a finally-block..
+     * late as possible, possibly from within a finally-block).
      * <p>
      * This method usually returns {@code null}; if however some asynchronous work needs to be done
      * in order for it to succeed, the corresponding request can be returned here.  The state
@@ -334,7 +366,7 @@ public class BasicNode extends BasicAgent implements BusNode {
      * The base method currently does nothing, but this might change in future versions.
      * <p>
      * Subclasses can wrap this method late (i.e. override it and invoke the superclass method as
-     * late as possible, possibly from within a finally-block..
+     * late as possible, possibly from within a finally-block).
      * <p>
      * This method usually returns {@code null}; if however some asynchronous work needs to be done
      * in order for it to succeed, the corresponding request can be returned here.  The state
@@ -358,7 +390,7 @@ public class BasicNode extends BasicAgent implements BusNode {
      * The base method currently does nothing, but this might change in future versions.
      * <p>
      * Subclasses can wrap this method late (i.e. override it and invoke the superclass method as
-     * late as possible, possibly from within a finally-block..
+     * late as possible, possibly from within a finally-block(.
      * <p>
      * This method usually returns {@code null}; if however some asynchronous work needs to be done
      * in order for it to succeed, the corresponding request can be returned here.  The state
@@ -382,7 +414,7 @@ public class BasicNode extends BasicAgent implements BusNode {
      * The base method clears the context to its initial state.
      * <p>
      * Subclasses can wrap this method late (i.e. override it and invoke the superclass method as
-     * late as possible, possibly from within a finally-block..
+     * late as possible, possibly from within a finally-block).
      * <p>
      * This method usually returns {@code null}; if however some asynchronous work needs to be done
      * in order for it to succeed, the corresponding request can be returned here.  The state
@@ -408,6 +440,10 @@ public class BasicNode extends BasicAgent implements BusNode {
             setMetaState(COMING_UP);
         else if (state == TERMINATING || state == TERMINATED || state == DETACHING)
             setMetaState(GOING_DOWN);
+    }
+
+    @Override public String toString() {
+        return ClassUtil.toString(this);
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")
@@ -541,14 +577,10 @@ public class BasicNode extends BasicAgent implements BusNode {
         }
     }
 
-    @Override public String toString() {
-        return ClassUtil.toString(this);
-    }
-
     @SuppressWarnings("ClassHasNoToStringMethod")
-    private static class DefaultBusContext extends BasicBusContext {
+    private static class DefaultBusContext implements BusContext {
 
-        Map<String, BusNode> nodes = new ConcurrentHashMap<>();
+        private final Map<String, BusNode> nodes = new ConcurrentHashMap<>();
 
         void joined(final String name, final BusNode node) {
             if (nodes.containsKey(name)) throw new MemberAlreadyPresentException();
@@ -567,9 +599,29 @@ public class BasicNode extends BasicAgent implements BusNode {
             throw new UnimplementedOperationException();
         }
 
+        @Override public Path getPath(final String name) {
+            return Path.of("", name);
+        }
+
+        @Override public <S extends BusService> boolean provides(final Class<? super S> type,
+                final Object... args) {
+            return false;
+        }
+
+        @Override public <S extends BusService> Optional<S> findService(final Class<? super S> type,
+                final Object... args) {
+            return Optional.empty();
+        }
+
+        @Override public <S extends BusService> S getService(final Class<? super S> type,
+                final Object... args) throws ServiceNotAvailableException {
+            return (S)findService(type, args).orElseThrow(
+                    () -> new ServiceNotAvailableException(type, args));
+        }
+
     }
 
-    private class InternalMember extends AbstractView implements Member {
+    private class InternalMember extends BasicView implements Member {
 
         /**
          * Initializes a new instance of InternalMember with the specified session context.
@@ -581,9 +633,28 @@ public class BasicNode extends BasicAgent implements BusNode {
         }
 
         @Override public Request dismiss() {
+            debug("%s: received request to terminate.", BasicNode.this);
             stateMachine.setTargetState(DETACHED);
             return stateMachine.start();
         }
+
+        @Override public BusNode getNode() {
+            return BasicNode.this;
+        }
     }
 
+    @SuppressWarnings("ClassHasNoToStringMethod")
+    private class InternalStateAchievedEvent extends BasicEvent implements StateAchievedEvent {
+
+        private final NodeState state;
+
+        InternalStateAchievedEvent(final NodeState state) {
+            super(BasicNode.this);
+            this.state = state;
+        }
+
+        @Override public NodeState getAchievedState() {
+            return state;
+        }
+    }
 }

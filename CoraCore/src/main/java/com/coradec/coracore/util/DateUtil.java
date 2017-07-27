@@ -28,7 +28,7 @@ import java.util.Date;
 /**
  * ​​Static library of Date utilities.
  */
-@SuppressWarnings({"WeakerAccess", "UseOfObsoleteDateTimeApi"})
+@SuppressWarnings("UseOfObsoleteDateTimeApi")
 public final class DateUtil {
 
     private DateUtil() {

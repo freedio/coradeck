@@ -39,7 +39,7 @@ public class BasicStringLogEntry extends BasicLogEntry<String> implements String
 
     /**
      * Initializes a new instance of BasicTextLogEntry from the specified origin with the specified
-     * l;og level, text and optional text arguments.
+     * log level, text and optional text arguments.
      *
      * @param origin   the origin.
      * @param level    the log level.
@@ -68,4 +68,5 @@ public class BasicStringLogEntry extends BasicLogEntry<String> implements String
     @Override public String getContent() {
         return getText();
     }
+
 }

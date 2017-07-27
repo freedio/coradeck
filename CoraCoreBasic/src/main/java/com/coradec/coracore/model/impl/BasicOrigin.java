@@ -26,7 +26,6 @@ import com.coradec.coracore.util.ClassUtil;
 /**
  * ​​Basic implementation of an origin.
  */
-@SuppressWarnings("WeakerAccess")
 public abstract class BasicOrigin implements Origin {
 
     @Override public String toString() {

@@ -27,10 +27,11 @@ public class ProcessState extends HubState {
 
     public static final ProcessState STARTING = new ProcessState("STARTING", 2000);
     public static final ProcessState STARTED = new ProcessState("STARTED", 2100);
-    public static final ProcessState SUSPENDING = new ProcessState("SUSPENDING", 2200);
-    public static final ProcessState SUSPENDED = new ProcessState("SUSPENDED", 2300);
-    public static final ProcessState RESUMING = new ProcessState("RESUMING", 2400);
-    public static final ProcessState RESUMED = new ProcessState("RESUMED", 2500);
+    public static final ProcessState RUNNING = new ProcessState("STARTED", 3000);
+    public static final ProcessState SUSPENDING = new ProcessState("SUSPENDING", 3100);
+    public static final ProcessState SUSPENDED = new ProcessState("SUSPENDED", 3200);
+    public static final ProcessState RESUMING = new ProcessState("RESUMING", 3300);
+    public static final ProcessState RESUMED = new ProcessState("RESUMED", 3400);
     public static final ProcessState STOPPING = new ProcessState("STOPPING", 7000);
     public static final ProcessState STOPPED = new ProcessState("STOPPED", 7100);
 

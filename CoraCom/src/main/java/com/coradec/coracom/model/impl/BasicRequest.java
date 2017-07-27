@@ -27,12 +27,16 @@ import com.coradec.coracom.ctrl.MessageQueue;
 import com.coradec.coracom.ctrl.Observer;
 import com.coradec.coracom.model.Asynchronous;
 import com.coradec.coracom.model.Command;
+import com.coradec.coracom.model.Deferred;
 import com.coradec.coracom.model.Information;
 import com.coradec.coracom.model.Message;
+import com.coradec.coracom.model.ParallelMultiRequest;
 import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Request;
 import com.coradec.coracom.model.Sender;
+import com.coradec.coracom.model.SerialMultiRequest;
 import com.coradec.coracom.state.RequestState;
+import com.coradec.coracom.trouble.RequestCancelledException;
 import com.coradec.coracom.trouble.RequestFailedException;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Inject;
@@ -45,6 +49,7 @@ import com.coradec.coratext.model.LocalizedText;
 import com.coradec.coratext.model.Text;
 
 import java.net.URI;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -52,6 +57,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * ​​Basic implementation of a request.
@@ -63,6 +69,8 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
     private static final Text TEXT_MESSAGE_BOUNCED = LocalizedText.define("MessageBounced");
     private static final Text TEXT_NOT_EXECUTING = LocalizedText.define("NotExecuting");
     @Inject private static Factory<MessageQueue> MQ;
+    @Inject private static Factory<ParallelMultiRequest> PARALLEL_MULTI_REQUEST;
+    @Inject private static Factory<SerialMultiRequest> Serial_MULTI_REQUEST;
     private static final Text TEXT_CANNOT_HANDLE_MESSAGE =
             LocalizedText.define("CannotHandleMessage");
 
@@ -126,18 +134,23 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
     }
 
     private void sendCompletionEvents() {
-        final Set<Observer> completionObservers = this.completionObservers;
-        if (!completionObservers.isEmpty()) {
+        final Observer[] co = completionObservers.toArray(new Observer[completionObservers.size()]);
+        if (co.length > 0) {
             RequestCompleteEvent event = new RequestCompleteEventImpl(this);
-            for (final Observer observer : completionObservers) {
+            for (final Observer observer : co) {
 //                debug("Completion event to %s", observer);
-                observer.notify(event);
+                if (observer.notify(event)) completionObservers.remove(observer);
             }
         }
     }
 
     @Override @ToString public RequestState getRequestState() {
         return requestState;
+    }
+
+    @Override
+    public Request hold(final long amount, final TimeUnit unit, final Supplier<Exception> reason) {
+        return MQ.get().inject(new FailMeCommand(amount, unit, reason));
     }
 
     @Override @ToString public Set<RequestState> getStates() {
@@ -173,6 +186,7 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
         if (isFailed()) throw Optional.ofNullable(getProblem())
                                       .map(RequestFailedException::new)
                                       .orElseGet(RequestFailedException::new);
+        if (isCancelled()) throw new RequestCancelledException();
         return this;
     }
 
@@ -219,6 +233,16 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
             action.run();
         } else successCallbacks.add(action);
         return this;
+    }
+
+    @Override public Request andThen(final Request request) {
+        return request == null ? this : Serial_MULTI_REQUEST.create(Arrays.asList(this, request),
+                getSender(), getRecipients());
+    }
+
+    @Override public Request and(@Nullable final Request request) {
+        return request == null ? this : PARALLEL_MULTI_REQUEST.create(Arrays.asList(this, request),
+                getSender(), getRecipients());
     }
 
     @Override public Request orElse(final Consumer<Throwable> action) {
@@ -268,7 +292,7 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
         return info instanceof RequestCompleteEvent;
     }
 
-    private abstract class InternalCommand extends AbstractCommand {
+    private abstract class InternalCommand extends BasicCommand {
 
         /**
          * Initializes a new instance of InternalCommand with the specified sender and list of
@@ -298,7 +322,10 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
             if (BasicRequest.this.isComplete()) {
 //                debug("Sending completion event directly to %s", observer);
                 observer.notify(new RequestCompleteEventImpl(BasicRequest.this));
-            } else BasicRequest.this.completionObservers.add(observer);
+            } else {
+                BasicRequest.this.completionObservers.add(observer);
+                debug("Added completion observer.");
+            }
         }
 
     }
@@ -328,4 +355,21 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
         setRequestState(NEW);
         return (Request)super.renew();
     }
+
+    private class FailMeCommand extends BasicDeferredCommand implements Command, Deferred {
+
+        private final Supplier<Exception> reason;
+
+        public FailMeCommand(final long amount, final TimeUnit unit,
+                final Supplier<Exception> reason) {
+            super(amount, unit, BasicRequest.this);
+            this.reason = reason;
+        }
+
+        @Override public void execute() {
+            BasicRequest.this.fail(reason.get());
+        }
+
+    }
+
 }

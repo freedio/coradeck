@@ -32,7 +32,6 @@ import com.coradec.coralog.ctrl.ClassLog;
 import com.coradec.coralog.model.LogLevel;
 import com.coradec.coralog.model.impl.BasicProblemLogEntry;
 import com.coradec.coralog.model.impl.BasicStringLogEntry;
-import com.coradec.coralog.model.impl.BasicStringProblemLogEntry;
 import com.coradec.coralog.model.impl.BasicTextLogEntry;
 import com.coradec.coratext.model.LocalizedText;
 import com.coradec.coratext.model.Text;
@@ -51,7 +50,7 @@ public class Logger extends AutoOrigin {
     private static Text LEAVING;
     private static Text FAILING;
 
-    @SuppressWarnings({"ConstantConditions", "PackageVisibleField", "WeakerAccess"})
+    @SuppressWarnings({"ConstantConditions", "PackageVisibleField"})
     final ClassLog log;
 
     protected Logger() {
@@ -307,31 +306,8 @@ public class Logger extends AutoOrigin {
         }
     }
 
-    protected ExtendedLogger discloseStringExtensions() {
-        return new ExtendedLogger();
+    protected InternalLogger discloseStringExtensions() {
+        return new InternalLogger();
     }
 
-    protected class ExtendedLogger {
-
-        public void warn(final Origin origin, final Throwable problem, final String text,
-                         final Object... textArgs) {
-            if (log.logsAt(WARNING))
-                log.log(new BasicStringProblemLogEntry(origin, WARNING, problem, text, textArgs));
-        }
-
-        public void warn(final String text, final Object... textArgs) {
-            if (log.logsAt(WARNING))
-                log.log(new BasicStringLogEntry(tthere(), WARNING, text, textArgs));
-        }
-
-        public void error(final String text, final Object... textArgs) {
-            if (log.logsAt(ERROR))
-                log.log(new BasicStringLogEntry(tthere(), ERROR, text, textArgs));
-        }
-
-        public void info(final String text, final Object... textArgs) {
-            if (log.logsAt(INFORMATION))
-                log.log(new BasicStringLogEntry(tthere(), INFORMATION, text, textArgs));
-        }
-    }
 }

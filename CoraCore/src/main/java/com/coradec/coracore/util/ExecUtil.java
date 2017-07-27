@@ -32,7 +32,6 @@ import java.util.regex.Pattern;
 /**
  * ​​Static library of execution utilities.
  */
-@SuppressWarnings("WeakerAccess")
 public final class ExecUtil {
 
     private static final Pattern INVOC_PATTERN = Pattern.compile("access\\$\\d+");
@@ -126,11 +125,22 @@ public final class ExecUtil {
     /**
      * Returns the stack frame of the <i>level</i>th stack frame.
      *
-     * @param level         the level.
+     * @param level the level.
      * @return a stack frame.
      */
     public static StackFrame getStackFrame(final int level) {
         return STACKFRAME_FACTORY.get(extract(level + 2, Thread.currentThread().getStackTrace()));
     }
 
+    /**
+     * Dumps the stack trace.
+     */
+    @SuppressWarnings("UseOfSystemOutOrSystemErr") public static void dumpStack() {
+        final StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+        for (int i = 1; i < stackTrace.length; i++) {
+            StackTraceElement frame = stackTrace[i];
+            System.out.printf("\tat %s.%s(%s:%d)%n", frame.getClassName(), frame.getMethodName(),
+                    frame.getFileName(), frame.getLineNumber());
+        }
+    }
 }

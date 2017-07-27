@@ -23,7 +23,6 @@ package com.coradec.coracom.trouble;
 /**
  * ​​Base class of all queue exceptions.
  */
-@SuppressWarnings("WeakerAccess")
 public class QueueException extends CommunicationException {
 
     /**

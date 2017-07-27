@@ -26,13 +26,19 @@ import com.coradec.corabus.com.Invitation;
 import com.coradec.corabus.model.ApplicationBus;
 import com.coradec.corabus.model.Bus;
 import com.coradec.corabus.model.BusApplication;
+import com.coradec.corabus.model.BusHub;
 import com.coradec.corabus.model.BusNode;
 import com.coradec.corabus.model.MachineBus;
+import com.coradec.corabus.model.MachineService;
 import com.coradec.corabus.model.SystemBus;
 import com.coradec.corabus.trouble.MountPointUndefinedException;
+import com.coradec.corabus.trouble.NodeNotFoundException;
 import com.coradec.corabus.view.BusContext;
+import com.coradec.corabus.view.BusService;
+import com.coradec.corabus.view.Member;
 import com.coradec.corabus.view.impl.BasicBusContext;
 import com.coradec.coracom.ctrl.MessageQueue;
+import com.coradec.coracom.model.Information;
 import com.coradec.coracom.model.Message;
 import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Request;
@@ -40,7 +46,7 @@ import com.coradec.coracom.model.Sender;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.model.Factory;
-import com.coradec.coracore.util.SystemUtil;
+import com.coradec.coracore.util.NetworkUtil;
 import com.coradec.coractrl.ctrl.SysControl;
 import com.coradec.coradir.model.Path;
 import com.coradec.coralog.ctrl.impl.Logger;
@@ -49,6 +55,7 @@ import com.coradec.coratext.model.LocalizedText;
 import com.coradec.coratext.model.Text;
 
 import java.net.URI;
+import java.util.Optional;
 
 /**
  * ​​Basic implementation of the bus infrastructure (façade).
@@ -58,6 +65,7 @@ import java.net.URI;
 public class BasicBus extends Logger implements Bus, Sender {
 
     private static final Text TEXT_MESSAGE_BOUNCED = LocalizedText.define("MessageBounced");
+
     @Inject private static Factory<Invitation> INVITATION;
 
     @Inject private MessageQueue MQ;
@@ -66,27 +74,79 @@ public class BasicBus extends Logger implements Bus, Sender {
     @Inject private Session setupSession;
     private final SystemBus sysBus;
     private final BusContext rootContext;
+    private Member sysBusMember;
+    private boolean initialized;
 
     public BasicBus() {
-        rootContext = new RootBusContext();
+        rootContext = new RootBusContext(setupSession);
         sysBus = SystemBus.create();
-        MQ.inject(INVITATION.create(setupSession, "", rootContext, this, new Recipient[] {sysBus}))
-          .andThen(() -> sysBus.add(setupSession, SystemUtil.getLocalMachineId(), machBus)
-                               .andThen(() -> machBus.add(setupSession, "apps", appBus)));
-        SysControl.onShutdown(() -> {
-            try {
-                sysBus.shutdown(setupSession).standby();
-            } catch (InterruptedException e) {
-                error(e);
-            }
-        });
+        initialized = false;
     }
 
-    @Override public Request add(final Session session, final String name, final BusNode node) {
-        if (node instanceof BusApplication) {
-            return getApplicationBus().add(session, name, node);
+    private void init() {
+        if (!initialized) {
+            final Invitation invitation = INVITATION.create(setupSession, "", rootContext, this,
+                    new Recipient[] {sysBus});
+            MQ.inject(invitation)
+              .andThen(() -> sysBus.add(setupSession, NetworkUtil.getLocalMachineId(), machBus)
+                                   .andThen(() -> machBus.add(setupSession, "apps", appBus)))
+              .andThen(() -> sysBusMember = invitation.getMember());
+            SysControl.onShutdown(() -> {
+                try {
+                    sysBus.shutdown(setupSession).standby();
+                } catch (InterruptedException e) {
+                    error(e);
+                }
+            });
+            initialized = true;
         }
-        throw new MountPointUndefinedException(name, node);
+    }
+
+    @Override public Request add(final Session session, final Path path, final BusNode node) {
+        init();
+        if (path.isAbsolute()) return getSystemBus().add(session, path.tail(), node);
+        else if (node instanceof BusApplication)
+            return getApplicationBus().add(session, path, node);
+        else if (node instanceof MachineService) return getMachineBus().add(session, path, node);
+        throw new MountPointUndefinedException(path, node);
+    }
+
+    @Override public void setup() {
+        init();
+    }
+
+    @Override public void shutdown() {
+        if (initialized) try {
+            sysBusMember.dismiss().standby();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        debug("Exiting system.");
+        System.exit(0);
+    }
+
+    @Override public BusHub getRoot() {
+        return sysBus;
+    }
+
+    @Override public Optional<BusNode> lookup(final Session session, final Path path) {
+        return getRoot().lookup(session, path.isAbsolute() ? path.tail() : path);
+    }
+
+    @Override public BusNode get(final Session session, final Path path)
+            throws NodeNotFoundException {
+        init();
+        return lookup(session, path).orElseThrow(() -> new NodeNotFoundException(path));
+    }
+
+    @Override public boolean has(final Session session, final Path path) {
+        init();
+        return getRoot().has(session, path.isAbsolute() ? path.tail() : path);
+    }
+
+    @Override public <I extends Information> I send(final I information) {
+        init();
+        return MQ.inject(information);
     }
 
     private SystemBus getSystemBus() {
@@ -115,9 +175,24 @@ public class BasicBus extends Logger implements Bus, Sender {
 
     private class RootBusContext extends BasicBusContext {
 
+        RootBusContext(final Session session) {
+            super(session);
+        }
+
         @Override public Path getPath(final String name) {
             return Path.of(name);
         }
+
+        @Override public <S extends BusService> boolean provides(final Class<? super S> type,
+                final Object... args) {
+            return false;
+        }
+
+        @Override public <S extends BusService> Optional<S> findService(final Class<? super S> type,
+                final Object... args) {
+            return Optional.empty();
+        }
+
     }
 
 }

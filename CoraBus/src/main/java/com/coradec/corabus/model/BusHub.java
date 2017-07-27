@@ -20,8 +20,12 @@
 
 package com.coradec.corabus.model;
 
+import com.coradec.corabus.trouble.MemberNotFoundException;
 import com.coradec.coracom.model.Request;
+import com.coradec.coradir.model.Path;
 import com.coradec.corasession.model.Session;
+
+import java.util.Optional;
 
 /**
  * The focal point of a couple of nodes working together; as such, a hub is the bus; as node, it is
@@ -39,5 +43,56 @@ public interface BusHub extends BusNode {
      * @return a request to track progress of the operation.
      */
     Request add(Session session, String name, BusNode node);
+
+    /**
+     * Adds the specified node to the hub under the specified relative path in the context of the
+     * specified session.
+     * <p>
+     * Note that this method does not support absolute paths.  To add a node under an absolute path,
+     * use {@link Bus#add(Session, Path, BusNode)}.
+     *
+     * @param session the session context.
+     * @param path    the relative path of the member-to-be.
+     * @param node    the node to add.
+     * @return a request to track progress of the operation.
+     */
+    Request add(Session session, Path path, BusNode node);
+
+    /**
+     * Looks up the node with the specified relative path in the context of the specified session.
+     * <p>
+     * Note that this method does not support absolute paths.  To lookup a node under an absolute
+     * path, use {@link Bus#lookup(Session, Path)}.
+     *
+     * @param session the session context.
+     * @param path    the relative path of the member.
+     * @return the node associated with the specified path, or {@link Optional#empty()}.
+     */
+    Optional<BusNode> lookup(Session session, Path path);
+
+    /**
+     * Returns the node with the specified relative path in the context of the specified session.
+     * <p>
+     * Note that this method does not support absolute paths.  To lookup a node under an absolute
+     * path, use {@link Bus#lookup(Session, Path)}.
+     *
+     * @param session the session context.
+     * @param path    the relative path of the member.
+     * @return the node associated with the specified path.
+     * @throws MemberNotFoundException if no member is associated with the specified path.
+     */
+    BusNode get(Session session, Path path) throws MemberNotFoundException;
+
+    /**
+     * Checks in the context of the specified session if the specified relative path is associated
+     * with a member node, in other words: if {@link #get(Session, Path)} would return a node
+     * instead of throwing a exception.
+     *
+     * @param session the session context.
+     * @param path    the relative path of the member.
+     * @return {@code true} if the specified path is associated with a member node, {@code false} if
+     * not.
+     */
+    boolean has(Session session, Path path);
 
 }

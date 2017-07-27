@@ -22,15 +22,12 @@ package com.coradec.coratext.model;
 
 import static com.coradec.coracore.util.ExecUtil.*;
 
-import com.coradec.coracore.model.Factory;
-import com.coradec.coracore.model.GenericFactory;
+import com.coradec.coratext.module.CoraText;
 
 /**
  * ​​A text literal to be resolved in a specific locale.
  */
 public interface LocalizedText extends Text {
-
-    Factory<LocalizedText> text = new GenericFactory<>(LocalizedText.class);
 
     /**
      * Defines a new text literal in the caller context.
@@ -39,7 +36,7 @@ public interface LocalizedText extends Text {
      * @return a new localized text literal.
      */
     static Text define(final String name) {
-        return text.get(getCallerStackFrame().getClassFileName(), name);
+        return CoraText.localized(getCallerStackFrame().getClassFileName(), name);
     }
 
     /**

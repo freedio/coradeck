@@ -60,8 +60,9 @@ public class BasicParallelMultiRequest extends BasicRequest implements ParallelM
 
     /**
      * Initializes a new instance of BasicParallelMultiRequest with the specified sender, list of
-     * recipients and a couple of sub-request.
+     * recipients and a couple of sub-requests.
      *
+     * @param requests   the requests to execute.
      * @param sender     the sender.
      * @param recipients the list of recipients
      */
@@ -74,11 +75,11 @@ public class BasicParallelMultiRequest extends BasicRequest implements ParallelM
     @Override public void process() {
         if (requests.isEmpty()) succeed();
         else {
-//            debug("Unleashing %d requests.", requests.size());
+            debug("Unleashing %d request(s).", requests.size());
             requests.forEach(request -> {
+                debug("State: %s", request.getState());
                 request.reportCompletionTo(this);
                 count.incrementAndGet();
-//                debug("State: %s", request.getState());
                 if (request.getState() == NEW) inject(request);
             });
         }
@@ -94,7 +95,8 @@ public class BasicParallelMultiRequest extends BasicRequest implements ParallelM
                 if (count.decrementAndGet() == 0) succeed();
             } else if (request.isCancelled()) cancel();
             else if (request.isFailed()) fail(request.getProblem());
-        } else super.notify(info);
+        } // else super.notify(info);
         return true;
     }
+
 }

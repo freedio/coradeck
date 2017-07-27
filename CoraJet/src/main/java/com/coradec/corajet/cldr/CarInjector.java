@@ -76,7 +76,7 @@ import java.util.stream.Stream;
 /**
  * ​​The injector of the CarClassLoader.
  */
-@SuppressWarnings({"unchecked", "WeakerAccess"})
+@SuppressWarnings("unchecked")
 public class CarInjector {
 
     static final String INJECT_DESC = ClassUtil.descriptorOf(Inject.class);
@@ -258,13 +258,14 @@ public class CarInjector {
     }
 
     public static Object implementationFor(final Class<?> interfaceClass, final List<Type> types,
-                                           Object... args) throws ObjectInstantiationFailure {
+            Object... args) throws ObjectInstantiationFailure {
         if (Factory.class.isAssignableFrom(interfaceClass)) {
             return new ObjectFactory(types);
         }
         Exception[] failed = new Exception[1];
         try {
             final Set<ImplementationClass<?>> ics = getImplementationClasses(interfaceClass);
+            //noinspection ConstantConditions
             return ics.stream()
                       .filter(ic -> ic.matches(interfaceClass, types))
                       .sorted(Comparator.comparingInt(ic -> ic.relevanceFor(interfaceClass, types)))
@@ -299,7 +300,7 @@ public class CarInjector {
      * @return an alternative implementation, if possible.
      */
     private static <T> T alternatives(Class<?> type, final List<Type> types, final Object[] args,
-                                      final Exception problem) throws RuntimeException {
+            final Exception problem) throws RuntimeException {
         if (type.isArray()) {
             final Class<?> componentType = type.getComponentType();
             if (args.length > 0 && Stream.of(args).allMatch(componentType::isInstance) ||
@@ -432,8 +433,7 @@ public class CarInjector {
          *                                    more of several reasons..
          */
         @SuppressWarnings("unchecked") T instantiate(final Class<?> iface, final List<Type> types,
-                final Object[] values)
-                throws ObjectInstantiationFailure {
+                final Object[] values) throws ObjectInstantiationFailure {
             Syslog.debug("Instantiating %s%s", //
                     klass.getName(), StringUtil.toString(typeParameters)
                                                .replaceFirst("^\\[", "<")
@@ -499,7 +499,10 @@ public class CarInjector {
                         Class<?> klass = (Class<?>)para;
                         if (klass.isPrimitive()) klass = ClassUtil.getBoxingType(klass);
                         Object value;
-                        if (values.length > i && klass.isInstance(values[i])) value = values[i];
+                        if (klass.isArray() && i + 1 == is && klass.isInstance(values))
+                            value = values;
+                        else if (values.length > i && klass.isInstance(values[i]))
+                            value = values[i];
                         else if (hasAnnotation(constr, i, Inject.class)) try {
                             value = implementationFor(klass, Collections.EMPTY_LIST);
                         } catch (ImplementationNotFoundException | ObjectInstantiationFailure e) {
@@ -550,9 +553,9 @@ public class CarInjector {
                             "arguments %s!", StringUtil.toString(values));
                 } else {
                     message = String.format(
-                            "Found no suitable public public constructor or static factory method" +
-                            " for type args %s and arguments " +
-                            "%s!", StringUtil.toString(types), StringUtil.toString(values));
+                            "Found no suitable public constructor or static factory method for " +
+                            "type args %s and arguments %s!", StringUtil.toString(types),
+                            StringUtil.toString(values));
                 }
                 throw new ObjectInstantiationFailure(klass, message);
             }
@@ -588,20 +591,25 @@ public class CarInjector {
                 if (e instanceof InvocationTargetException &&
                     e.getCause() instanceof NoClassDefFoundError) {
                     NoClassDefFoundError ncdfe = (NoClassDefFoundError)e.getCause();
-                    final String message = ncdfe.getMessage();
+                    String message = ncdfe.getMessage();
+                    if (!message.contains(" ")) message =
+                            String.format("No initialized class definition found for class %s",
+                                    message);
                     Syslog.error(
-                            "No initialized class definition found for class %s!  The most common" +
-                            " cause for this problem are recursive static dependencies between " +
-                            "injected classes, at least of which usually is a singleton " +
-                            "implementation (such as CentralMessageQueue).  The solution is to " +
-                            "either make the static dependency annotated as @Inject in class %<s " +
-                            "an instance field, or to use a static factory that provides " +
-                            "(singleton) instances, both quite easy to achieve.  The latter " +
-                            "solution is preferred in classes with a lot of instances: Use " +
-                            "something like «@Inject private static %s<%s> X;» instead of " +
-                            "«@Inject private static %<s X», and change all references «X» " +
-                            "inside the body to «X.get()».  There will be only a couple of μs " +
-                            "of overhead for this solution, particularly with singletons.", message,
+                            "%s!  The most common causes for this problem are a) unsatisfied " +
+                            "dependencies (you forgot to add implementation modules to the POM), " +
+                            "b) recursive static interdependencies between injected classes, some" +
+                            " of which usually are singleton implementations (such as " +
+                            "CentralMessageQueue).  Both kinds of problems are usually " +
+                            "foreshadowed in the CarInjector log leading up to the exception. The" +
+                            " solution is to either make the static dependency annotated as " +
+                            "@Inject in the class an instance field, or to use a static factory " +
+                            "that provides (singleton) instances, both quite easy to achieve.  " +
+                            "The latter solution is preferred in classes with a lot of instances:" +
+                            " Use something like «@Inject private static %s<%s> X;» instead of " +
+                            "«@Inject private static %<s X», and change all references «X» inside" +
+                            " the body to «X.get()».  There will be only a couple of μs of " +
+                            "overhead for this solution, particularly with singletons.", message,
                             Factory.class.getName(), message.replaceFirst("^.+\\.", ""));
                 }
                 throw new ObjectInstantiationFailure(klass, e);
@@ -839,8 +847,7 @@ public class CarInjector {
         }
 
         @Override public void visit(final int version, final int access, final String name,
-                                    final String signature, final String superName,
-                                    final String[] interfaces) {
+                final String signature, final String superName, final String[] interfaces) {
             currentClassName = name.replace('/', '.');
             super.visit(version, access, name, signature, superName, interfaces);
         }
@@ -860,15 +867,14 @@ public class CarInjector {
 
         @Override
         public FieldVisitor visitField(final int access, final String name, final String desc,
-                                       final String signature, final Object value) {
+                final String signature, final Object value) {
             return new ClassModeler.FieldPatcher(
                     cv.visitField(access, name, desc, signature, value), name,
                     signature != null ? signature : desc, Modifier.isStatic(access));
         }
 
         @Override public MethodVisitor visitMethod(final int access, String name, final String desc,
-                                                   final String signature,
-                                                   final String[] exceptions) {
+                final String signature, final String[] exceptions) {
             if (patch) {
                 if (name.equals("<init>")) {
                     final String descriptor = signature != null ? signature : desc;
@@ -930,7 +936,7 @@ public class CarInjector {
             private final boolean isStatic;
 
             FieldPatcher(final FieldVisitor fv, final String name, final String type,
-                         final boolean isStatic) {
+                    final boolean isStatic) {
                 super(Opcodes.ASM5, fv);
                 this.name = name;
                 this.type = type;
@@ -1051,7 +1057,7 @@ public class CarInjector {
         private int minStack;
 
         ConstructorPatcher(final String className, final String signature, final MethodVisitor mv,
-                           final InjectionMode injectionMode) {
+                final InjectionMode injectionMode) {
             super(Opcodes.ASM5, mv);
             this.className = className;
             this.signature = signature;
@@ -1065,7 +1071,7 @@ public class CarInjector {
 
         @Override
         public void visitMethodInsn(final int opcode, final String owner, final String name,
-                                    final String desc, final boolean intf) {
+                final String desc, final boolean intf) {
             super.visitMethodInsn(opcode, owner, name, desc, intf);
             if (!patched &&
                 opcode == INVOKESPECIAL &&
@@ -1162,8 +1168,7 @@ public class CarInjector {
         }
 
         @Override public void visit(final int version, final int access, final String name,
-                                    final String signature, final String superName,
-                                    final String[] interfaces) {
+                final String signature, final String superName, final String[] interfaces) {
             currentClassName = name.replace('/', '.');
             super.visit(version, access, name, signature, superName, interfaces);
         }
@@ -1189,7 +1194,7 @@ public class CarInjector {
 
         @Override
         public FieldVisitor visitField(final int access, final String name, final String desc,
-                                       final String signature, final Object value) {
+                final String signature, final Object value) {
             return getFieldAnalyzer();
         }
 

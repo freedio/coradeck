@@ -36,7 +36,6 @@ import org.junit.runner.RunWith;
 /**
  * ​​Test suite for the BasicHub.
  */
-@SuppressWarnings("WeakerAccess")
 @RunWith(CoradeckJUnit4TestRunner.class)
 public class BasicHubTest extends BasicBusTestInfrastructure {
 
@@ -45,20 +44,20 @@ public class BasicHubTest extends BasicBusTestInfrastructure {
     @Inject Session initialSession;
 
     @Test public void normalSetupAndShutdownShouldWork() throws InterruptedException {
-        testNormalSetupAndShutdown(testee, LOADED, 5);
+        testNormalSetupAndShutdown("proc1", testee, LOADED, 5);
     }
 
     @Test public void normalSetupAndShutdownWithMemberPreloadingShouldWork()
             throws InterruptedException {
         testee.add(initialSession, "member", member);
-        testNormalSetupAndShutdown(testee, LOADED, 5);
+        testNormalSetupAndShutdown("proc2", testee, LOADED, 5);
     }
 
     @Test public void normalSetupAndShutdownWithMemberPostloadingShouldWork()
             throws InterruptedException {
         assertThat(member.getState(), is(UNATTACHED));
         assertThat(member.getMetaState(), is(DOWN));
-        testNormalSetupAndShutdown(testee, LOADED, 5, new LoadMember(), new WaitAbit());
+        testNormalSetupAndShutdown("proc3", testee, LOADED, 10, new LoadMember(), new WaitAbit());
         assertThat(member.getState(), is(DETACHED));
         assertThat(member.getMetaState(), is(DOWN));
     }

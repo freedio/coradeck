@@ -63,4 +63,5 @@ public interface BusNode extends Recipient {
      * @return the path.
      */
     Path getPath();
+
 }

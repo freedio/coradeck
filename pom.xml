@@ -212,7 +212,7 @@
             <plugin>
                 <groupId>com.coradec</groupId>
                 <artifactId>carchiver</artifactId>
-                <version>0.1</version>
+                <version>0.3</version>
                 <executions>
                     <execution>
                         <phase>package</phase>

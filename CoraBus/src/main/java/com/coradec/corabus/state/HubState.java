@@ -23,7 +23,6 @@ package com.coradec.corabus.state;
 /**
  * ​​Type-safe extensible enumeration of hub states.
  */
-@SuppressWarnings("WeakerAccess")
 public class HubState extends NodeState {
 
     public static final NodeState LOADING = new HubState("LOADING", 1000);

@@ -21,14 +21,16 @@
 package com.coradec.coractrl.ctrl.impl;
 
 import com.coradec.coracom.ctrl.MessageQueue;
+import com.coradec.coracom.ctrl.Observer;
 import com.coradec.coracom.model.Command;
+import com.coradec.coracom.model.Event;
 import com.coradec.coracom.model.Information;
 import com.coradec.coracom.model.Message;
 import com.coradec.coracom.model.MultiRequest;
 import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Request;
 import com.coradec.coracom.model.Sender;
-import com.coradec.coracom.model.impl.AbstractCommand;
+import com.coradec.coracom.model.impl.BasicCommand;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.Nullable;
@@ -52,7 +54,7 @@ import java.util.function.Consumer;
 /**
  * ​​Basic implementation of an agent.
  */
-@SuppressWarnings({"WeakerAccess", "PublicField"})
+@SuppressWarnings("PublicField")
 @Implementation
 public class BasicAgent extends Logger implements Agent, Recipient, Sender {
 
@@ -216,6 +218,19 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
     }
 
     /**
+     * Pulls the specified trigger in concurrency separation when the specified event occurs.
+     *
+     * @param once    {@code true} if the trigger shall fire only once, {@code false} if it shall be
+     *                pulled every time the event occurs.
+     * @param event   the type of event.
+     * @param trigger the trigger to pull.
+     */
+    @SuppressWarnings("unchecked") protected <E extends Event> void on(boolean once,
+            Class<? super E> event, Consumer<E> trigger) {
+        MQ.subscribe(new ReactiveTrigger(event, trigger, once));
+    }
+
+    /**
      * Callback invoked to check if the specified command is approved for execution.
      * <p>
      * The default is to not approve commands for reasons of security except if there is a route for
@@ -237,12 +252,37 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
         error(TEXT_MESSAGE_BOUNCED, message);
     }
 
+    /**
+     * Allows the message queue to shut down as an important asynchronous process is running.
+     */
+    protected void allowMessageQueueShutdown() {
+        MQ.allowShutdown();
+    }
+
+    /**
+     * Prevents the message queue from shutting down after an important asynchronous process has
+     * finished.
+     */
+    protected void preventMessageQueueShutdown() {
+        MQ.preventShutdown();
+    }
+
     @Override public String toString() {
         return ClassUtil.toString(this);
     }
 
+    /**
+     * Re-injects the specified info into the message queue after renewing it.
+     *
+     * @param <I>  the information type.
+     * @param info the information to re-inject.
+     */
+    protected <I extends Information> void again(final I info) {
+        inject(info.renew());
+    }
+
     @SuppressWarnings("ClassHasNoToStringMethod")
-    private class AddRouteCommand<R extends Message> extends AbstractCommand {
+    private class AddRouteCommand<R extends Message> extends BasicCommand {
 
         private final Class<? super R> selector;
         private final Consumer<? extends Message> processor;
@@ -269,7 +309,7 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")
-    private class ReplaceRouteCommand<R extends Message> extends AbstractCommand {
+    private class ReplaceRouteCommand<R extends Message> extends BasicCommand {
 
         private final Class<? super R> selector;
         private final Consumer<? extends Message> processor;
@@ -293,8 +333,8 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
         }
     }
 
-    @SuppressWarnings({"ClassHasNoToStringMethod", "WeakerAccess"})
-    private class RemoveRouteCommand<R extends Message> extends AbstractCommand {
+    @SuppressWarnings("ClassHasNoToStringMethod")
+    private class RemoveRouteCommand<R extends Message> extends BasicCommand {
 
         private final Class<? super R> selector;
 
@@ -314,7 +354,7 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")
-    private class InternalCommandWrapper extends AbstractCommand {
+    private class InternalCommandWrapper extends BasicCommand {
 
         private final Runnable task;
 
@@ -331,6 +371,34 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
                 fail(e);
             }
         }
+    }
+
+    @SuppressWarnings("ClassHasNoToStringMethod")
+    private class ReactiveTrigger<E extends Event> implements Observer {
+
+        private final Class<E> event;
+        private final Consumer<E> trigger;
+        private final boolean once;
+
+        public ReactiveTrigger(final Class<E> event, final Consumer<E> trigger, boolean once) {
+            this.event = event;
+            this.trigger = trigger;
+            this.once = once;
+        }
+
+        @SuppressWarnings("unchecked") @Override public boolean notify(final Information info) {
+            if (wants(info)) try {
+                trigger.accept((E)info);
+            } catch (Exception e) {
+                error(e);
+            }
+            return once;
+        }
+
+        @Override public boolean wants(final Information info) {
+            return event.isInstance(info);
+        }
+
     }
 
 }

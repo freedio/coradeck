@@ -20,8 +20,13 @@
 
 package com.coradec.corabus.model;
 
+import com.coradec.corabus.trouble.NodeNotFoundException;
+import com.coradec.coracom.model.Information;
 import com.coradec.coracom.model.Request;
+import com.coradec.coradir.model.Path;
 import com.coradec.corasession.model.Session;
+
+import java.util.Optional;
 
 /**
  * ​Representation of the bus system.
@@ -29,14 +34,69 @@ import com.coradec.corasession.model.Session;
 public interface Bus {
 
     /**
-     * Adds the specified node to the bus under the specified local name in the context of the
-     * specified session.
+     * Adds the specified node to the bus under the specified path in the context of the specified
+     * session.
      *
      * @param session the session context.
-     * @param name    the name.
+     * @param path    the path.
      * @param node    the node.
      * @return a request to track progress.
      */
-    Request add(final Session session, String name, BusNode node);
+    Request add(final Session session, Path path, BusNode node);
+
+    /**
+     * Starts the bus system manually.
+     */
+    void setup();
+
+    /**
+     * Shuts the bus system down.
+     */
+    void shutdown();
+
+    /**
+     * Returns the root hub of the bus system.
+     *
+     * @return the root.
+     */
+    BusHub getRoot();
+
+    /**
+     * Looks up the bus node with the specified path in the context of the specified session.
+     *
+     * @param session the session context.
+     * @param path    the path of the node to look up.
+     * @return the bus node, or {@link Optional#empty()} if the node was not found.
+     */
+    Optional<BusNode> lookup(Session session, Path path);
+
+    /**
+     * Returns the bus node with the specified path in the context of the specified session.
+     *
+     * @param session the session context.
+     * @param path    the path of the node to return.
+     * @return the bus node.
+     * @throws NodeNotFoundException if no node was associated with the specified path.
+     */
+    BusNode get(Session session, Path path) throws NodeNotFoundException;
+
+    /**
+     * Checks in the context of the specified session if the bus system has a node with the
+     * specified path.
+     *
+     * @param session the session context.
+     * @param path    the path.
+     * @return {@code true} if the bus system has a node with the specified path, {@code false} if
+     * not.
+     */
+    boolean has(Session session, Path path);
+
+    /**
+     * Sends the specified information to the bus system.
+     *
+     * @param information the information.
+     * @return the information.
+     */
+    <I extends Information> I send(I information);
 
 }

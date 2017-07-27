@@ -32,7 +32,6 @@ import java.util.Optional;
  * Configurable reader for property files in the standard property file format, as known from Java
  * .properties files or Unix configuration files.
  */
-@SuppressWarnings("WeakerAccess")
 public abstract class AnnotatedConfigurationReader extends BasicConfigurationReader {
 
 //    private static final Log LOG = UniLog.forClass(AnnotatedConfigurationReader.class);

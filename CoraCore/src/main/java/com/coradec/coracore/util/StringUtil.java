@@ -33,6 +33,7 @@ import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -45,7 +46,7 @@ import java.util.stream.Stream;
 /**
  * ​​Static library of String utilities.
  */
-@SuppressWarnings({"UseOfObsoleteDateTimeApi", "WeakerAccess"})
+@SuppressWarnings("UseOfObsoleteDateTimeApi")
 public final class StringUtil {
 
     public static final String EMPTY = "";
@@ -82,28 +83,47 @@ public final class StringUtil {
         if (o == null) return NULL_REPR;
         if (o instanceof Representable) return ((Representable)o).represent();
         if (o instanceof byte[]) return ppByteArray((byte[])o);
-        if (o.getClass().isArray()) return arrayRepr(o);
-        if (o instanceof CharSequence) return "\"" + o + '"';
-        if (o instanceof Character) return "'" + escape((char)o) + "'";
+        if (o.getClass().isArray())
+            return ppArray(o, StringUtil::represent, StringUtil::charArrayRepr);
+        if (o instanceof CharSequence) return (String)o;
+        if (o instanceof Character) return Character.toString((Character)o);
         if (o instanceof Optional<?>) {
             //noinspection unchecked
             return (String)((Optional)o).map(StringUtil::represent).orElse(NULL_REPR);
         }
         if (o instanceof List) //
-            return ((List<?>)o).stream()
-                               .map(StringUtil::represent)
-                               .collect(joining(", ", "[", "]"));
+            do {
+                try {
+                    return ((List<?>)o).stream()
+                                       .map(StringUtil::represent)
+                                       .collect(joining(", ", "[", "]"));
+                } catch (ConcurrentModificationException e) {
+                    // retry
+                }
+            } while (true);
         if (o instanceof Collection) //
-            return ((Collection<?>)o).stream()
-                                     .map(StringUtil::represent)
-                                     .collect(joining(", ", "(", ")"));
+            do {
+                try {
+                    return ((Collection<?>)o).stream()
+                                             .map(StringUtil::represent)
+                                             .collect(joining(", ", "(", ")"));
+                } catch (ConcurrentModificationException e) {
+                    // retry
+                }
+            } while (true);
         if (o instanceof Map) //
-            return ((Map<?, ?>)o).entrySet()
-                                 .stream()
-                                 .map(entry -> represent(entry.getKey()) +
-                                               ": " +
-                                               represent(entry.getValue()))
-                                 .collect(joining(", ", "{", "}"));
+            do {
+                try {
+                    return ((Map<?, ?>)o).entrySet()
+                                         .stream()
+                                         .map(entry -> represent(entry.getKey()) +
+                                                       ": " +
+                                                       represent(entry.getValue()))
+                                         .collect(joining(", ", "{", "}"));
+                } catch (Exception e) {
+                    // retry
+                }
+            } while (true);
         if (o instanceof Date) return String.format(Locale.UK, "%tFT%<tT.%<tN", (Date)o);
         return o.toString();
     }
@@ -111,7 +131,7 @@ public final class StringUtil {
     public static String toString(final @Nullable Object o) {
         if (o == null) return NULL_REPR;
         if (o instanceof byte[]) return ppByteArray((byte[])o);
-        if (o.getClass().isArray()) return array(o);
+        if (o.getClass().isArray()) return ppArray(o, StringUtil::toString, StringUtil::charArray);
         if (o instanceof CharSequence) return "\"" + o + '"';
         if (o instanceof Character) return "'" + escape((char)o) + "'";
         if (o instanceof Class) return ClassUtil.nameOf((Class<?>)o);
@@ -184,9 +204,10 @@ public final class StringUtil {
         return String.valueOf(o);
     }
 
-    private static String ppArray(final Object o, Function<Object, String> objArray) {
+    private static String ppArray(final Object o, Function<Object, String> objArray,
+            Function<char[], String> charray) {
         if (o instanceof boolean[]) return Arrays.toString((boolean[])o);
-        else if (o instanceof char[]) return charray((char[])o);
+        else if (o instanceof char[]) return charray.apply((char[])o);
         else if (o instanceof byte[]) return toString(o);
         else if (o instanceof short[]) return Arrays.toString((short[])o);
         else if (o instanceof int[]) return Arrays.toString((int[])o);
@@ -196,19 +217,21 @@ public final class StringUtil {
         return Stream.of((Object[])o).map(objArray).collect(joining(", ", "[", "]"));
     }
 
-    private static String array(final Object o) {
-        return ppArray(o, StringUtil::toString);
-    }
-
-    private static String arrayRepr(final Object o) {
-        return ppArray(o, StringUtil::represent);
-    }
-
-    private static String charray(final char[] cs) {
+    private static String charArray(final char[] cs) {
         StringBuilder collector = new StringBuilder().append("[");
         String separator = "";
         for (char c : cs) {
             collector.append(separator).append(StringUtil.toString(c));
+            separator = ", ";
+        }
+        return collector.append(']').toString();
+    }
+
+    private static String charArrayRepr(final char[] cs) {
+        StringBuilder collector = new StringBuilder().append("[");
+        String separator = "";
+        for (char c : cs) {
+            collector.append(separator).append(StringUtil.represent(c));
             separator = ", ";
         }
         return collector.append(']').toString();

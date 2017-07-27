@@ -25,7 +25,6 @@ import com.coradec.coracore.trouble.BasicException;
 /**
  * ​​Base class of all exceptions in the CoraType module.
  */
-@SuppressWarnings("WeakerAccess")
 public class TypeException extends BasicException {
 
     public TypeException() {

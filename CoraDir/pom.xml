@@ -36,6 +36,10 @@
             <groupId>com.coradec.coradeck</groupId>
             <artifactId>coracore</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.coradec.coradeck</groupId>
+            <artifactId>coraconf</artifactId>
+        </dependency>
     </dependencies>
 
 </project>

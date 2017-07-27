@@ -24,6 +24,6 @@ package com.coradec.coracom.model;
  * ​​A multi-request consisting of sub-requests that depend on each other and will therefore
  * be executed serially, in the order they have been added to the multi-request.
  */
-public interface SerialMultiRequest {
+public interface SerialMultiRequest extends MultiRequest {
 
 }

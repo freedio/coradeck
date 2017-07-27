@@ -73,4 +73,21 @@ public interface StateMachine {
      */
     StartStateMachineRequest start();
 
+    /**
+     * Callback invoked when the state machine reaches the specified state.  Immediately after
+     * reaching the state, the specified task is executed.
+     * <p>
+     * <span style="color:yellow;background:red">IMPORTANT NOTE:</span>&nbsp;Callbacks have a nasty
+     * tendency to re-introduce concurrency in otherwise carefree environments. You are advised to
+     * refrain from changing state in the task.
+     * <p>
+     * It is OK to call {@link #setTargetState(State)}, {@link #addTransitions(Collection)}, {@link
+     * #start()} though, because these methods inject their actions into the message queue which in
+     * turn serializes their execution.
+     *
+     * @param state the state.
+     * @param task  the task to execute.
+     */
+    void onState(State state, Executable task);
+
 }

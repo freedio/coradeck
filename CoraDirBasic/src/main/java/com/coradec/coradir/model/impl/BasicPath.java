@@ -20,11 +20,11 @@
 
 package com.coradec.coradir.model.impl;
 
-import com.coradec.coraconf.model.Property;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.util.ClassUtil;
-import com.coradec.coracore.util.SystemUtil;
+import com.coradec.coracore.util.NetworkUtil;
 import com.coradec.coradir.model.Path;
+import com.coradec.coradir.trouble.PathEmptyException;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -38,9 +38,7 @@ import java.util.stream.Collectors;
 @Implementation
 public class BasicPath implements Path {
 
-    private static final Property<String> PROP_SEPARATOR =
-            Property.define("PathSeparator", String.class, "/");
-    private final ArrayList<String> path;
+    private final List<String> path;
 
     /**
      * Initializes a new instance of BasicPath consisting of the specified names in the order of
@@ -56,9 +54,8 @@ public class BasicPath implements Path {
 
     /**
      * Initializes a new instance of BasicPath consisting of the specified names in their order in
-     * the list.  If the first element is the empty string, the resulting path will be
-     * absolute. If the last element is the empty string, the resulting path will refer to a
-     * directory.
+     * the list.  If the first element is the empty string, the resulting path will be absolute. If
+     * the last element is the empty string, the resulting path will refer to a directory.
      *
      * @param names a list of names.
      */
@@ -79,7 +76,7 @@ public class BasicPath implements Path {
         collector.append(schema).append(':');
         if (isAbsolute()) {
             collector.append("//");
-            collector.append(SystemUtil.getCanonicalHostName());
+            collector.append(NetworkUtil.getCanonicalHostName());
         }
         collector.append(represent());
         return URI.create(collector.toString());
@@ -93,6 +90,23 @@ public class BasicPath implements Path {
         final List<String> names = new ArrayList<>(path);
         names.add(name);
         return new BasicPath(names);
+    }
+
+    @Override public boolean isEmpty() {
+        return path.isEmpty();
+    }
+
+    @Override public boolean isName() {
+        return path.size() == 1;
+    }
+
+    @Override public String head() {
+        if (path.isEmpty()) throw new PathEmptyException();
+        return path.get(0);
+    }
+
+    @Override public Path tail() {
+        return new BasicPath(path.stream().skip(1).collect(Collectors.toList()));
     }
 
 }

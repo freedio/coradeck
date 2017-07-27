@@ -20,7 +20,10 @@
 
 package com.coradec.corabus.view;
 
+import com.coradec.coracore.trouble.ServiceNotAvailableException;
 import com.coradec.coradir.model.Path;
+
+import java.util.Optional;
 
 /**
  * ​Context for an attachment between a member node and its bus hub.
@@ -56,5 +59,35 @@ public interface BusContext {
      * @return the member path.
      */
     Path getPath(String name);
+
+    /**
+     * Checks if the context provides the specified service.
+     *
+     * @param type the type of service.
+     * @param args arguments for service selection.
+     * @return {@code true} if the context provides the service, {@code false} if not.
+     */
+    <S extends BusService> boolean provides(Class<? super S> type, Object... args);
+
+    /**
+     * Returns a service implementation of the specified type, if any is available.
+     *
+     * @param <S>  the service type.
+     * @param type the service type selector.
+     * @param args arguments for service selection and initialization.
+     * @return a service implementation, or {@link Optional#empty()}.
+     */
+    <S extends BusService> Optional<S> findService(Class<? super S> type, Object... args);
+
+    /**
+     * Returns a service implementation of the specified type.
+     *
+     * @param <S>  the service type.
+     * @param type the service type selector.
+     * @param args arguments for service selection and initialization.
+     * @return a service implementation.
+     */
+    <S extends BusService> S getService(Class<? super S> type, Object... args)
+            throws ServiceNotAvailableException;
 
 }

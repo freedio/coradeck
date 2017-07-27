@@ -27,7 +27,6 @@ import com.coradec.coracore.util.ClassUtil;
 /**
  * Type-safe extensible enumeration of request states.
  */
-@SuppressWarnings("WeakerAccess")
 public class RequestState implements State {
 
     public static final RequestState NEW = new RequestState("NEW", 0);

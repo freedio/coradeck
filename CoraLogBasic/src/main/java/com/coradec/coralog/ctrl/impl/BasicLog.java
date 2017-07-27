@@ -48,7 +48,7 @@ public class BasicLog implements Log {
     private LogLevel level;
     @Inject private LogFacility logging;
 
-    @SuppressWarnings("WeakerAccess") public BasicLog(final LogLevel level) {
+    public BasicLog(final LogLevel level) {
         this.level = level;
     }
 

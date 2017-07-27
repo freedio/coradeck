@@ -30,7 +30,7 @@ import java.net.URI;
 /**
  * Basic implementation of a stack frame.​​
  */
-@SuppressWarnings({"ClassHasNoToStringMethod", "WeakerAccess"})
+@SuppressWarnings("ClassHasNoToStringMethod")
 @Implementation
 public class BasicStackFrame extends BasicOrigin implements StackFrame {
 
