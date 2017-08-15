@@ -20,13 +20,17 @@
 
 package com.coradec.coracore.util;
 
+import static java.time.temporal.ChronoUnit.*;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.*;
 
+import com.coradec.coracore.annotation.Attribute;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.trouble.ResourceFileNotFoundException;
 import org.junit.Test;
 
+import java.time.Duration;
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
@@ -96,6 +100,18 @@ public class ClassUtilTest {
                    "1980-12-14T22:55:01.234000000, \"died\": 2009-02-14T00:31:30.123000000})"));
     }
 
+    @Test public void testGetAttributes() {
+        final Map<String, Object> attributes = ClassUtil.getAttributes(new InnerObject());
+        assertThat(attributes.containsKey("HiddenAttribute"), is(false));
+        assertThat(attributes.containsKey("HiddenInnerAttribute"), is(false));
+        assertThat(attributes.containsKey("PublicAttribute"), is(true));
+        assertThat(attributes.containsKey("PublicInnerAttribute"), is(true));
+        assertThat(attributes.containsKey("RenamedAttribute"), is(false));
+        assertThat(attributes.containsKey("RenamedInnerAttribute"), is(false));
+        assertThat(attributes.containsKey("Answer"), is(true));
+        assertThat(attributes.containsKey("Scent"), is(true));
+    }
+
     private class EmptyObject {
 
         @Override public String toString() {
@@ -128,6 +144,48 @@ public class ClassUtilTest {
 
         @Override public String toString() {
             return ClassUtil.toString(this);
+        }
+
+    }
+
+    @SuppressWarnings("ClassHasNoToStringMethod")
+    private class OuterObject {
+
+        private final String hiddenAttribute = "hidden";
+        private final String publicAttribute = "public";
+        private final int renamedAttribute = 42;
+
+        public String getHiddenAttribute() {
+            return hiddenAttribute;
+        }
+
+        @Attribute public String getPublicAttribute() {
+            return publicAttribute;
+        }
+
+        @Attribute("Answer") public int getRenamedAttribute() {
+            return renamedAttribute;
+        }
+
+    }
+
+    @SuppressWarnings("ClassHasNoToStringMethod")
+    private class InnerObject extends OuterObject {
+
+        private final LocalDate hiddenInnerAttribute = LocalDate.now();
+        private final Duration publicInnerAttribute = Duration.of(2, SECONDS);
+        private final long renamedInnerAttribute = 4711L;
+
+        public LocalDate getHiddenInnerAttribute() {
+            return hiddenInnerAttribute;
+        }
+
+        @Attribute public Duration getPublicInnerAttribute() {
+            return publicInnerAttribute;
+        }
+
+        @Attribute("Scent") public long getRenamedInnerAttribute() {
+            return renamedInnerAttribute;
         }
 
     }

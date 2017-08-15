@@ -1,0 +1,7 @@
+# Localized text base for default locale of class CoradecProtocolImpl
+
+RequestWuthoutOrigin: Received request without an origin: %s → skipped!
+RequestWithoutCommand: Received request without a command: %s → skipped!
+EventUnrecognized: Received unrecognizable network event: %s → skipped!
+InvalidResponse: Invalid response: %s → skipped!
+InvalidEvent: Invalid event: %s → skipped!

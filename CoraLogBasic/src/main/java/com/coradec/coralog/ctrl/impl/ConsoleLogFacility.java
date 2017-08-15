@@ -72,6 +72,7 @@ public class ConsoleLogFacility implements LogFacility {
         out.println(format(TEXT_LINE1.get(), entry));
         out.println(format(TEXT_LINE2.get(), entry));
         if (entry instanceof ProblemLogEntry) {
+            out.print("due to ");
             ((ProblemLogEntry)entry).getProblem().printStackTrace(out);
         }
         out.flush();

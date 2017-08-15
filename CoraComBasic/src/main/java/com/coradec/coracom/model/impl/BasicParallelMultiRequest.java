@@ -29,7 +29,9 @@ import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Request;
 import com.coradec.coracom.model.Sender;
 import com.coradec.coracore.annotation.Implementation;
+import com.coradec.coracore.annotation.Nullable;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -72,17 +74,15 @@ public class BasicParallelMultiRequest extends BasicRequest implements ParallelM
         this.requests.addAll(requests);
     }
 
-    @Override public void process() {
-        if (requests.isEmpty()) succeed();
-        else {
-            debug("Unleashing %d request(s).", requests.size());
-            requests.forEach(request -> {
-                debug("State: %s", request.getState());
-                request.reportCompletionTo(this);
-                count.incrementAndGet();
-                if (request.getState() == NEW) inject(request);
-            });
+    @Override public BasicParallelMultiRequest process() {
+        if (!isComplete()) {
+            if (requests.isEmpty()) succeed();
+            else {
+//            debug("Unleashing %d request(s).", requests.size());
+                requests.forEach(this::launchRequest);
+            }
         }
+        return this;
     }
 
     @Override public boolean notify(final Information info) {
@@ -97,6 +97,25 @@ public class BasicParallelMultiRequest extends BasicRequest implements ParallelM
             else if (request.isFailed()) fail(request.getProblem());
         } // else super.notify(info);
         return true;
+    }
+
+    @Override public Request and(@Nullable final Request request) {
+        return request == null ? this : isComplete() ? new BasicParallelMultiRequest(
+                Arrays.asList(this, request), getSender(), getRecipientList())
+                                                     : addRequest(request);
+    }
+
+    private Request addRequest(final Request request) {
+        requests.add(request);
+        launchRequest(request);
+        return request;
+    }
+
+    private void launchRequest(final Request request) {
+        //                debug("State: %s", request.getState());
+        request.reportCompletionTo(this);
+        count.incrementAndGet();
+        if (request.getState() == NEW) inject(request);
     }
 
 }

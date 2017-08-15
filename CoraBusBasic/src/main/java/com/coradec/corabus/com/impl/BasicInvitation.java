@@ -27,6 +27,7 @@ import com.coradec.corabus.view.Member;
 import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Sender;
 import com.coradec.coracom.model.impl.BasicSessionRequest;
+import com.coradec.coracore.annotation.Attribute;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.NonNull;
 import com.coradec.coracore.annotation.Nullable;
@@ -59,11 +60,11 @@ public class BasicInvitation extends BasicSessionRequest implements Invitation {
         this.context = context;
     }
 
-    @Override @ToString public String getName() {
+    @Override @ToString @Attribute public String getName() {
         return name;
     }
 
-    @Override @ToString public BusContext getContext() {
+    @Override @ToString @Attribute public BusContext getContext() {
         return context;
     }
 

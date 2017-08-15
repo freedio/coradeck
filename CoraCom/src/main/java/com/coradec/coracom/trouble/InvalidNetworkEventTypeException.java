@@ -18,22 +18,15 @@
  *
  */
 
-package com.coradec.corabus.view;
-
-import com.coradec.coracom.model.Information;
-import com.coradec.coracom.model.Voucher;
+package com.coradec.coracom.trouble;
 
 /**
- * ​API of a network service.
+ * ​​Indicates an invalid network event type (neither NetworkEvent nor NetworkResponse).
  */
-public interface NetworkService extends BusService {
+public class InvalidNetworkEventTypeException extends NetworkCommunicationException {
 
-    /**
-     * Send the specified information to the network service.
-     *
-     * @param info the information to send.
-     */
-    void send(Information info);
+    public InvalidNetworkEventTypeException(final String message) {
+        super(message);
+    }
 
-    Voucher<Information> receive();
 }

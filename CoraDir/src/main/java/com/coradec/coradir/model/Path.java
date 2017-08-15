@@ -29,6 +29,31 @@ import java.net.URI;
 
 /**
  * ​Representation of a directory path.
+ * <p>
+ * Paths appear in 6 flavors: <dl> <dt>System transcendent path</dt><dd>
+ * <code>//as.coradec.com/vm0/app/my-app/myComponent</code> <br/><em>This notation addresses every
+ * single accessible component in the world through the explicit system bus (= host name, here:
+ * as.coradec.com) and the explicit machine bus address part</em></dd> <dt>Machine transcendent
+ * path</dt><dd><code>///vm0/app/my-app/myComponent</code><br/><em>Leaving the hostname away in a
+ * global absolute path implicitly fills the gap with “localhost”<br/> System absolute addresses are
+ * only valid within the host system</em></dd> <dt>Machine absolute
+ * path</dt><dd><code>////my-app/myComponent</code><br/><em>Leaving
+ * away the machine bus name in a system absolute path implicitly fills the gap with the current
+ * machine bus name<br/>Local absolute addresses are valid within the local VM only.</em></dd>
+ * <dt>Local absolute path</dt><dd><code>/my-app/myComponent</code><br/><em>This is an alternative
+ * representation of the machine absolute path (which has too many slashes)<br/>Again, this type of
+ * paths is valid only within the VM.</em></dd> <dt>Application relative
+ * path</dt><dd><code>~/myComponent</code><br/><em>This path is relative and confined to the
+ * application within which it is used<br/>This type of paths is valid only within an
+ * application.</em></dd> <dt>Local relative path</dt><dd><code>myComponent</code><br/><em>A
+ * relative path is relative to the innermost applicable service level from where it is used.
+ * Typically, within an application, the local root is the application itself; from other points, it
+ * is usually the machine bus.  “Applicable” means that if the path has no meaning within a lower
+ * service level, it is applied to the next upper service level, a.s.o..  Thus, to access a
+ * particular database table, e.g., it suffices to specify "db/DB-NAME/TABLE-NAME". If there is a
+ * database on the application level that provides the specified table, it will be used; otherwise a
+ * database on the machine bus may applicable; if not, the path will be applied to the system
+ * bus.</em></dd> </dl>
  */
 public interface Path extends Representable {
 
@@ -56,6 +81,16 @@ public interface Path extends Representable {
     }
 
     /**
+     * Returns a path consisting of the specified atomic name.
+     *
+     * @param name the name.
+     * @return a path.
+     */
+    static Path from(String name) {
+        return PATH.create(name);
+    }
+
+    /**
      * Returns the path as an URI with the specified schema.
      *
      * @param schema the schema (the part in front of the first colon).
@@ -64,9 +99,16 @@ public interface Path extends Representable {
     URI toURI(String schema);
 
     /**
-     * Checks if this path is absolute.
+     * Checks if the path is (system or machine) transcendent.
      *
-     * @return {@code true} if the path is absolute, {@code false} if it is relative.
+     * @return {@code true} if the path is transcendent.
+     */
+    boolean isTranscendent();
+
+    /**
+     * Checks if the path is (machine or local) absolute.
+     *
+     * @return {@code true} if the path is absolute.
      */
     boolean isAbsolute();
 
@@ -107,5 +149,12 @@ public interface Path extends Representable {
      * @return the tail of this path.
      */
     Path tail();
+
+    /**
+     * Returns the localized part of a transcendent or absolute path.
+     *
+     * @return a localized path.
+     */
+    Path localize();
 
 }

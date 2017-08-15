@@ -18,11 +18,31 @@
  *
  */
 
-package com.coradec.corabus.com;
+package com.coradec.coratype.ctrl;
 
 /**
- * ​Notification about available data.
+ * ​Serializes and deserializes "canned" objects of a particular type.
+ * <p>
+ * Object serializable through Marshaller must have a constructor taking a map.  The constructor
+ *
+ * @param <V> the object type
  */
-public interface DataAvailableEvent extends NetworkEvent {
+public interface Marshaller<V> {
+
+    /**
+     * Serialzies an object into a byte array.
+     *
+     * @param object the object to serialize.
+     * @return the serialized object.
+     */
+    byte[] marshal(V object);
+
+    /**
+     * Deserailizes a byte array into an object.
+     *
+     * @param data the canned object representation.
+     * @return an object instance.
+     */
+    V unmarshal(byte[] data);
 
 }

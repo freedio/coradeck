@@ -96,4 +96,5 @@ public final class GenericType<T> implements Representable, ParameterizedType {
     public boolean isInstance(final @Nullable Object value) {
         return type.isInstance(value);
     }
+
 }

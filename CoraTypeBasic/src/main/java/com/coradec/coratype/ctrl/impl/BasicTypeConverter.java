@@ -70,4 +70,77 @@ public abstract class BasicTypeConverter<T> implements TypeConverter<T> {
                 String.format("Failed to convert object ‹%s› to type ‹%s›", value, this.type));
     }
 
+    protected byte[] marshal(final long l) {
+        return marshal(l, Long.BYTES);
+    }
+
+    protected byte[] marshal(final int i) {
+        return marshal(i, Integer.BYTES);
+    }
+
+    protected byte[] marshal(final short s) {
+        return marshal(s, Short.BYTES);
+    }
+
+    protected byte[] marshal(final byte b) {
+        return marshal(b, Byte.BYTES);
+    }
+
+    protected byte[] marshal(final char c) {
+        return marshal(c, Character.BYTES);
+    }
+
+    protected byte[] marshal(final boolean x) {
+        return marshal(x ? -1 : 0, 1);
+    }
+
+    protected byte[] marshal(final float f) {
+        return marshal(Float.floatToRawIntBits(f), Integer.BYTES);
+    }
+
+    protected byte[] marshal(final double d) {
+        return marshal(Double.doubleToRawLongBits(d), Long.BYTES);
+    }
+
+    private byte[] marshal(long l, final int bytes) {
+        byte[] buffer = new byte[bytes];
+        for (int i = 0; i < bytes; ++i) {
+            buffer[i] = (byte)(l & 0xff);
+            l >>>= 8;
+        }
+        return buffer;
+    }
+
+    protected long unmarshalLong(final byte[] value) {
+        long result = 0L;
+        for (int i = value.length; i >= 0; --i) {
+            result = result << 8 | value[i] & 0xff;
+        }
+        return result;
+    }
+
+    protected int unmarshalInt(final byte[] value) {
+        return (int)unmarshalLong(value);
+    }
+
+    protected short unmarshalShort(final byte[] value) {
+        return (short)(value[0] + 256 * value[1]);
+    }
+
+    protected byte unmarshalByte(final byte[] value) {
+        return value[0];
+    }
+
+    protected boolean unmarshalBoolean(final byte[] value) {
+        return value[0] != 0;
+    }
+
+    protected float unmarshalFloat(final byte[] value) {
+        return Float.intBitsToFloat(unmarshalInt(value));
+    }
+
+    protected double unmarshalDouble(final byte[] value) {
+        return Double.longBitsToDouble(unmarshalLong(value));
+    }
+
 }

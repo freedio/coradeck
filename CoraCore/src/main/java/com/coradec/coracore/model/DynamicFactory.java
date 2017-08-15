@@ -30,16 +30,29 @@ import java.lang.reflect.Type;
 @SuppressWarnings("ClassHasNoToStringMethod")
 public class DynamicFactory<T> {
 
-    @Inject
-    private MetaFactory<T> META_FACTORY;
+    @Inject private MetaFactory<T> META_FACTORY;
 
     public DynamicFactory() {
     }
 
-    public Factory<T> of(final Class<? super T> baseType, final Type... typeArgs) {
-        return META_FACTORY.get(baseType, typeArgs);
+    /**
+     * Returns a suitable factory for parametrized instances with the specified raw type and type
+     * parameters.
+     *
+     * @param baseType the base type.
+     * @param paras    the type parameters.
+     * @return a generic factory.
+     */
+    public Factory<T> of(final Class<? super T> baseType, final Type... paras) {
+        return META_FACTORY.get(baseType, paras);
     }
 
+    /**
+     * Returns a suitable factory for instances of the specified generic type.
+     *
+     * @param genericType the generic type.
+     * @return a generic factory.
+     */
     public Factory<T> of(final GenericType<? super T> genericType) {
         return META_FACTORY.get(genericType);
     }

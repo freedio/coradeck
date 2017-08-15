@@ -1,0 +1,7 @@
+# Localized text base for default locale of class BasicNetworkConnection
+
+NotEstablished: Network connection is not established!
+ResponseWithoutSender: Response without sender dropped!
+ResponseWithoutRecipient: Response without recipient dropped!
+ClosingStaleConnection: Connection %s has become unresponsive: \
+    discarding all request and closing the connection!

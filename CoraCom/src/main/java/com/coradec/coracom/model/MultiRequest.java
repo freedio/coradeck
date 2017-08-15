@@ -24,13 +24,16 @@ package com.coradec.coracom.model;
  * A request launching other requests and collecting/synchronizing their results.​
  * <p>
  * In order for the multi-request to succeed, all sub-requests must succeed.  As soon as one of the
- * sub-requests fails or is cancelled, the entire multi-request fails or is cancelled, respectively.
+ * sub-requests fails or is cancelled, the entire multi-request fails or is cancelled,
+ * respectively.
  */
 public interface MultiRequest extends Request {
 
     /**
      * Processes the multi-request.
+     *
+     * @return this multi-request.
      */
-    void process();
+    MultiRequest process();
 
 }

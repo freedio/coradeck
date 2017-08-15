@@ -48,6 +48,14 @@ public class DurationConverter extends BasicTypeConverter<Duration> {
         return parse(value);
     }
 
+    @Override public Duration unmarshal(final byte[] value) throws TypeConversionException {
+        return Duration.of(unmarshalLong(value), MILLISECONDS);
+    }
+
+    @Override public byte[] marshal(final Duration value) {
+        return marshal(value.toMillis());
+    }
+
     /**
      * Parses a simple duration with one amount and a time unit (ns, μs/us, ms, s, m, h, d),
      * optionally separated with spaces.

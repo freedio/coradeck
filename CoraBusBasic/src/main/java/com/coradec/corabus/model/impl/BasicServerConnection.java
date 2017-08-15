@@ -20,38 +20,74 @@
 
 package com.coradec.corabus.model.impl;
 
+import static java.nio.channels.SelectionKey.*;
+
+import com.coradec.corabus.com.ConnectionAcceptableEvent;
+import com.coradec.corabus.model.Bus;
 import com.coradec.corabus.model.ServerConnection;
-import com.coradec.coracom.ctrl.ChannelReader;
-import com.coradec.coracom.ctrl.ChannelWriter;
+import com.coradec.coracom.model.Information;
+import com.coradec.coracom.model.Recipient;
+import com.coradec.coracom.model.SessionEvent;
+import com.coradec.coracom.model.SessionRequest;
+import com.coradec.coracom.model.impl.BasicRequest;
+import com.coradec.coracore.annotation.Inject;
+import com.coradec.coracore.trouble.UnimplementedOperationException;
+import com.coradec.coradir.model.Path;
 
 import java.io.IOException;
-import java.net.SocketAddress;
-import java.nio.channels.ReadableByteChannel;
+import java.net.URI;
 import java.nio.channels.Selector;
-import java.nio.channels.WritableByteChannel;
+import java.nio.channels.SocketChannel;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * ​​Basic implementation of a server connection.
  */
 @SuppressWarnings("ClassHasNoToStringMethod")
-public class BasicServerConnection extends AbstractConnection implements ServerConnection {
+public class BasicServerConnection extends AbstractNetworkConnection implements ServerConnection {
 
-    private final ChannelReader reader;
-    private final ChannelWriter writer;
+    private IOException connectionFailure;
 
-    public BasicServerConnection(final Selector selector, final SocketAddress socket,
-            final ChannelReader reader, final ChannelWriter writer) {
-        super(selector, socket);
-        this.reader = reader;
-        this.writer = writer;
+    private final Map<UUID, SessionRequest> outboundRequests = new HashMap<>();
+    @Inject private Bus bus;
+
+    public BasicServerConnection(final Selector selector, final SocketChannel server,
+            final URI target) {
+        super(selector, server, OP_CONNECT, target);
+        addRoute(ConnectionAcceptableEvent.class, this::establishConnection);
     }
 
-    @Override protected boolean read(final ReadableByteChannel peer) throws IOException {
-        return reader.read(peer);
+    private void establishConnection(final ConnectionAcceptableEvent event) {
+        final SocketChannel channel = getChannel();
+        try {
+            while (!channel.finishConnect()) Thread.yield();
+            deselect(OP_CONNECT);
+            select(OP_READ | OP_WRITE);
+        } catch (IOException e) {
+            connectionFailure = e;
+        }
     }
 
-    @Override protected boolean write(final WritableByteChannel peer) throws IOException {
-        return writer.write(peer);
+    @Override protected void requestReceived(final SessionRequest request) {
+        throw new UnimplementedOperationException();
+    }
+
+    @Override protected void eventReceived(final SessionEvent event) {
+        inject(new ResolveEventRequest(bus.get(getInitialSession(), Path.of("/net/resolver"))));
+    }
+
+    @Override protected void infoReceived(final Information info) {
+        throw new UnimplementedOperationException();
+    }
+
+    private class ResolveEventRequest extends BasicRequest {
+
+        public ResolveEventRequest(final Recipient... recipients) {
+            super(BasicServerConnection.this, recipients);
+        }
+
     }
 
 }

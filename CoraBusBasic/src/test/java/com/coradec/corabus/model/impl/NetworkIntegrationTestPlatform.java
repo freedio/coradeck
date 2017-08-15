@@ -20,11 +20,10 @@
 
 package com.coradec.corabus.model.impl;
 
-import static java.util.concurrent.TimeUnit.*;
-
 import com.coradec.corabus.com.impl.ShutdownRequest;
 import com.coradec.corabus.model.Bus;
 import com.coradec.corabus.model.BusNode;
+import com.coradec.coracom.ctrl.MessageQueue;
 import com.coradec.coracom.model.Message;
 import com.coradec.coracom.model.Sender;
 import com.coradec.coraconf.model.Property;
@@ -56,6 +55,7 @@ public class NetworkIntegrationTestPlatform extends Logger implements Sender {
     private static final Text TEXT_MESSAGE_BOUNCED = LocalizedText.define("MessageBounced");
 
     @Inject Bus bus;
+    @Inject MessageQueue messageQueue;
     @Inject Session session;
     protected Communication communication = new Communication();
 
@@ -95,9 +95,9 @@ public class NetworkIntegrationTestPlatform extends Logger implements Sender {
                     while (err.ready()) stderr.append((char)err.read());
                     if (stdout.toString().contains("Bus system ready.")) ready = true;
                     if (stderr.toString().contains("Server failed.")) failed = true;
-                } while (!ready && !failed && System.currentTimeMillis() - then < 5000);
-                debug("Stdout: \"%s\"", stdout);
-                debug("Stderr: \"%s\"", stderr);
+                } while (!ready && !failed && System.currentTimeMillis() - then < 10000);
+                debug("Stdout: \"%s\"", stdout.toString().replace("\n", "\n\t"));
+                debug("Stderr: \"%s\"", stderr.toString().replace("\n", "\n\t"));
                 if (failed) throw new IOException("Server setup failed!");
                 if (!ready) throw new IOException("Server setup timed out!");
             }
@@ -105,8 +105,7 @@ public class NetworkIntegrationTestPlatform extends Logger implements Sender {
     }
 
     protected void shutdownExternalBus() {
-        bus.send(new ShutdownRequest(session, this, bus.get(session, Path.of("/"))))
-           .standby(5, SECONDS);
+        messageQueue.inject(new ShutdownRequest(session, this));
     }
 
     @Override public void bounce(final Message message) {

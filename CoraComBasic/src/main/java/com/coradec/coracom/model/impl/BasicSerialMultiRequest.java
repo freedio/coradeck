@@ -24,12 +24,14 @@ import static com.coradec.coracom.state.QueueState.*;
 
 import com.coradec.coracom.com.RequestCompleteEvent;
 import com.coradec.coracom.model.Information;
+import com.coradec.coracom.model.MultiRequest;
 import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Request;
 import com.coradec.coracom.model.Sender;
 import com.coradec.coracom.model.SerialMultiRequest;
 import com.coradec.coracore.annotation.Implementation;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -70,13 +72,16 @@ public class BasicSerialMultiRequest extends BasicRequest implements SerialMulti
         this.requests.addAll(requests);
     }
 
-    @Override public void process() {
-        final Request next = requests.poll();
-        if (next == null) succeed();
-        else {
-            next.reportCompletionTo(this);
-            if (next.getState() == NEW) inject(next);
+    @Override public MultiRequest process() {
+        if (!isComplete()) {
+            final Request next = requests.poll();
+            if (next == null) succeed();
+            else {
+                next.reportCompletionTo(this);
+                if (next.getState() == NEW) inject(next);
+            }
         }
+        return this;
     }
 
     @Override public boolean notify(final Information info) {
@@ -89,6 +94,17 @@ public class BasicSerialMultiRequest extends BasicRequest implements SerialMulti
             else if (request.isFailed()) fail(request.getProblem());
         } else return super.notify(info);
         return true;
+    }
+
+    @Override public Request andThen(final Request request) {
+        return request == null ? this : isComplete() ? new BasicSerialMultiRequest(
+                Arrays.asList(this, request), getSender(), getRecipientList())
+                                                     : addRequest(request);
+    }
+
+    private Request addRequest(final Request request) {
+        requests.add(request);
+        return request;
     }
 
 }

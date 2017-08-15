@@ -20,6 +20,7 @@
 
 package com.coradec.coracore.util;
 
+import com.coradec.coracore.annotation.Attribute;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.ctrl.RecursiveObjects;
@@ -40,7 +41,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -473,6 +476,42 @@ public class ClassUtil {
         if (klass == Character.TYPE) return Character.class;
         if (klass == Void.TYPE) return Void.class;
         return klass;
+    }
+
+    public static Map<String, Object> getAttributes(final Object o) {
+        final HashMap<String, Object> result = new LinkedHashMap<>();
+        if (o == null) return result;
+        final Class<?> klass = o.getClass();
+        if (klass.isArray()) return result;
+        Stream.of(klass.getMethods())
+              .filter(method -> method.getName().matches("^(is|get)[A-Z0-9].+") &&
+                                method.isAnnotationPresent(Attribute.class))
+              .map(method -> new Tuple(attributeName(method.getAnnotation(Attribute.class).value(),
+                      method.getName()), method))
+              .forEach(p -> {
+                  final String name = p.get(0);
+                  @Nullable Object value;
+                  try {
+                      try {
+                          value = AccessController.doPrivileged(
+                                  (PrivilegedExceptionAction<Object>)() -> {
+                                      final Method method = p.get(1);
+                                      method.setAccessible(true);
+                                      return method.invoke(o);
+                                  });
+                          result.put(name, value);
+                      } catch (PrivilegedActionException e) {
+                          throw e.getException();
+                      }
+                  } catch (Exception e) {
+                      // not added
+                  }
+              });
+        return result;
+    }
+
+    private static String attributeName(final String alias, final String methodName) {
+        return alias.isEmpty() ? propertyName(methodName) : alias;
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")

@@ -23,7 +23,12 @@ package com.coradec.coracom.model.impl;
 import com.coradec.coracom.model.Deferred;
 import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Sender;
+import com.coradec.coracore.annotation.Attribute;
+import com.coradec.coracore.annotation.ToString;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -53,8 +58,8 @@ public class BasicDeferredRequest extends BasicRequest implements Deferred {
         return executionTime;
     }
 
-    @Override public boolean isDue() {
-        return getExecutionTime() < System.currentTimeMillis();
+    @ToString @Attribute("On") public LocalDateTime getExecutionTimeStamp() {
+        return LocalDateTime.ofInstant(Instant.ofEpochMilli(executionTime), ZoneId.systemDefault());
     }
 
 }

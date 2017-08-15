@@ -20,6 +20,13 @@
 
 package com.coradec.coracom.model;
 
+import com.coradec.coracom.model.impl.BasicVoucher;
+import com.coradec.coracom.trouble.RequestFailedException;
+import com.coradec.coracom.trouble.ValueNotAvailableException;
+import com.coradec.coracore.annotation.Nullable;
+import com.coradec.coracore.model.GenericType;
+
+import java.util.Optional;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -30,25 +37,68 @@ import java.util.concurrent.TimeoutException;
  *
  * @param <V> the value type.
  */
-public interface Voucher<V> {
+public interface Voucher<V> extends Request {
+
+    static <X> Voucher<X> of(Class<X> type, X value, Sender sender, Recipient... recipients) {
+        return new BasicVoucher<>(type, sender, recipients).setValue(value);
+    }
 
     /**
-     * Waits until the value has been set.
+     * Looks up the value, if it is already available.
      *
-     * @throws InterruptedException if the thread was interrupted while waiting for the value to
-     *                              appear.
+     * @return the value, or {@link Optional#empty()} if the value is not yet available.
      */
-    void standBy() throws InterruptedException;
+    Optional<V> lookup();
 
     /**
-     * Waits for at most the specified amount of time for the value before timing out.
+     * Returns the value, waiting for it to become available, if necessary.
      *
-     * @param amount the amount of time to wait.
+     * @return the value.
+     * @throws InterruptedException       if the thread was interrupted while waiting for the value
+     *                                    to become available.
+     * @throws RequestFailedException     if the request to get the value failed.
+     * @throws ValueNotAvailableException if the value was not available when expected.
+     */
+    V value() throws InterruptedException, RequestFailedException, ValueNotAvailableException;
+
+    /**
+     * Returns the value, waiting not longer than the specified amount of time for it to become
+     * available.
+     *
+     * @param amount the amount of time.
      * @param unit   the time unit.
-     * @throws InterruptedException if the thread has been interrupted while waiting for the value
-     *                              to appear.
-     * @throws TimeoutException     if the request timed out.
+     * @return the value.
+     * @throws InterruptedException       if the thread was interrupted while waiting for the value
+     *                                    to become available.
+     * @throws TimeoutException           if the value was not available in the specified amount of
+     *                                    time.
+     * @throws RequestFailedException     if the request to get the value failed.
+     * @throws ValueNotAvailableException if the value was not available when expected.
      */
-    void standBy(long amount, TimeUnit unit) throws InterruptedException, TimeoutException;
+    V value(long amount, TimeUnit unit)
+            throws InterruptedException, TimeoutException, RequestFailedException,
+                   ValueNotAvailableException;
+
+    /**
+     * Returns the value, whatever it currently is.
+     *
+     * @return the value, or {@code null} if the value has not yet been set.
+     */
+    @Nullable V getValue();
+
+    /**
+     * Returns the expected result type.
+     *
+     * @return the expected result type.
+     */
+    GenericType<V> getType();
+
+    /**
+     * Sets the value of the voucher.
+     *
+     * @param value the value.
+     * @return the voucher itself, for method chaining.
+     */
+    Voucher<V> setValue(V value);
 
 }

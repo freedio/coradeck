@@ -25,6 +25,7 @@ import static com.coradec.coracom.state.QueueState.*;
 import com.coradec.coracom.model.Message;
 import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Sender;
+import com.coradec.coracore.annotation.Attribute;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.model.State;
@@ -34,7 +35,6 @@ import com.coradec.coracore.util.CollectionUtil;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Set;
 
 /**
  * ​​Basic implementation of a message.
@@ -43,7 +43,7 @@ import java.util.Set;
 @Implementation
 public class BasicMessage extends BasicEvent implements Message {
 
-    private final Set<Recipient> recipients;
+    private final Collection<Recipient> recipients;
     private int deliveries;  // number of remaining deliveries
 
     /**
@@ -52,7 +52,7 @@ public class BasicMessage extends BasicEvent implements Message {
      * @param sender     the sender.
      * @param recipients the recipients.
      */
-    private BasicMessage(final Sender sender, final Set<Recipient> recipients) {
+    private BasicMessage(final Sender sender, final Collection<Recipient> recipients) {
         super(sender);
         this.recipients = new HashSet<>(recipients);
         deliveries = 0; // not yet dispatched
@@ -100,11 +100,11 @@ public class BasicMessage extends BasicEvent implements Message {
         return ClassUtil.toString(this);
     }
 
-    @Override @ToString public Sender getSender() {
+    @Override @ToString @Attribute("From") public Sender getSender() {
         return (Sender)getOrigin();
     }
 
-    @Override @ToString public boolean isUrgent() {
+    @Override @ToString @Attribute public boolean isUrgent() {
         return false;
     }
 

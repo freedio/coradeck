@@ -47,7 +47,7 @@ public class ServerConsole extends BasicBusProcess implements MachineService {
             LocalizedText.define("ServerConsoleTitle");
     static final Text TEXT_SHUTDOWN_ACTION = LocalizedText.define("ShutdownActionName");
 
-    private JFrame frame;
+    JFrame frame;
     @Inject Bus bus;
 
     @Override protected @Nullable Request onInitialize(final Session session) {
@@ -92,10 +92,10 @@ public class ServerConsole extends BasicBusProcess implements MachineService {
         return request;
     }
 
-    @Override protected @Nullable Request onTerminate(final Session session) {
-        SwingUtilities.invokeLater(() -> frame.dispose());
-        return super.onTerminate(session);
-    }
+//    @Override protected @Nullable Request onTerminate(final Session session) {
+//        SwingUtilities.invokeLater(() -> frame.dispose());
+//        return super.onTerminate(session);
+//    }
 
     private TreeNode buildTree() {
         return new DefaultMutableTreeNode("", true);
@@ -122,7 +122,10 @@ public class ServerConsole extends BasicBusProcess implements MachineService {
         }
 
         @Override public void actionPerformed(final ActionEvent e) {
-            bus.shutdown();
+            SwingUtilities.invokeLater(() -> {
+                frame.dispose();
+                bus.shutdown();
+            });
         }
     }
 }

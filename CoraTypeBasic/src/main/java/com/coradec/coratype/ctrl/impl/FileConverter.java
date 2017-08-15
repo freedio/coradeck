@@ -23,6 +23,7 @@ package com.coradec.coratype.ctrl.impl;
 import static com.coradec.coracore.model.Scope.*;
 
 import com.coradec.coracore.annotation.Implementation;
+import com.coradec.coracore.util.StringUtil;
 import com.coradec.coratype.trouble.TypeConversionException;
 
 import java.io.File;
@@ -54,6 +55,14 @@ public class FileConverter extends BasicTypeConverter<File> {
 
     @Override public File decode(final String value) throws TypeConversionException {
         return new File(value);
+    }
+
+    @Override public File unmarshal(final byte[] value) throws TypeConversionException {
+        return decode(new String(value, StringUtil.CHARSET));
+    }
+
+    @Override public byte[] marshal(final File value) {
+        return value.getPath().getBytes(StringUtil.CHARSET);
     }
 
 }

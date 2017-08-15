@@ -41,13 +41,13 @@ import com.coradec.coracom.model.Request;
 import com.coradec.coracom.model.SerialMultiRequest;
 import com.coradec.coracom.model.impl.BasicSessionCommand;
 import com.coradec.coracom.model.impl.BasicSessionRequest;
+import com.coradec.coracore.annotation.Attribute;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.model.Factory;
 import com.coradec.coracore.model.State;
 import com.coradec.coracore.trouble.ServiceNotAvailableException;
-import com.coradec.coracore.util.ClassUtil;
 import com.coradec.coractrl.model.StateTransition;
 import com.coradec.coradir.model.Path;
 import com.coradec.coradir.trouble.PathAbsoluteException;
@@ -106,12 +106,6 @@ public class BasicHub extends BasicNode implements BusHub {
         return LOADED;
     }
 
-    @Override protected @Nullable Request onInitialize(final Session session) {
-        super.onInitialize(session);
-//        addRoute(AddMemberRequest.class, this::addCandidate);
-        return null;
-    }
-
     /**
      * Interceptor invoked during the state transition from INITIALIZED to LOADING.
      * <p>
@@ -149,9 +143,10 @@ public class BasicHub extends BasicNode implements BusHub {
      */
     protected @Nullable Request onLoad(final Session session) {
         replaceRoute(AddMemberRequest.class, this::addMember);
-        final @Nullable Request result =
-                candidates.isEmpty() ? null : inject(SERIALMRQ.create(candidates, this));
-        setState(LOADED);
+        Request result = null;
+        if (candidates.isEmpty()) setState(LOADED);
+        else result = inject(SERIALMRQ.create(candidates, this)).andThen(
+                () -> execute(() -> setState(LOADED)));
         return result;
     }
 
@@ -188,14 +183,13 @@ public class BasicHub extends BasicNode implements BusHub {
      *
      * @param session the session context.
      */
-    @Nullable <R extends Message> Request onUnload(
-            final Session session) {
+    @Nullable <R extends Message> Request onUnload(final Session session) {
         final Map<String, Member> members = getMembers();
         final int memberCount = members.size();
         debug("Unloading %d member%s.", memberCount, memberCount == 1 ? "" : "s");
-        final Request result = memberCount == 0 ? null : inject(PARALLELMRQ.create(
-                members.values().stream().map(Member::dismiss).collect(toList()), this,
-                new Object[] {}));
+        final Request result = memberCount == 0 ? null : inject(
+                PARALLELMRQ.create(members.values().stream().map(Member::dismiss).collect(toList()),
+                        this, new Object[] {}));
         setState(UNLOADED);
         return result;
     }
@@ -205,11 +199,15 @@ public class BasicHub extends BasicNode implements BusHub {
     }
 
     @Override public Request add(final Session session, final String name, final BusNode node) {
-        return inject(new AddMemberRequest(session, Path.of(name), node));
+        return inject(new AddMemberRequest(session, Path.from(name), node));
     }
 
     @Override public Request add(final Session session, final Path path, final BusNode node) {
         return inject(new AddMemberRequest(session, path, node));
+    }
+
+    @Override public Optional<BusNode> lookup(final Session session, final String name) {
+        return lookup(session, Path.from(name));
     }
 
     @Override public Optional<BusNode> lookup(final Session session, final Path path) {
@@ -317,21 +315,25 @@ public class BasicHub extends BasicNode implements BusHub {
 
         @Override public <S extends BusService> Optional<S> findService(final Class<? super S> type,
                 final Object... args) {
-            return getMembers().values()
-                               .stream()
-                               .filter(member -> member instanceof ServiceProvider &&
-                                                 ((ServiceProvider)member).provides(getSession(),
-                                                         type, args))
-                               .findFirst()
-                               .map(member -> {
-                                   try {
-                                       return ((ServiceProvider)member).getService(getSession(),
-                                               type, args);
-                                   } catch (ServiceNotAvailableException e) {
-                                       error(e);
-                                       return null;
-                                   }
-                               });
+            Optional<S> result = //
+                    getMembers().values()
+                                .stream()
+                                .map(Member::getNode)
+                                .filter(node -> node instanceof ServiceProvider &&
+                                                ((ServiceProvider)node).provides(getSession(), type,
+                                                        args))
+                                .findFirst()
+                                .map(node -> {
+                                    try {
+                                        return ((ServiceProvider)node).getService(getSession(),
+                                                type, args);
+                                    } catch (ServiceNotAvailableException e) {
+                                        error(e);
+                                        return null;
+                                    }
+                                });
+            if (!result.isPresent()) result = BasicHub.this.findService(type, args);
+            return result;
         }
 
     }
@@ -413,11 +415,11 @@ public class BasicHub extends BasicNode implements BusHub {
             this.node = node;
         }
 
-        @ToString public Path getPath() {
+        @ToString @Attribute public Path getPath() {
             return path;
         }
 
-        @ToString public BusNode getNode() {
+        @ToString @Attribute public BusNode getNode() {
             return node;
         }
 
@@ -444,10 +446,6 @@ public class BasicHub extends BasicNode implements BusHub {
 
         @Override public void execute() {
             getMembers().put(name, member);
-        }
-
-        @Override public String toString() {
-            return ClassUtil.toString(this);
         }
 
     }

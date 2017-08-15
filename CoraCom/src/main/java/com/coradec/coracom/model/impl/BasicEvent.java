@@ -21,7 +21,9 @@
 package com.coradec.coracom.model.impl;
 
 import com.coradec.coracom.model.Event;
+import com.coradec.coracore.annotation.Attribute;
 import com.coradec.coracore.annotation.Implementation;
+import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.model.Origin;
 
 import java.time.LocalDateTime;
@@ -54,6 +56,10 @@ public class BasicEvent extends BasicInformation implements Event {
     public BasicEvent(final Origin origin, LocalDateTime eventTimestamp) {
         super(origin);
         this.eventTimestamp = eventTimestamp;
+    }
+
+    @ToString @Attribute("At") public LocalDateTime getEventTimestamp() {
+        return eventTimestamp;
     }
 
 }

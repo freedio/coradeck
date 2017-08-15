@@ -46,4 +46,12 @@ public class IntegerConverter extends BasicTypeConverter<Integer> {
             throw new TypeConversionException(String.class, e);
         }
     }
+
+    @Override public Integer unmarshal(final byte[] value) throws TypeConversionException {
+        return unmarshalInt(value);
+    }
+
+    @Override public byte[] marshal(final Integer value) {
+        return marshal((int)value);
+    }
 }

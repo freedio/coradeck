@@ -31,6 +31,7 @@ import java.lang.reflect.GenericDeclaration;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
@@ -75,6 +76,7 @@ public final class StringUtil {
             "upon", "down", "near", "off", "onto", "unto", "yet", "nor", "so", "if", "once", "than",
             "that", "till", "when", "into", "out", "by", "and", "or", "but", "up", "over",
             };
+    public static final Charset CHARSET = Charset.forName("UTF-8");
 
     private StringUtil() {
     }

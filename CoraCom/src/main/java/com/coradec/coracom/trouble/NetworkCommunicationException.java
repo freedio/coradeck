@@ -18,23 +18,15 @@
  *
  */
 
-package com.coradec.corabus.model.impl;
-
-import com.coradec.corabus.model.ServiceProvider;
-import com.coradec.corabus.view.BusService;
-
-import java.util.Collection;
-import java.util.concurrent.ConcurrentLinkedQueue;
+package com.coradec.coracom.trouble;
 
 /**
- * ​​Basic implementation of a service provider hub.
+ * ​​Base class of all exceptions related to network communication.
  */
-public abstract class BasicServiceProviderHub extends BasicHub implements ServiceProvider {
+public class NetworkCommunicationException extends CommunicationException {
 
-    private final Collection<BusService> registeredServices = new ConcurrentLinkedQueue<>();
-
-    protected void registerService(final BusService service) {
-        registeredServices.add(service);
+    public NetworkCommunicationException(final String message) {
+        super(message);
     }
 
 }

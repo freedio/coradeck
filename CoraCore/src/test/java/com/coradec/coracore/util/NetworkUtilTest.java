@@ -33,7 +33,7 @@ public class NetworkUtilTest {
     @Test public void testLocalMachineId() {
         final String expected =
                 NetworkUtil.isOnline() ? "[0-9a-fA-F]{2}(-[0-9a-fA-F]{2}){5,}" : "^localhost$";
-//        System.out.printf("Local system id: %s", NetworkUtil.getLocalMachineId());
+        System.out.printf("Local system id: %s", NetworkUtil.getLocalMachineId());
         assertThat(NetworkUtil.getLocalMachineId(), matches(expected));
     }
 

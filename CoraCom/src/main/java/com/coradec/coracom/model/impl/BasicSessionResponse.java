@@ -18,34 +18,33 @@
  *
  */
 
-package com.coradec.corabus.model.impl;
+package com.coradec.coracom.model.impl;
 
-import com.coradec.coracom.model.Request;
-import com.coradec.coracore.annotation.Inject;
+import com.coradec.coracom.model.Recipient;
+import com.coradec.coracom.model.Sender;
+import com.coradec.coracom.model.SessionResponse;
+import com.coradec.coracom.state.Answer;
 import com.coradec.coracore.annotation.Nullable;
-import com.coradec.coradir.model.Path;
 import com.coradec.corasession.model.Session;
 
-import java.net.SocketAddress;
+import java.util.UUID;
 
 /**
- * Implementation of the system bus as a local system bus.​​
+ * ​​Basic implementation of a session response.
  */
 @SuppressWarnings("ClassHasNoToStringMethod")
-class LocalSystemBus extends BasicSystemBus {
+public class BasicSessionResponse extends BasicResponse implements SessionResponse {
 
-    private final SocketAddress server;
-    @Inject private Session initSession;
+    private final Session session;
 
-    LocalSystemBus(final SocketAddress socket) {
-        this.server = socket;
+    public BasicSessionResponse(final Session session, final UUID reference, final Answer answer,
+            final @Nullable Object arg, final Sender sender, final Recipient... recipients) {
+        super(session, reference, answer, arg, sender, recipients);
+        this.session = session;
     }
 
-    @Override protected @Nullable Request onInitialize(final Session session) {
-        final Request request = super.onInitialize(session);
-        add(initSession, Path.of("net"), new Network());
-        add(initSession, Path.of("net/server"), new NetworkServer());
-        add(initSession, Path.of("console"), new ServerConsole());
-        return request;
+    @Override public Session getSession() {
+        return session;
     }
+
 }

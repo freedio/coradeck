@@ -75,7 +75,7 @@ public class BasicProperty<R> implements Property<R> {
     }
 
     @Override public R value(final Object... args) {
-        return resolve().orElse(dflt);
+        return resolve(args).orElse(dflt);
     }
 
     private Optional<R> resolve(final Object... args) {

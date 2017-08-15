@@ -20,6 +20,7 @@
 
 package com.coradec.corabus.com;
 
+import com.coradec.corabus.model.BusNode;
 import com.coradec.corabus.state.NodeState;
 import com.coradec.coracom.model.Event;
 
@@ -34,5 +35,12 @@ public interface StateAchievedEvent extends Event {
      * @return the achieved node state.
      */
     NodeState getAchievedState();
+
+    /**
+     * Returns the affected node.
+     *
+     * @return the affected node.
+     */
+    BusNode getNode();
 
 }

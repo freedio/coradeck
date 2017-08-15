@@ -21,8 +21,9 @@
 package com.coradec.corabus.model;
 
 import com.coradec.corabus.trouble.NodeNotFoundException;
-import com.coradec.coracom.model.Information;
+import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Request;
+import com.coradec.coracom.model.Sender;
 import com.coradec.coradir.model.Path;
 import com.coradec.corasession.model.Session;
 
@@ -92,11 +93,35 @@ public interface Bus {
     boolean has(Session session, Path path);
 
     /**
-     * Sends the specified information to the bus system.
+     * Returns a sender representation from the specified path.
      *
-     * @param information the information.
-     * @return the information.
+     * @param path the path.
+     * @return a sender.
      */
-    <I extends Information> I send(I information);
+    Sender sender(Path path);
+
+    /**
+     * Returns a sender representation from the specified path.
+     *
+     * @param path the path.
+     * @return a sender.
+     */
+    Sender sender(String path);
+
+    /**
+     * Returns a recipient representation from the specified path.
+     *
+     * @param path the path.
+     * @return a recipient.
+     */
+    Recipient recipient(Path path);
+
+    /**
+     * Returns a recipient representation from the specified path.
+     *
+     * @param path the path.
+     * @return a recipient.
+     */
+    Recipient recipient(String path);
 
 }

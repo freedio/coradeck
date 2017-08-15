@@ -21,15 +21,20 @@
 package com.coradec.corabus.com.impl;
 
 import com.coradec.corabus.com.BusControlRequest;
+import com.coradec.corabus.model.Bus;
 import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Sender;
-import com.coradec.coracom.model.impl.BasicSessionRequest;
+import com.coradec.coracore.annotation.Inject;
 import com.coradec.corasession.model.Session;
+
+import java.util.Collections;
 
 /**
  * ​​Request to shut down the bus system.
  */
-public class ShutdownRequest extends BasicSessionRequest implements BusControlRequest {
+public class ShutdownRequest extends NetworkRequest implements BusControlRequest {
+
+    @Inject private static Bus BUS;
 
     /**
      * Initializes a new instance of ShutdownRequest with the specified sender and list of
@@ -41,7 +46,7 @@ public class ShutdownRequest extends BasicSessionRequest implements BusControlRe
      */
     public ShutdownRequest(final Session session, final Sender sender,
             final Recipient... recipients) {
-        super(session, sender, recipients);
+        super(session, "SHUTDOWN", Collections.emptyMap(), null, sender, BUS.recipient("/"));
     }
 
 }

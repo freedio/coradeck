@@ -25,9 +25,9 @@ import com.coradec.coracore.trouble.ServiceNotAvailableException;
 import com.coradec.corasession.model.Session;
 
 /**
- * ​A node providing a service.
+ * ​A bus node providing a service.
  */
-public interface ServiceProvider {
+public interface ServiceProvider extends BusNode {
 
     /**
      * Checks if the provider provides a service of the specified type with the specified

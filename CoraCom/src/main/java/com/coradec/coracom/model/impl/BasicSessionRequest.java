@@ -23,6 +23,7 @@ package com.coradec.coracom.model.impl;
 import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Sender;
 import com.coradec.coracom.model.SessionRequest;
+import com.coradec.coracore.annotation.Attribute;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.corasession.model.Session;
 
@@ -48,7 +49,7 @@ public class BasicSessionRequest extends BasicRequest implements SessionRequest 
         this.session = session;
     }
 
-    @Override @ToString public Session getSession() {
+    @Override @ToString @Attribute public Session getSession() {
         return session;
     }
 

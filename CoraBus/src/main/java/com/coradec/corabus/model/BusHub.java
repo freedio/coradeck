@@ -59,6 +59,16 @@ public interface BusHub extends BusNode {
     Request add(Session session, Path path, BusNode node);
 
     /**
+     * Looks up the direct member node with the specified name in the context of the specified
+     * session.
+     *
+     * @param session the session context.
+     * @param name    the member node.
+     * @return the node associated with the specified name, or {@link Optional#empty()}.
+     */
+    Optional<BusNode> lookup(Session session, String name);
+
+    /**
      * Looks up the node with the specified relative path in the context of the specified session.
      * <p>
      * Note that this method does not support absolute paths.  To lookup a node under an absolute

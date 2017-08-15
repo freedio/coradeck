@@ -72,7 +72,9 @@ public final class NetworkUtil {
             for (final Enumeration<NetworkInterface> interfaces =
                  NetworkInterface.getNetworkInterfaces(); interfaces.hasMoreElements(); ) {
                 final NetworkInterface network = interfaces.nextElement();
-                if (network.isUp()) {
+                if (network.isUp() && !network.isLoopback()) {
+                    //noinspection UseOfSystemOutOrSystemErr
+                    System.out.printf("Network %s is UP%n", network);
                     online = true;
                     break;
                 }

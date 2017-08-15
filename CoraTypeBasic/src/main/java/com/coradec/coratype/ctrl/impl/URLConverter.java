@@ -23,6 +23,7 @@ package com.coradec.coratype.ctrl.impl;
 import static com.coradec.coracore.model.Scope.*;
 
 import com.coradec.coracore.annotation.Implementation;
+import com.coradec.coracore.util.StringUtil;
 import com.coradec.coratype.trouble.TypeConversionException;
 
 import java.net.MalformedURLException;
@@ -55,6 +56,14 @@ public class URLConverter extends BasicTypeConverter<URL> {
         } catch (MalformedURLException e) {
             throw new TypeConversionException(value, String.class, e);
         }
+    }
+
+    @Override public URL unmarshal(final byte[] value) throws TypeConversionException {
+        return decode(new String(value, StringUtil.CHARSET));
+    }
+
+    @Override public byte[] marshal(final URL value) {
+        return value.toExternalForm().getBytes(StringUtil.CHARSET);
     }
 
 }

@@ -46,7 +46,7 @@ public abstract class BasicBusContext extends BasicView implements BusContext {
         super(session);
     }
 
-    @ToString public Map<String, Member> getMembers() {
+    @ToString public Map<String, Member> getContextMembers() {
         return members;
     }
 

@@ -23,6 +23,7 @@ package com.coradec.coracom.model.impl;
 import static com.coradec.coracom.state.QueueState.*;
 
 import com.coradec.coracom.model.Information;
+import com.coradec.coracore.annotation.Attribute;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.model.Origin;
 import com.coradec.coracore.model.State;
@@ -37,9 +38,9 @@ import java.util.UUID;
  */
 public class BasicInformation extends Logger implements Information {
 
+    private final Origin origin;
     private final LocalDateTime created;
     private final UUID id;
-    private final Origin origin;
     private State state;
 
     public BasicInformation(Origin origin) {
@@ -49,7 +50,7 @@ public class BasicInformation extends Logger implements Information {
         this.state = NEW;
     }
 
-    @Override @ToString public LocalDateTime getCreationTimestamp() {
+    @Override @ToString @Attribute public LocalDateTime getCreatedAt() {
         return created;
     }
 
@@ -66,11 +67,11 @@ public class BasicInformation extends Logger implements Information {
         this.state = state;
     }
 
-    @Override @ToString public UUID getId() {
+    @Override @ToString @Attribute public UUID getId() {
         return id;
     }
 
-    @Override @ToString public Origin getOrigin() {
+    @Override @ToString @Attribute public Origin getOrigin() {
         return origin;
     }
 

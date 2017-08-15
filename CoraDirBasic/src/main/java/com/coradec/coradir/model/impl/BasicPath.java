@@ -29,6 +29,7 @@ import com.coradec.coradir.trouble.PathEmptyException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -39,6 +40,15 @@ import java.util.stream.Collectors;
 public class BasicPath implements Path {
 
     private final List<String> path;
+
+    /**
+     * Initializes a new instance of BasicPath consisting of the specified atomic name.
+     *
+     * @param name a single name.
+     */
+    public BasicPath(String name) {
+        path = new ArrayList<>(Collections.singletonList(name));
+    }
 
     /**
      * Initializes a new instance of BasicPath consisting of the specified names in the order of
@@ -82,6 +92,10 @@ public class BasicPath implements Path {
         return URI.create(collector.toString());
     }
 
+    @Override public boolean isTranscendent() {
+        return path.size() > 2 && path.get(0).isEmpty() && path.get(1).isEmpty();
+    }
+
     @Override public boolean isAbsolute() {
         return !path.isEmpty() && path.get(0).isEmpty();
     }
@@ -107,6 +121,12 @@ public class BasicPath implements Path {
 
     @Override public Path tail() {
         return new BasicPath(path.stream().skip(1).collect(Collectors.toList()));
+    }
+
+    @Override public Path localize() {
+        List<String> newPath = new ArrayList<>(path);
+        while (!path.isEmpty() && path.get(0).isEmpty()) path.remove(0);
+        return new BasicPath(newPath);
     }
 
 }

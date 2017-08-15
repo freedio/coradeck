@@ -1,0 +1,4 @@
+# Localized text base for default locale of class BasicClientConnection
+
+DuplicateConnection: Received duplicate connection confirmation!
+ChannelNotInitialized: Channel «%s» has not been initialized!

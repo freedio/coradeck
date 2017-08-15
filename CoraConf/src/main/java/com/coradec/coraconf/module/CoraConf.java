@@ -21,11 +21,12 @@
 package com.coradec.coraconf.module;
 
 import com.coradec.coraconf.model.Property;
+import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.model.DynamicFactory;
 import com.coradec.coracore.model.GenericType;
 
 /**
- * ​​Implementation of a property loader.
+ * ​​The configuration service façade.
  */
 @SuppressWarnings("ClassHasNoToStringMethod")
 public final class CoraConf {
@@ -33,7 +34,7 @@ public final class CoraConf {
     private static final CoraConf INSTANCE = new CoraConf();
 
     public static <X, D extends X> Property<X> define(final String context, final String name,
-            final GenericType<X> type, final D dflt) {
+            final GenericType<X> type, @Nullable final D dflt) {
         return INSTANCE.createProperty(context, name, type, dflt);
     }
 
@@ -49,7 +50,7 @@ public final class CoraConf {
 
     @SuppressWarnings("unchecked")
     private <X, D extends X> Property<X> createProperty(final Object context, final String name,
-            final GenericType<X> type, final D dflt) {
+            final GenericType<X> type, @Nullable final D dflt) {
         return (Property<X>)property.of(Property.class, type).get(type, context, name, dflt);
     }
 

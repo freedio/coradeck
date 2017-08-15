@@ -20,9 +20,19 @@
 
 package com.coradec.corasession.model;
 
+import com.coradec.coracore.annotation.ToString;
+
+import java.util.UUID;
+
 /**
  * ​​Context for an interaction between systems.
  */
 public interface Session {
 
+    /**
+     * Returns the session ID.
+     *
+     * @return the session ID.
+     */
+    @ToString UUID getId();
 }

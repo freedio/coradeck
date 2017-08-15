@@ -52,12 +52,11 @@
             <groupId>com.coradec.coradeck</groupId>
             <artifactId>coratext</artifactId>
         </dependency>
-
         <dependency>
             <groupId>com.coradec.coradeck</groupId>
             <artifactId>coratype</artifactId>
-            <scope>test</scope>
         </dependency>
+
         <dependency>
             <groupId>com.coradec.coradeck</groupId>
             <artifactId>coratype-basic</artifactId>

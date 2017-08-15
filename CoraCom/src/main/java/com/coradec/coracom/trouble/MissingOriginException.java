@@ -18,13 +18,14 @@
  *
  */
 
-package com.coradec.corabus.com;
-
-import com.coradec.coracom.model.Event;
+package com.coradec.coracom.trouble;
 
 /**
- * ​Notification about an established connection.
+ * ​​Indicates an attempt to send a network message without an indication of origin.
  */
-public interface ConnectionEstablishedEvent extends Event {
+public class MissingOriginException extends NetworkCommunicationException {
 
+    public MissingOriginException(final String message) {
+        super(message);
+    }
 }

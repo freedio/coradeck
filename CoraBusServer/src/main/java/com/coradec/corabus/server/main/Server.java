@@ -20,9 +20,7 @@
 
 package com.coradec.corabus.server.main;
 
-import static com.coradec.corabus.state.NodeState.*;
-
-import com.coradec.corabus.com.StateAchievedEvent;
+import com.coradec.corabus.com.impl.BusSystemTerminatedEvent;
 import com.coradec.corabus.model.Bus;
 import com.coradec.corabus.model.impl.ServerConsole;
 import com.coradec.coracom.ctrl.MessageQueue;
@@ -58,7 +56,9 @@ public final class Server extends Logger implements Observer {
 
     private void launch() {
         CMQ.subscribe(this);
+        debug("Setting up the bus...");
         bus.setup();
+        debug("Bus set up.");
         try {
             lock.acquire();
         } catch (InterruptedException e) {
@@ -69,15 +69,11 @@ public final class Server extends Logger implements Observer {
     }
 
     @Override public boolean notify(final Information info) {
-        StateAchievedEvent event = (StateAchievedEvent)info;
-        if (event.getAchievedState() == DETACHED) {
-            lock.release();
-            return true;
-        }
-        return false;
+        lock.release();
+        return true;
     }
 
     @Override public boolean wants(final Information info) {
-        return info instanceof StateAchievedEvent && info.getOrigin() == serverConsole;
+        return info instanceof BusSystemTerminatedEvent;
     }
 }

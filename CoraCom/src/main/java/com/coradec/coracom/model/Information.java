@@ -24,20 +24,21 @@ import com.coradec.coracom.state.QueueState;
 import com.coradec.coracore.model.Origin;
 import com.coradec.coracore.model.State;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
  * ​An general information about something.
  */
-public interface Information {
+public interface Information extends Serializable {
 
     /**
      * Returns the exact timestamp of creation.
      *
      * @return the creation timestamp.
      */
-    LocalDateTime getCreationTimestamp();
+    LocalDateTime getCreatedAt();
 
     /**
      * Returns the information processing state.

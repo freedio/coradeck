@@ -20,7 +20,7 @@
 
 package com.coradec.corabus.model;
 
-import com.coradec.corabus.model.impl.BasicSystemBus;
+import com.coradec.coracom.model.Voucher;
 import com.coradec.coractrl.com.StartStateMachineRequest;
 import com.coradec.corasession.model.Session;
 
@@ -30,18 +30,17 @@ import com.coradec.corasession.model.Session;
 public interface SystemBus extends BusHub {
 
     /**
-     * Creates a suitable system bus.
-     *
-     * @return the system bus.
-     */
-    static SystemBus create() {
-        return BasicSystemBus.create();
-    }
-
-    /**
      * Shuts the system bus down in the context of the specified session.
      *
      * @param session the session context.
      */
     StartStateMachineRequest shutdown(Session session);
+
+    /**
+     * Returns the next available machine bus ID in the context of the specified session.
+     *
+     * @param session the session context.
+     * @return a machine bus ID.
+     */
+    Voucher<String> getMachineBusId(Session session);
 }

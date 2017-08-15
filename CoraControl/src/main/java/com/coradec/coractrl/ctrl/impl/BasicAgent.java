@@ -44,10 +44,10 @@ import com.coradec.coratext.model.Text;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
@@ -68,7 +68,7 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
 
     @Inject private MessageQueue MQ;
     private @Nullable Map<Class<?>, Consumer<?>> routes;
-    private final Set<Class<?>> approvedCommands = new HashSet<>();
+    private final Set<Class<?>> approvedCommands = new CopyOnWriteArraySet<>();
 
     protected BasicAgent() {
         id = IDS.computeIfAbsent(getClass(), klass -> new AtomicInteger(0)).incrementAndGet();

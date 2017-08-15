@@ -96,7 +96,7 @@ public class CentralMessageQueueTest {
     /**
      * Runs 100 test LOAD_TEST_AGENTS in parallel, each sending 10..500 messages to itself.
      */
-    @Test public void aa_testLoad() throws InterruptedException {
+    @Test public void testLoad() throws InterruptedException {
         APPROVED.set(0);
         GENERATED.set(0);
         APPROVED.set(0);
@@ -122,7 +122,7 @@ public class CentralMessageQueueTest {
         assertThat(termLock.availablePermits(), is(0)); // All tests reported finished.
     }
 
-    @Test public void bb_testSequence() throws InterruptedException {
+    @Test public void testSequence() throws InterruptedException {
         Syslog.info("Performing the sequence test ... (should take less than 50 seconds)");
         CMQ.resetUsage();
         long elapsed = System.currentTimeMillis();
@@ -156,7 +156,7 @@ public class CentralMessageQueueTest {
         assertThat(termLock.availablePermits(), is(0)); // All tests reported finished.
     }
 
-    @Test public void cc_testInformationDispatch() throws InterruptedException {
+    @Test public void testInformationDispatch() throws InterruptedException {
         Syslog.info(
                 "Performing the information delivery test ... (should take less than 50 seconds)");
         APPROVED.set(0);

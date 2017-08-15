@@ -137,8 +137,7 @@ public class CarClassLoader extends ClassLoader {
     }
 
     /**
-     * Recursively collect resources from the specified class path into the
-     * specified resource map.
+     * Recursively collect resources from the specified class path into the specified resource map.
      *
      * @param resourceMap the resource map.
      * @param classPath   the class path.

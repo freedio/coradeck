@@ -18,29 +18,12 @@
  *
  */
 
-package com.coradec.corabus.com;
-
-import com.coradec.coracom.model.SessionRequest;
-
-import java.net.SocketAddress;
+package com.coradec.coracom.status;
 
 /**
- * ​Request to create a connection to a client.
+ * ​Enumeration of response states.
  */
-public interface ClientConnectionRequest extends SessionRequest {
-
-    /**
-     * Returns the name of the client, typically its hostname or the web service address.
-     *
-     * @return the client name.
-     */
-    String getClientName();
-
-    /**
-     * The socket address to connect to.  For the typical Internet address, this must contain the
-     * target internet address and port.
-     *
-     * @return the socket specification.
-     */
-    SocketAddress getSocket();
+public enum ResponseStatus {
+    OK,
+    FAILURE
 }

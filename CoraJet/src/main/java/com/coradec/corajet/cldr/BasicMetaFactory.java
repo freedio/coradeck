@@ -39,10 +39,10 @@ import java.util.List;
 @Implementation
 public class BasicMetaFactory<G> implements MetaFactory<G> {
 
-    private final CarClassLoader loader;
+    private final ClassLoader loader;
 
     public BasicMetaFactory() {
-        loader = (CarClassLoader)getClass().getClassLoader();
+        loader = getClass().getClassLoader();
         if (!loader.getClass()
                    .getName()
                    .equals(getClass().getPackage().getName() + ".CarClassLoader"))
@@ -72,14 +72,15 @@ public class BasicMetaFactory<G> implements MetaFactory<G> {
     @SuppressWarnings("unchecked")
     private class ImplementationFactory<I> implements Factory<I> {
 
-        private final CarClassLoader loader;
+        private final ClassLoader loader;
         private final Class<? super I> klass;
         private final List<Type> typeArgs;
         private final Method implement;
 
-        ImplementationFactory(final CarClassLoader loader, final Class<? super I> klass,
+        ImplementationFactory(final ClassLoader loader, final Class<? super I> klass,
                               final Type... typeArgs) throws NoSuchMethodException {
             this.loader = loader;
+            //noinspection JavaReflectionMemberAccess
             this.implement = loader.getClass()
                                    .getMethod("implement", Class.class, List.class, Object[].class);
             this.klass = klass;

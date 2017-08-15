@@ -39,7 +39,6 @@
         <dependency>
             <groupId>com.coradec.coradeck</groupId>
             <artifactId>coratype</artifactId>
-            <version>0.3</version>
         </dependency>
     </dependencies>
 

@@ -34,4 +34,9 @@ public class CommunicationException extends BasicException {
 
     protected CommunicationException() {
     }
+
+    public CommunicationException(final String info) {
+        super(info);
+    }
+
 }

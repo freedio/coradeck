@@ -2,3 +2,4 @@
 
 ServerDisconnected: Server has disconnected.
 ConnectionAccepted: Connection accepted from %s.
+UnknownSocketType: Unknown socket type: «%s»!

@@ -21,24 +21,18 @@
 package com.coradec.corabus.com.impl;
 
 import com.coradec.corabus.com.MetaStateChangedEvent;
-import com.coradec.coracom.model.Sender;
 import com.coradec.coracom.model.impl.BasicEvent;
 import com.coradec.coracore.annotation.Implementation;
+import com.coradec.coracore.model.Origin;
 
 /**
- * ​​Basic implementation of a meta-state change event.
+ * ​​Basic implementation of a meta-state changed event.
  */
 @Implementation
 public class BasicMetaStateChangedEvent extends BasicEvent implements MetaStateChangedEvent {
 
-    /**
-     * Initializes a new instance of BasicMetaStateChangedEvent regarding a meta-state change from
-     * the specified old value to the specified new value in the specified node with the specified
-     * sender.
-     *
-     * @param sender the sender.
-     */
-    public BasicMetaStateChangedEvent(final Sender sender) {
-        super(sender);
+    public BasicMetaStateChangedEvent(final Origin origin) {
+        super(origin);
     }
+
 }

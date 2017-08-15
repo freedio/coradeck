@@ -50,12 +50,10 @@ public class BasicBusTest {
 
     @Test public void simpleSetupAndShutdownShouldSucceed() throws InterruptedException {
         final Session session = sessionFactory.create();
-        bus.add(session, Path.of("SampleApplication"), application).standby(3, SECONDS);
+        bus.add(session, Path.of("SampleApplication"), application).standby(5, SECONDS);
         assertThat(application.getState(), is(STARTED));
         assertThat(application.getIdentifier().toString(), matches("corabus://[^/]+/[^/]+/apps/SampleApplication"));
         assertThat(bus.has(session, Path.of("/net/server")), is(true));
-//        Thread.sleep(2000);
-//        bus.shutdown();
     }
 
     private class TestApp extends BasicBusApplication {

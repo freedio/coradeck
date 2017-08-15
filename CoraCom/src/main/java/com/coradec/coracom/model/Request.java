@@ -34,7 +34,7 @@ import java.util.function.Supplier;
 /**
  * ​An event that needs permission to happen.
  */
-public interface Request extends Event, Observer {
+public interface Request extends Message, Observer {
 
     /**
      * Waits for the request to become complete.
@@ -145,7 +145,7 @@ public interface Request extends Event, Observer {
      * @param request the request to add.
      * @return a serial multi-request, or this request in the absence of an argument.
      */
-    Request andThen(Request request);
+    Request andThen(@Nullable Request request);
 
     /**
      * Returns a parallel multi-request containing this and the specified request, which both must

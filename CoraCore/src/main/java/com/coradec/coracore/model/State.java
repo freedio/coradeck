@@ -22,10 +22,12 @@ package com.coradec.coracore.model;
 
 import com.coradec.coracore.util.StringUtil;
 
+import java.io.Serializable;
+
 /**
  * ​Representation of a state.
  */
-public interface State extends Representable {
+public interface State extends Serializable, Representable {
 
     /**
      * Returns the name of the state.

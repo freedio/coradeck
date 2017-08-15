@@ -20,14 +20,18 @@
 
 package com.coradec.coractrl.ctrl.impl;
 
-import static java.util.concurrent.TimeUnit.*;
+import static com.coradec.coracom.state.RequestState.*;
 import static java.util.stream.Collectors.*;
 
+import com.coradec.coracom.com.RequestCompleteEvent;
+import com.coradec.coracom.model.Information;
 import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Request;
 import com.coradec.coracom.model.impl.BasicCommand;
 import com.coradec.coracom.model.impl.BasicEvent;
 import com.coradec.coracom.model.impl.BasicRequest;
+import com.coradec.coracom.state.RequestState;
+import com.coradec.coracore.annotation.Attribute;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.ToString;
@@ -65,6 +69,9 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
 
     private static final Text TEXT_NO_TRANSITIONS = LocalizedText.define("NoTransitions");
     private static final Text TEXT_INVALID_STATE = LocalizedText.define("InvalidState");
+    static final Text TEXT_STATE_TRANSITION_FAILED = LocalizedText.define("StateTransitionFailed");
+    static final Text TEXT_STATE_TRANSITION_CANCELLED =
+            LocalizedText.define("StateTransitionCancelled");
     @Inject private static Factory<Trajectory> TRAJECTORY_FACTORY;
 
     final Recipient agent;
@@ -345,27 +352,47 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
                                        getTargetState()));
 //                debug("Proceeding from %s to %s", transition.getInitialState(),
 //                        transition.getTerminalState());
-                inject(new InternalExecuteStateTransitionRequest(agent, transition)).andThen(() -> {
-//                    debug("Proceed → succees");
-                    final State newState = transition.getTerminalState();
-                    setCurrentState(newState);
-                    if (newState == getTargetState()) {
-//                        debug("Trajectory successful, reached state %s", newState);
-                        trigger.addState(newState);
-                        trigger.succeed();
-                        allowMessageQueueShutdown();
-                    }
-                }).orElse(problem -> {
-//                    debug("Proceed → fail with %s", problem);
-                    blockTransition(trajectories, trigger, transition);
-                    trigger.removeState(state);
-                }).standby(5, SECONDS);
-                if (getCurrentState() != getTargetState()) again(this);
+                inject(new InternalExecuteStateTransitionRequest(agent,
+                        transition)).reportCompletionTo(this);
             } catch (Exception e) {
                 error(e);
-                trigger.fail(e);
                 allowMessageQueueShutdown();
+                trigger.fail(e);
             }
+        }
+
+        @Override public boolean notify(final Information info) {
+            if (info instanceof RequestCompleteEvent) {
+                RequestCompleteEvent event = (RequestCompleteEvent)info;
+                final Request rq = event.getRequest();
+                if (rq instanceof ExecuteStateTransitionRequest) {
+                    ExecuteStateTransitionRequest request = (ExecuteStateTransitionRequest)rq;
+                    final StateTransition transition = request.getTransition();
+                    final RequestState state = request.getRequestState();
+                    if (state == SUCCESSFUL) {
+                        final State newState = transition.getTerminalState();
+                        setCurrentState(newState);
+                        if (newState == getTargetState()) {
+//                        debug("Trajectory successful, reached state %s", newState);
+                            trigger.addState(newState);
+                            trigger.succeed();
+                            allowMessageQueueShutdown();
+                        } else again(this);
+                    } else if (state == FAILED) {
+//                    debug("Proceed → fail with %s", problem);
+                        error(request.getProblem(), TEXT_STATE_TRANSITION_FAILED, transition);
+                        blockTransition(trajectories, trigger, transition);
+                        trigger.removeState(state);
+                        again(this);
+                    } else if (state == CANCELLED) {
+                        info(TEXT_STATE_TRANSITION_CANCELLED, transition);
+                        allowMessageQueueShutdown();
+                        request.cancel();
+                    }
+                    return true;
+                }
+            }
+            return super.notify(info);
         }
 
         private void blockTransition(final Set<Trajectory> trajectories, final Request request,
@@ -388,7 +415,7 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
             this.state = state;
         }
 
-        @Override public State getReachedState() {
+        @Override @ToString @Attribute public State getReachedState() {
             return state;
         }
 

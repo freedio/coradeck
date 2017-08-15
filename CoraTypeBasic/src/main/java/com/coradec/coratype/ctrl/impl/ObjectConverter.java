@@ -43,4 +43,12 @@ public class ObjectConverter extends BasicTypeConverter<Object> {
         return value;
     }
 
+    @Override public Object unmarshal(final byte[] value) throws TypeConversionException {
+        return new Object();
+    }
+
+    @Override public byte[] marshal(final Object value) {
+        return new byte[0];
+    }
+
 }

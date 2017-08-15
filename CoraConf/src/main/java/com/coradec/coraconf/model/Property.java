@@ -21,6 +21,7 @@
 package com.coradec.coraconf.model;
 
 import com.coradec.coraconf.module.CoraConf;
+import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.model.GenericType;
 import com.coradec.coracore.util.ExecUtil;
 
@@ -30,13 +31,13 @@ import com.coradec.coracore.util.ExecUtil;
 public interface Property<T> {
 
     static <X, D extends X> Property<X> define(final String name, final Class<X> type,
-            final D dflt) {
+            final @Nullable D dflt) {
         return CoraConf.define(ExecUtil.getCallerStackFrame().getClassFileName(), name,
                 GenericType.of(type), dflt);
     }
 
     static <X, D extends X> Property<X> define(final String name, final GenericType<X> type,
-            final D dflt) {
+            final @Nullable D dflt) {
         return CoraConf.define(ExecUtil.getCallerStackFrame().getClassFileName(), name, type, dflt);
     }
 

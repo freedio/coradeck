@@ -20,18 +20,11 @@
 
 package com.coradec.corabus.com;
 
-import java.nio.channels.SocketChannel;
+import com.coradec.coracom.model.Message;
 
 /**
- * ​API of a general network event.
+ * ​Notification about available data.
  */
-public interface NetworkEvent {
-
-    /**
-     * Returns the peer of the connection.
-     *
-     * @return the peer of the connection.
-     */
-    SocketChannel getPeer();
+public interface ReadyToReadEvent extends Message {
 
 }

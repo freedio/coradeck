@@ -23,14 +23,15 @@ package com.coradec.corabus.model.impl;
 import static com.coradec.coracore.model.Scope.*;
 
 import com.coradec.corabus.com.Invitation;
+import com.coradec.corabus.com.impl.BusSystemTerminatedEvent;
 import com.coradec.corabus.model.ApplicationBus;
 import com.coradec.corabus.model.Bus;
 import com.coradec.corabus.model.BusApplication;
 import com.coradec.corabus.model.BusHub;
 import com.coradec.corabus.model.BusNode;
 import com.coradec.corabus.model.MachineBus;
-import com.coradec.corabus.model.MachineService;
 import com.coradec.corabus.model.SystemBus;
+import com.coradec.corabus.protocol.handler.CMP_Handler;
 import com.coradec.corabus.trouble.MountPointUndefinedException;
 import com.coradec.corabus.trouble.NodeNotFoundException;
 import com.coradec.corabus.view.BusContext;
@@ -38,15 +39,17 @@ import com.coradec.corabus.view.BusService;
 import com.coradec.corabus.view.Member;
 import com.coradec.corabus.view.impl.BasicBusContext;
 import com.coradec.coracom.ctrl.MessageQueue;
-import com.coradec.coracom.model.Information;
 import com.coradec.coracom.model.Message;
 import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Request;
 import com.coradec.coracom.model.Sender;
+import com.coradec.coraconf.model.Property;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.model.Factory;
-import com.coradec.coracore.util.NetworkUtil;
+import com.coradec.coracore.time.Duration;
+import com.coradec.coracore.trouble.OperationInterruptedException;
+import com.coradec.coracore.trouble.UnimplementedOperationException;
 import com.coradec.coractrl.ctrl.SysControl;
 import com.coradec.coradir.model.Path;
 import com.coradec.coralog.ctrl.impl.Logger;
@@ -54,8 +57,12 @@ import com.coradec.corasession.model.Session;
 import com.coradec.coratext.model.LocalizedText;
 import com.coradec.coratext.model.Text;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.URI;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 /**
  * ​​Basic implementation of the bus infrastructure (façade).
@@ -65,6 +72,10 @@ import java.util.Optional;
 public class BasicBus extends Logger implements Bus, Sender {
 
     private static final Text TEXT_MESSAGE_BOUNCED = LocalizedText.define("MessageBounced");
+    private static final Property<Duration> PROP_SYSTEM_BUS_PROBE_TIMEOUT =
+            Property.define("SystemBusProbeTimeout", Duration.class,
+                    Duration.of(1, TimeUnit.SECONDS));
+    private static final CMP_Handler CMP = new CMP_Handler();
 
     @Inject private static Factory<Invitation> INVITATION;
 
@@ -72,28 +83,46 @@ public class BasicBus extends Logger implements Bus, Sender {
     @Inject private ApplicationBus appBus;
     @Inject private MachineBus machBus;
     @Inject private Session setupSession;
-    private final SystemBus sysBus;
+    private SystemBus systemBus;
     private final BusContext rootContext;
     private Member sysBusMember;
     private boolean initialized;
 
     public BasicBus() {
         rootContext = new RootBusContext(setupSession);
-        sysBus = SystemBus.create();
         initialized = false;
     }
 
     private void init() {
         if (!initialized) {
+            final InetSocketAddress socketAddr =
+                    new InetSocketAddress(CMP_Handler.PROP_STANDARD_PORT.value());
+            Socket socket = new Socket();
+            final int timeout = (int)PROP_SYSTEM_BUS_PROBE_TIMEOUT.value().toMillis();
+            debug("Connecting to socket %s (waiting %d ms)", socketAddr, timeout);
+            try {
+                socket.connect(socketAddr, timeout);
+                debug("Successfully connected → setting up system bus proxy.");
+                systemBus = new SystemBusProxy(socket);
+            } catch (IOException e) {
+                debug("Failed to connect → setting up local system bus.");
+                systemBus = new BasicSystemBus();
+            }
             final Invitation invitation = INVITATION.create(setupSession, "", rootContext, this,
-                    new Recipient[] {sysBus});
+                    new Recipient[] {systemBus});
+            final String mbusid;
+            try {
+                mbusid = systemBus.getMachineBusId(setupSession).value();
+            } catch (InterruptedException e) {
+                throw new OperationInterruptedException();
+            }
             MQ.inject(invitation)
-              .andThen(() -> sysBus.add(setupSession, NetworkUtil.getLocalMachineId(), machBus)
-                                   .andThen(() -> machBus.add(setupSession, "apps", appBus)))
+              .andThen(() -> systemBus.add(setupSession, mbusid, machBus)
+                                      .andThen(() -> machBus.add(setupSession, "apps", appBus)))
               .andThen(() -> sysBusMember = invitation.getMember());
             SysControl.onShutdown(() -> {
                 try {
-                    sysBus.shutdown(setupSession).standby();
+                    systemBus.shutdown(setupSession).standby();
                 } catch (InterruptedException e) {
                     error(e);
                 }
@@ -104,11 +133,12 @@ public class BasicBus extends Logger implements Bus, Sender {
 
     @Override public Request add(final Session session, final Path path, final BusNode node) {
         init();
-        if (path.isAbsolute()) return getSystemBus().add(session, path.tail(), node);
+        if (path.isTranscendent()) return getSystemBus().add(session, path, node);
+        else if (path.isAbsolute()) return getMachineBus().add(session, path.localize(), node);
         else if (node instanceof BusApplication)
             return getApplicationBus().add(session, path, node);
-        else if (node instanceof MachineService) return getMachineBus().add(session, path, node);
         throw new MountPointUndefinedException(path, node);
+//        return getApplicableServiceLevel().add(session, path, node);
     }
 
     @Override public void setup() {
@@ -118,24 +148,27 @@ public class BasicBus extends Logger implements Bus, Sender {
     @Override public void shutdown() {
         if (initialized) try {
             sysBusMember.dismiss().standby();
+            MQ.inject(new BusSystemTerminatedEvent(this));
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
         debug("Exiting system.");
+//        MQ.allowShutdown();
         System.exit(0);
     }
 
     @Override public BusHub getRoot() {
-        return sysBus;
+        init();
+        return systemBus;
     }
 
     @Override public Optional<BusNode> lookup(final Session session, final Path path) {
+        init();
         return getRoot().lookup(session, path.isAbsolute() ? path.tail() : path);
     }
 
     @Override public BusNode get(final Session session, final Path path)
             throws NodeNotFoundException {
-        init();
         return lookup(session, path).orElseThrow(() -> new NodeNotFoundException(path));
     }
 
@@ -144,13 +177,24 @@ public class BasicBus extends Logger implements Bus, Sender {
         return getRoot().has(session, path.isAbsolute() ? path.tail() : path);
     }
 
-    @Override public <I extends Information> I send(final I information) {
-        init();
-        return MQ.inject(information);
+    @Override public Sender sender(final Path path) {
+        return new NetworkSender(path);
+    }
+
+    @Override public Sender sender(final String path) {
+        return sender(Path.of(path));
+    }
+
+    @Override public Recipient recipient(final Path path) {
+        return new NetworkRecipient(path);
+    }
+
+    @Override public Recipient recipient(final String path) {
+        return new NetworkRecipient(Path.of(path));
     }
 
     private SystemBus getSystemBus() {
-        return sysBus;
+        return systemBus;
     }
 
     private MachineBus getMachineBus() {
@@ -195,4 +239,37 @@ public class BasicBus extends Logger implements Bus, Sender {
 
     }
 
+    private class NetworkSender implements Sender {
+
+        private final Path path;
+
+        public NetworkSender(final Path path) {
+            this.path = path;
+        }
+
+        @Override public void bounce(final Message message) {
+            throw new UnimplementedOperationException(); // don't know yet how to do that
+        }
+
+        @Override public URI toURI() {
+            return path.toURI(CMP_Handler.SCHEME);
+        }
+
+        @Override public String represent() {
+            return toURI().toString();
+        }
+    }
+
+    private class NetworkRecipient implements Recipient {
+
+        private final Path path;
+
+        public NetworkRecipient(final Path path) {
+            this.path = path;
+        }
+
+        @Override public void onMessage(final Message message) {
+            throw new UnimplementedOperationException(); // don't know how to do that yet.
+        }
+    }
 }

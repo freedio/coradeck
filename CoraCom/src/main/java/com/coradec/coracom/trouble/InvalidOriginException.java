@@ -18,13 +18,15 @@
  *
  */
 
-package com.coradec.corabus.model;
+package com.coradec.coracom.trouble;
 
 /**
- * ​API of a network service provider.
- * <p>
- * A network service provider offers client side network services.
+ * ​​Indicates an attempt to send a message with an invalid indication of origin.
  */
-public interface NetworkServiceProvider {
+public class InvalidOriginException extends NetworkCommunicationException {
+
+    public InvalidOriginException(final String message) {
+        super(message);
+    }
 
 }

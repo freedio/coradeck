@@ -22,27 +22,21 @@ package com.coradec.corabus.model.impl;
 
 import static com.coradec.corabus.model.impl.NetworkIntegrationTestPlatform.TestResult.*;
 import static com.coradec.coracore.util.NetworkUtil.*;
-import static java.util.concurrent.TimeUnit.*;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.*;
 
-import com.coradec.corabus.view.NetworkService;
-import com.coradec.coracom.model.Information;
 import com.coradec.coracom.model.Sender;
 import com.coradec.coracom.model.TextMessage;
-import com.coradec.coracom.model.Voucher;
 import com.coradec.coracom.model.impl.BasicInformation;
 import com.coradec.corajet.test.CoradeckJUnit4TestRunner;
 import com.coradec.coratext.model.LocalizedText;
 import com.coradec.coratext.model.Text;
-import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.util.concurrent.Semaphore;
 
 /**
  * ​​Simple network integration test.
@@ -59,45 +53,18 @@ public class SimpleNetworkIT extends NetworkIntegrationTestPlatform {
 
     @Ignore @Test public void clientServerCommunicationWithOneClientAndServer() throws Exception {
         final SocketAddress clientSocket = getLocalAddress(10);
-        TestClient client = new TestClient(clientSocket);
+        TestClient client = new TestClient();
         TestServer server = new TestServer();
         launchServerSetup(server);
         launchClientSetup(client);
-        client.standby();
         assertThat(communication, is(SUCCESSFUL));
     }
 
     private class TestClient extends BasicBusProcess implements Client {
 
-        private final Semaphore resultLock = new Semaphore(0);
-        private final SocketAddress socket;
-        NetworkService network;
-
-        TestClient(SocketAddress socket) {
-            this.socket = socket;
-        }
-
-        /**
-         * Waits for the client to finish whatever it has to do.
-         */
-        void standby() throws InterruptedException {
-            resultLock.acquire();
-        }
-
         @Override public void run() {
-            network.send(new TestMessage(this, "Hello!"));
-            final Voucher<Information> response = network.receive();
-            try {
-                response.standBy(5, SECONDS);
-                if (response instanceof TextMessage) {
-                    assertThat(((TextMessage)response).getContent(), is(equalTo("Welcome!")));
-                } else Assert.fail("Answer was not a text message!");
-            } catch (Exception e) {
-                error(e);
-                Assert.fail("Failed with " + e + "!");
-            }
+            discloseStringExtensions().info("Running the client");
         }
-
     }
 
     private class TestServer extends BasicNode implements Server {

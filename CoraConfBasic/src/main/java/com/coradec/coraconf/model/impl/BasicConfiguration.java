@@ -121,8 +121,9 @@ public class BasicConfiguration implements Configuration {
     private <T> Optional<T> transform(final GenericType<T> type, final String name,
                                       final Object... args) {
         return Optional.ofNullable(getRawProperties().get(name))
-                       .map(o -> ((TypeConverter<T>)FACTORY.of(TypeConverter.class, type).get(type))
-                               .convert(o));
+                       .map(s -> String.format(s, args))
+                       .map(s -> ((TypeConverter<T>)FACTORY.of(TypeConverter.class, type).get(type))
+                               .convert(s));
     }
 
     @Override public <T> Optional<T> lookup(final Class<? super T> type, final String name,

@@ -32,10 +32,4 @@ public interface Deferred extends Information {
      */
     long getExecutionTime();
 
-    /**
-     * Checks if the deferred information is due for processing.
-     *
-     * @return {@code true} if the information is due for processing, {@code false} if not (yet).
-     */
-    boolean isDue();
 }

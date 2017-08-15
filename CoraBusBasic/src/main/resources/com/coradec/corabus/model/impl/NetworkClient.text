@@ -4,3 +4,4 @@ ClientDisconnected: Client has been disconnected.
 NoProtocol: No or invalid protocol!
 NoAddress: No or invalid address!
 NoPort: No or invalid port!
+InvalidResourceIdentifier: Invalid resource identifier (not an URI): «%s»!

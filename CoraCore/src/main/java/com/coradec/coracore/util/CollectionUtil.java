@@ -20,6 +20,8 @@
 
 package com.coradec.coracore.util;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -42,6 +44,17 @@ public final class CollectionUtil {
      */
     @SafeVarargs public static <T> Set<T> setOf(final T... array) {
         return Stream.of(array).collect(Collectors.toSet());
+    }
+
+    public static Map<String, String> mapOf(final String repr, final Object... args) {
+        final Map<String, String> result = new HashMap<>();
+        for (String entry : repr.split("\0")) {
+            final String[] fields = entry.split(":");
+            if (fields.length == 2) result.put(fields[0], fields[1]);
+            else //noinspection UseOfSystemOutOrSystemErr
+                System.err.printf("Invalid mapping «%s» skipped!", entry);
+        }
+        return result;
     }
 
 }

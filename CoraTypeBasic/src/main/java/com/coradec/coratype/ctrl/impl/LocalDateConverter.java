@@ -56,4 +56,13 @@ public class LocalDateConverter extends BasicTypeConverter<LocalDate> {
             throw new TypeConversionException(String.class, e);
         }
     }
+
+    @Override public LocalDate unmarshal(final byte[] value) throws TypeConversionException {
+        return LocalDate.ofEpochDay(unmarshalLong(value));
+    }
+
+    @Override public byte[] marshal(final LocalDate value) {
+        return marshal(value.toEpochDay());
+    }
+
 }

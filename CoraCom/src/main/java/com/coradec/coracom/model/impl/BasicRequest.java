@@ -38,6 +38,7 @@ import com.coradec.coracom.model.SerialMultiRequest;
 import com.coradec.coracom.state.RequestState;
 import com.coradec.coracom.trouble.RequestCancelledException;
 import com.coradec.coracom.trouble.RequestFailedException;
+import com.coradec.coracore.annotation.Attribute;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.Nullable;
@@ -70,7 +71,7 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
     private static final Text TEXT_NOT_EXECUTING = LocalizedText.define("NotExecuting");
     @Inject private static Factory<MessageQueue> MQ;
     @Inject private static Factory<ParallelMultiRequest> PARALLEL_MULTI_REQUEST;
-    @Inject private static Factory<SerialMultiRequest> Serial_MULTI_REQUEST;
+    @Inject private static Factory<SerialMultiRequest> SERIAL_MULTI_REQUEST;
     private static final Text TEXT_CANNOT_HANDLE_MESSAGE =
             LocalizedText.define("CannotHandleMessage");
 
@@ -144,7 +145,7 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
         }
     }
 
-    @Override @ToString public RequestState getRequestState() {
+    @Override @ToString @Attribute("State") public RequestState getRequestState() {
         return requestState;
     }
 
@@ -153,11 +154,11 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
         return MQ.get().inject(new FailMeCommand(amount, unit, reason));
     }
 
-    @Override @ToString public Set<RequestState> getStates() {
+    @Override @ToString @Attribute public Set<RequestState> getStates() {
         return states;
     }
 
-    @Override public @Nullable Throwable getProblem() {
+    @Override @ToString @Attribute public @Nullable Throwable getProblem() {
         return problem;
     }
 
@@ -236,7 +237,7 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
     }
 
     @Override public Request andThen(final Request request) {
-        return request == null ? this : Serial_MULTI_REQUEST.create(Arrays.asList(this, request),
+        return request == null ? this : SERIAL_MULTI_REQUEST.create(Arrays.asList(this, request),
                 getSender(), getRecipients());
     }
 
@@ -324,7 +325,7 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
                 observer.notify(new RequestCompleteEventImpl(BasicRequest.this));
             } else {
                 BasicRequest.this.completionObservers.add(observer);
-                debug("Added completion observer.");
+//                debug("Added completion observer.");
             }
         }
 
@@ -344,7 +345,7 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
             this.request = request;
         }
 
-        @Override @ToString public Request getRequest() {
+        @Override @ToString @Attribute public Request getRequest() {
             return request;
         }
 

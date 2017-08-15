@@ -23,6 +23,7 @@ package com.coradec.corabus.model;
 import com.coradec.corabus.state.MetaState;
 import com.coradec.corabus.state.NodeState;
 import com.coradec.coracom.model.Recipient;
+import com.coradec.coracom.model.Sender;
 import com.coradec.coradir.model.Path;
 
 import java.net.URI;
@@ -34,7 +35,7 @@ import java.net.URI;
  * A node can be attached to a hub in two ways:  either the node sends a request to a hub to add it,
  * or the hub invites the node to join it.  The first way actually only triggers the second way.
  */
-public interface BusNode extends Recipient {
+public interface BusNode extends Sender, Recipient {
 
     /**
      * Returns the node's current state (last achieved state).

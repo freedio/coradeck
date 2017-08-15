@@ -1,0 +1,5 @@
+# Localized text base for default locale of class CMP_Handler
+
+FailedToDecodeReference: Failed to decode reference \"%s\"!
+FailedToDecodeAnswer: Failed to decode answer \"%s\"!
+FailedToDecodeEventType: Failed to decode event type \"%s\"!

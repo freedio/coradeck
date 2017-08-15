@@ -21,12 +21,26 @@
 package com.coradec.corabus.model.impl;
 
 import com.coradec.corabus.model.MachineBus;
+import com.coradec.coracom.model.Request;
 import com.coradec.coracore.annotation.Implementation;
+import com.coradec.coracore.annotation.Inject;
+import com.coradec.coracore.annotation.Nullable;
+import com.coradec.coradir.model.Path;
+import com.coradec.corasession.model.Session;
 
 /**
  * ​​Implementation of the machine bus.
  */
+@SuppressWarnings("ClassHasNoToStringMethod")
 @Implementation
 public class BasicMachineBus extends BasicHub implements MachineBus {
+
+    @Inject private Session initSession;
+
+    @Override protected @Nullable Request onInitialize(final Session session) {
+        final Request request = super.onInitialize(session);
+        add(initSession, Path.from("console"), new ServerConsole());
+        return request;
+    }
 
 }

@@ -36,4 +36,9 @@ public class RequestFailedException extends CommunicationException {
 
     public RequestFailedException() {
     }
+
+    public RequestFailedException(final String info) {
+        super(info);
+    }
+
 }

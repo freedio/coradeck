@@ -20,9 +20,41 @@
 
 package com.coradec.corabus.model.impl;
 
+import com.coradec.corabus.protocol.ProtocolHandler;
+import com.coradec.coracom.model.ParallelMultiRequest;
+import com.coradec.coracom.model.Request;
+import com.coradec.coraconf.model.Property;
+import com.coradec.coracore.annotation.Inject;
+import com.coradec.coracore.annotation.Nullable;
+import com.coradec.coracore.model.Factory;
+import com.coradec.coracore.model.GenericType;
+import com.coradec.corasession.model.Session;
+
+import java.util.Collections;
+import java.util.List;
+
 /**
  * ​​The network component of the bus.
  */
 public class Network extends BasicHub {
+
+    private static final Property<List<String>> PROP_ENABLED_PROTOCOLS =
+            Property.define("EnabledProtocols", GenericType.of(List.class, String.class),
+                    Collections.singletonList("CMP"));
+    @Inject private static Factory<ParallelMultiRequest> MULTIREQUEST;
+
+    @Override protected @Nullable Request onInitialize(final Session session) {
+        final Request request = super.onInitialize(session);
+        PROP_ENABLED_PROTOCOLS.value().forEach(proto -> {
+            add(session, proto + "-handler", createHandler(proto));
+            add(session, proto + "-server", new NetworkServer(proto));
+        });
+        add(session, "client", new NetworkClient());
+        return request;
+    }
+
+    private ProtocolHandler createHandler(final String protocol) {
+        return ProtocolHandler.fore(protocol);
+    }
 
 }

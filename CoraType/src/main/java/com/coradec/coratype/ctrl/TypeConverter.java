@@ -26,7 +26,9 @@ import com.coradec.coracore.model.GenericType;
 import com.coradec.coratype.trouble.TypeConversionException;
 
 /**
- * ​A type converter for a particular target class.
+ * Converts object into a particular type.
+ *
+ * @param <V> the object type.
  */
 @SuppressWarnings("unchecked")
 public interface TypeConverter<V> {
@@ -55,4 +57,20 @@ public interface TypeConverter<V> {
      */
     V decode(String value) throws TypeConversionException;
 
+    /**
+     * Unmarshals the specified byte array into an object of the target type, if possible.
+     *
+     * @param value the value to unmarshal.
+     * @return the decoded object.
+     * @throws TypeConversionException if the type conversion failed.
+     */
+    V unmarshal(byte[] value) throws TypeConversionException;
+
+    /**
+     * Marshals the specified value into a byte array.
+     *
+     * @param value the value to marshal.
+     * @return the encoded object.
+     */
+    byte[] marshal(V value);
 }

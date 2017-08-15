@@ -36,6 +36,7 @@ import com.coradec.coracom.trouble.InformationWithoutOriginException;
 import com.coradec.coracom.trouble.MessageUndeliverableException;
 import com.coradec.coracom.trouble.QueueException;
 import com.coradec.coraconf.model.Property;
+import com.coradec.coracore.annotation.Attribute;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
@@ -132,7 +133,7 @@ public class CentralMessageQueue extends Logger
             throw dead;
         }
         if (info.getOrigin() == null) throw new InformationWithoutOriginException(info);
-        if (info instanceof Deferred && !((Deferred)info).isDue()) scheduleDeferred((Deferred)info);
+        if (info instanceof Deferred && !isDue((Deferred)info)) scheduleDeferred((Deferred)info);
         else if (info instanceof Message) {
             Message message = (Message)info;
             Collection<Recipient> recipients = message.getRecipients();
@@ -164,6 +165,10 @@ public class CentralMessageQueue extends Logger
             inject(new DispatchInfoCommand(info));
         }
         return info;
+    }
+
+    boolean isDue(final Deferred info) {
+        return info.getExecutionTime() <= System.currentTimeMillis();
     }
 
     /**
@@ -426,6 +431,10 @@ public class CentralMessageQueue extends Logger
                 }
             succeed();
         }
+
+        @ToString @Attribute public Information getInfo() {
+            return info;
+        }
     }
 
     private class AddSubscriberCommand extends BasicCommand {
@@ -475,7 +484,7 @@ public class CentralMessageQueue extends Logger
                 try {
                     final Deferred deferred = deferredQueue.take();
                     if (deferred == null) continue;
-                    if (deferred.isDue()) {
+                    if (isDue(deferred)) {
                         inject(deferred);
                     } else {
                         deferredQueue.put(deferred);

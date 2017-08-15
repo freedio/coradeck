@@ -36,6 +36,7 @@ import com.coradec.corabus.view.BusService;
 import com.coradec.corabus.view.Member;
 import com.coradec.coracom.model.Request;
 import com.coradec.coracom.model.impl.BasicEvent;
+import com.coradec.coracore.annotation.Attribute;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
@@ -168,6 +169,34 @@ public class BasicNode extends BasicAgent implements BusNode {
      */
     protected State getReadyState() {
         return INITIALIZED;
+    }
+
+    /**
+     * Returns a service implementation of the specified type, if any is available.
+     *
+     * @param <S>  the service type.
+     * @param type the service type selector.
+     * @param args arguments for service selection and initialization.
+     * @return a service implementation, or {@link Optional#empty()}.
+     */
+    protected <S extends BusService> Optional<S> findService(Class<? super S> type,
+            Object... args) {
+        return getContext().findService(type, args);
+    }
+
+    /**
+     * Returns a service implementation of the specified type.
+     *
+     * @param type the service type selector.
+     * @param args arguments for service selection and initialization.
+     * @param <S>  the service type.
+     * @return a service implementation.
+     * @throws ServiceNotAvailableException if such a service is not available.
+     */
+    protected <S extends BusService> S getService(Class<? super S> type, Object... args)
+            throws ServiceNotAvailableException {
+        return (S)findService(type, args).orElseThrow(
+                () -> new ServiceNotAvailableException(type, args));
     }
 
     private void transit(final ExecuteStateTransitionRequest request) {
@@ -435,7 +464,7 @@ public class BasicNode extends BasicAgent implements BusNode {
 
     private void setMetaStateFrom(final NodeState state) {
         if (state == UNATTACHED || state == DETACHED) setMetaState(DOWN);
-        else if (state == INITIALIZED) setMetaState(UP);
+        else if (state == getReadyState()) setMetaState(UP);
         else if (state == ATTACHING || state == ATTACHED || state == INITIALIZING)
             setMetaState(COMING_UP);
         else if (state == TERMINATING || state == TERMINATED || state == DETACHING)
@@ -653,8 +682,12 @@ public class BasicNode extends BasicAgent implements BusNode {
             this.state = state;
         }
 
-        @Override public NodeState getAchievedState() {
+        @Override @ToString @Attribute public NodeState getAchievedState() {
             return state;
+        }
+
+        @Override public BusNode getNode() {
+            return BasicNode.this;
         }
     }
 }

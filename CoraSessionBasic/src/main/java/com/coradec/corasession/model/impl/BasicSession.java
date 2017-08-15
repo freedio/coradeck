@@ -21,7 +21,11 @@
 package com.coradec.corasession.model.impl;
 
 import com.coradec.coracore.annotation.Implementation;
+import com.coradec.coracore.annotation.ToString;
+import com.coradec.coracore.util.ClassUtil;
 import com.coradec.corasession.model.Session;
+
+import java.util.UUID;
 
 /**
  * ​​Basic implementation of a session context.
@@ -29,4 +33,17 @@ import com.coradec.corasession.model.Session;
 @Implementation
 public class BasicSession implements Session {
 
+    private final UUID id;
+
+    public BasicSession() {
+        this.id = UUID.randomUUID();
+    }
+
+    @Override @ToString public UUID getId() {
+        return id;
+    }
+
+    @Override public String toString() {
+        return ClassUtil.toString(this);
+    }
 }
