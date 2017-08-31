@@ -23,6 +23,6 @@ package com.coradec.coracom.model;
 /**
  * ​A command in the context of a session.
  */
-public interface SessionCommand extends SessionRequest, Command {
+public interface SessionCommand extends Command, SessionInformation {
 
 }

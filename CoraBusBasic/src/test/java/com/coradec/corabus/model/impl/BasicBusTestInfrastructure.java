@@ -33,12 +33,11 @@ import com.coradec.corabus.view.BusService;
 import com.coradec.corabus.view.impl.BasicBusContext;
 import com.coradec.coracom.ctrl.MessageQueue;
 import com.coradec.coracom.model.Information;
-import com.coradec.coracom.model.Message;
 import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Request;
-import com.coradec.coracom.model.Sender;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.model.Factory;
+import com.coradec.coracore.model.Origin;
 import com.coradec.corajet.cldr.Syslog;
 import com.coradec.coralog.ctrl.impl.Logger;
 import com.coradec.corasession.model.Session;
@@ -73,11 +72,10 @@ class BasicBusTestInfrastructure extends Logger {
             final int timeoutSeconds, final Inbetween... inBetweens) throws InterruptedException {
         final Session session = sessionFactory.create();
         final BusContext dummyContext = new TestBusContext(session);
-        final Sender testEnv = new TestEnvironment();
+        final Origin testEnv = new TestEnvironment();
         assertThat(testee.getState(), is(UNATTACHED));
         final Invitation invitation = MQ.inject(
-                invitationFactory.create(session, name, dummyContext, testEnv,
-                        new Recipient[] {testee}));
+                invitationFactory.create(session, testEnv, testee, name, dummyContext));
         invitation.standby(timeoutSeconds, SECONDS).andThen(() -> {
             assertThat(dummyContext.contains(invitation.getMember()), is(true));
             assertThat(testee.getState(), is(terminalState));
@@ -98,7 +96,7 @@ class BasicBusTestInfrastructure extends Logger {
         return MQ.inject(info);
     }
 
-    protected class TestEnvironment implements Sender {
+    protected class TestEnvironment implements Origin {
 
         @Override public String represent() {
             return "TestEnvironment";
@@ -108,15 +106,12 @@ class BasicBusTestInfrastructure extends Logger {
             return URI.create(represent());
         }
 
-        @Override public void bounce(final Message message) {
-            error(TEXT_MESSAGE_BOUNCED, message);
-        }
     }
 
     protected abstract class Inbetween {
 
-        protected abstract void execute(final Session session, final Sender sender,
-                final Recipient... recipients) throws InterruptedException;
+        protected abstract void execute(final Session session, final Origin sender,
+                final Recipient recipient) throws InterruptedException;
 
     }
 

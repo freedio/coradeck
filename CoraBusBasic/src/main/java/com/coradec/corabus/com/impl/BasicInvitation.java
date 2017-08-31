@@ -25,13 +25,13 @@ import com.coradec.corabus.trouble.NodeNotAttachedException;
 import com.coradec.corabus.view.BusContext;
 import com.coradec.corabus.view.Member;
 import com.coradec.coracom.model.Recipient;
-import com.coradec.coracom.model.Sender;
 import com.coradec.coracom.model.impl.BasicSessionRequest;
-import com.coradec.coracore.annotation.Attribute;
 import com.coradec.coracore.annotation.Implementation;
+import com.coradec.coracore.annotation.Internal;
 import com.coradec.coracore.annotation.NonNull;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
+import com.coradec.coracore.model.Origin;
 import com.coradec.corasession.model.Session;
 
 /**
@@ -39,6 +39,7 @@ import com.coradec.corasession.model.Session;
  */
 @SuppressWarnings("ClassHasNoToStringMethod")
 @Implementation
+@Internal
 public class BasicInvitation extends BasicSessionRequest implements Invitation {
 
     private final String name;
@@ -46,25 +47,24 @@ public class BasicInvitation extends BasicSessionRequest implements Invitation {
     private @Nullable Member member;
 
     /**
-     * Initializes a new instance of BasicInvitation with the specified sender and list of
-     * recipients in the context of the specified session.
-     *
-     * @param session    the session context.
-     * @param sender     the sender.
-     * @param recipients the list of recipients
+     * Initializes a new instance of BasicInvitation with the specified sender and recipient in the
+     * context of the specified session.
+     *  @param session   the session context.
+     * @param sender    the sender.
+     * @param recipient the recipient.
      */
-    public BasicInvitation(final Session session, final String name, final BusContext context,
-            final Sender sender, final Recipient... recipients) {
-        super(session, sender, recipients);
+    public BasicInvitation(final Session session, final Origin sender, final Recipient recipient,
+            final String name, final BusContext context) {
+        super(session, sender, recipient);
         this.name = name;
         this.context = context;
     }
 
-    @Override @ToString @Attribute public String getName() {
+    @Override @ToString public String getName() {
         return name;
     }
 
-    @Override @ToString @Attribute public BusContext getContext() {
+    @Override @ToString public BusContext getContext() {
         return context;
     }
 
@@ -75,6 +75,11 @@ public class BasicInvitation extends BasicSessionRequest implements Invitation {
 
     @Override public void setMember(final @NonNull Member member) {
         this.member = member;
+    }
+
+    @Override protected void collect() {
+        super.collect();
+        set(PROP_NAME, name);
     }
 
 }

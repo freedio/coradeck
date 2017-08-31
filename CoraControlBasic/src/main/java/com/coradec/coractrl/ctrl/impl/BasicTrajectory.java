@@ -46,6 +46,10 @@ public class BasicTrajectory implements Trajectory {
     private final List<StateTransition> transitions;
     private @Nullable Set<Request> blockedRequests;
 
+    public BasicTrajectory(final StateTransition... transitions) {
+        this.transitions = new ArrayList<>(Arrays.asList(transitions));
+    }
+
     public BasicTrajectory(final StateTransition first, final StateTransition... rest) {
         transitions = new ArrayList<>();
         transitions.add(first);

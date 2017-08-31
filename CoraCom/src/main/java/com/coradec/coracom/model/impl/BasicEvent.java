@@ -21,12 +21,12 @@
 package com.coradec.coracom.model.impl;
 
 import com.coradec.coracom.model.Event;
-import com.coradec.coracore.annotation.Attribute;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.model.Origin;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 /**
  * ​​Basic implementation of an event notification.
@@ -35,7 +35,7 @@ import java.time.LocalDateTime;
 @Implementation
 public class BasicEvent extends BasicInformation implements Event {
 
-    private final LocalDateTime eventTimestamp;
+    private final LocalDateTime occurred;
 
     /**
      * Initializes a new instance of BasicEvent from the specified origin.
@@ -43,7 +43,8 @@ public class BasicEvent extends BasicInformation implements Event {
      * @param origin the origin of the event.
      */
     public BasicEvent(final Origin origin) {
-        this(origin, LocalDateTime.now());
+        super(origin);
+        this.occurred = getCreatedAt();
     }
 
     /**
@@ -55,11 +56,33 @@ public class BasicEvent extends BasicInformation implements Event {
      */
     public BasicEvent(final Origin origin, LocalDateTime eventTimestamp) {
         super(origin);
-        this.eventTimestamp = eventTimestamp;
+        this.occurred = eventTimestamp;
     }
 
-    @ToString @Attribute("At") public LocalDateTime getEventTimestamp() {
-        return eventTimestamp;
+    /**
+     * Initializes a new instance of BasicEvent from the specified property map.
+     *
+     * @param properties the property map.
+     */
+    public BasicEvent(final Map<String, Object> properties) {
+        super(properties);
+        this.occurred = get(LocalDateTime.class, PROP_OCCURRED);
+    }
+
+    @ToString public LocalDateTime getEventTimestamp() {
+        return this.occurred;
+    }
+
+    /**
+     * Collects the properties into the built-in property map in preparation for {@link
+     * #getProperties()}.
+     * <p>
+     * Every subclass defining its own attributes should override this method and add its own
+     * properties by calling {@link BasicInformation#set(String, Object)} for each of them.
+     */
+    @Override protected void collect() {
+        super.collect();
+        set(PROP_OCCURRED, getEventTimestamp());
     }
 
 }

@@ -38,7 +38,7 @@ public class RequestState implements State {
     private final String name;
     private final int rank;
 
-    protected RequestState(final String name, final int rank) {
+    public RequestState(final String name, final int rank) {
         this.name = name;
         this.rank = rank;
     }

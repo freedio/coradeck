@@ -22,25 +22,21 @@ package com.coradec.corabus.model.impl;
 
 import static java.nio.channels.SelectionKey.*;
 
-import com.coradec.corabus.com.ConnectionAcceptableEvent;
+import com.coradec.corabus.com.OutboundMessage;
+import com.coradec.corabus.com.ReadyToConnectEvent;
+import com.coradec.corabus.com.impl.BasicKeyProcessedEvent;
 import com.coradec.corabus.model.Bus;
 import com.coradec.corabus.model.ServerConnection;
-import com.coradec.coracom.model.Information;
-import com.coradec.coracom.model.Recipient;
+import com.coradec.corabus.view.NetworkProtocol;
 import com.coradec.coracom.model.SessionEvent;
+import com.coradec.coracom.model.SessionInformation;
 import com.coradec.coracom.model.SessionRequest;
-import com.coradec.coracom.model.impl.BasicRequest;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.trouble.UnimplementedOperationException;
-import com.coradec.coradir.model.Path;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 
 /**
  * ​​Basic implementation of a server connection.
@@ -50,23 +46,25 @@ public class BasicServerConnection extends AbstractNetworkConnection implements 
 
     private IOException connectionFailure;
 
-    private final Map<UUID, SessionRequest> outboundRequests = new HashMap<>();
     @Inject private Bus bus;
 
-    public BasicServerConnection(final Selector selector, final SocketChannel server,
+    public BasicServerConnection(final SocketChannel server, final NetworkProtocol protocol,
             final URI target) {
-        super(selector, server, OP_CONNECT, target);
-        addRoute(ConnectionAcceptableEvent.class, this::establishConnection);
+        super(server, protocol, target, OP_CONNECT);
+        addRoute(ReadyToConnectEvent.class, this::establishConnection);
     }
 
-    private void establishConnection(final ConnectionAcceptableEvent event) {
+    private void establishConnection(final ReadyToConnectEvent event) {
         final SocketChannel channel = getChannel();
         try {
             while (!channel.finishConnect()) Thread.yield();
+            debug("Server connection %s established,", getChannel());
             deselect(OP_CONNECT);
             select(OP_READ | OP_WRITE);
         } catch (IOException e) {
             connectionFailure = e;
+        } finally {
+            inject(new BasicKeyProcessedEvent(this, event.getSelectionKey()));
         }
     }
 
@@ -75,19 +73,15 @@ public class BasicServerConnection extends AbstractNetworkConnection implements 
     }
 
     @Override protected void eventReceived(final SessionEvent event) {
-        inject(new ResolveEventRequest(bus.get(getInitialSession(), Path.of("/net/resolver"))));
-    }
-
-    @Override protected void infoReceived(final Information info) {
         throw new UnimplementedOperationException();
     }
 
-    private class ResolveEventRequest extends BasicRequest {
+    @Override protected void infoReceived(final SessionInformation info) {
+        throw new UnimplementedOperationException();
+    }
 
-        public ResolveEventRequest(final Recipient... recipients) {
-            super(BasicServerConnection.this, recipients);
-        }
-
+    @Override public void output(final OutboundMessage message) throws IOException {
+        super.output(message);
     }
 
 }

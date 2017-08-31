@@ -22,6 +22,7 @@ package com.coradec.coracom.model;
 
 import com.coradec.coracom.state.Answer;
 import com.coradec.coracore.annotation.Nullable;
+import com.coradec.coradir.model.Path;
 
 import java.util.UUID;
 
@@ -29,6 +30,10 @@ import java.util.UUID;
  * ​A response to a request.  This type of message is used with networking only.
  */
 public interface Response extends PayloadMessage {
+
+    String PROP_REFERENCE = "Reference";
+    String PROP_ANSWER = "Answer";
+    String PROP_REASON = "Reason";
 
     /**
      * Returns the request reference.
@@ -50,5 +55,19 @@ public interface Response extends PayloadMessage {
      * @return the reason for failure.
      */
     @Nullable Throwable getFailureReason();
+
+    /**
+     * Returns the response body.
+     *
+     * @return the response body.
+     */
+    byte[] getBody();
+
+    /**
+     * Returns the target path.  This is the origin of the request this response answers.
+     *
+     * @return the target path.
+     */
+    Path getTarget();
 
 }

@@ -20,10 +20,6 @@
 
 package com.coradec.coracom.model;
 
-import com.coradec.coracom.state.QueueState;
-
-import java.util.Collection;
-
 /**
  * An object sent from a sender to a list of recipients.  If the list of recipients is empty, the
  * message will either be delivered regularly to the sender, if it is also a recipient, or bounce to
@@ -32,40 +28,17 @@ import java.util.Collection;
  */
 public interface Message extends Event {
 
-    /**
-     * Returns the set of recipients.  The empty set denotes a broadcast message.
-     *
-     * @return the set of recipients.
-     */
-    Collection<Recipient> getRecipients();
+    String PROP_SENDER = "Sender";
+    String PROP_RECIPIENT = "Recipient";
+    String PROP_URGENT = "Urgent";
+    String PROP_RECIPIENT_RESOLVER = "-RecipientResolver";
 
     /**
-     * Returns the recipients as an array.  The empty array denotes a broadcast message.
+     * Returns the recipient.
      *
-     * @return the recipient list.
+     * @return the recipient.
      */
-    Recipient[] getRecipientList();
-
-    /**
-     * Sets the number of recipients to which the message is to be delivered.
-     *
-     * @param recipients the number of recipients.
-     */
-    void setDeliveries(int recipients);
-
-    /**
-     * Callback invoked when the message has been delivered to all recipients.
-     *
-     * @throws IllegalStateException if the current state is not {@link QueueState#ENQUEUED}.
-     */
-    void onDelivered();
-
-    /**
-     * Returns the sender.
-     *
-     * @return the sender.
-     */
-    Sender getSender();
+    Recipient getRecipient();
 
     /**
      * Checks whether the message is urgent.
@@ -73,5 +46,12 @@ public interface Message extends Event {
      * @return {@code true} if the message is urgent, {@code false} if not.
      */
     boolean isUrgent();
+
+    /**
+     * Sets the recipient.
+     *
+     * @param recipient the new recipient.
+     */
+    void setRecipent(Recipient recipient);
 
 }

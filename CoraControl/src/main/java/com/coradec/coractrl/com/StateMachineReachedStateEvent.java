@@ -27,6 +27,8 @@ import com.coradec.coracore.model.State;
  */
 public interface StateMachineReachedStateEvent {
 
+    String PROP_REACHED_STATE = "ReachedState";
+
     /**
      * Returns the reached state.
      *

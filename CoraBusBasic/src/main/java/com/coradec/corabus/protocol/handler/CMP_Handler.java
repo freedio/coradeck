@@ -20,33 +20,35 @@
 
 package com.coradec.corabus.protocol.handler;
 
-import com.coradec.corabus.com.impl.NetworkEvent;
-import com.coradec.corabus.com.impl.NetworkMessage;
-import com.coradec.corabus.com.impl.NetworkRequest;
+import static com.coradec.coracom.model.Information.PROP_CLASS;
+import static com.coradec.coracom.model.SessionInformation.*;
+
+import com.coradec.corabus.com.NetworkRequest;
 import com.coradec.corabus.model.Bus;
 import com.coradec.corabus.model.impl.BasicServiceProvider;
 import com.coradec.corabus.protocol.ProtocolHandler;
-import com.coradec.corabus.trouble.InvalidDataException;
 import com.coradec.corabus.view.BusService;
 import com.coradec.corabus.view.NetworkProtocol;
 import com.coradec.corabus.view.impl.BasicServiceView;
-import com.coradec.coracom.model.Information;
+import com.coradec.coracom.ctrl.RecipientResolver;
+import com.coradec.coracom.model.Event;
 import com.coradec.coracom.model.PayloadMessage;
-import com.coradec.coracom.model.Recipient;
-import com.coradec.coracom.model.Sender;
-import com.coradec.coracom.model.impl.BasicResponse;
-import com.coradec.coracom.state.Answer;
-import com.coradec.coracom.state.EventType;
-import com.coradec.coracom.trouble.RequestFailedException;
+import com.coradec.coracom.model.Request;
+import com.coradec.coracom.model.Response;
+import com.coradec.coracom.model.SessionEvent;
+import com.coradec.coracom.model.SessionInformation;
+import com.coradec.coracom.model.SessionRequest;
+import com.coradec.coracom.model.SessionResponse;
 import com.coradec.coraconf.model.Property;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.Nullable;
+import com.coradec.coracore.model.Factory;
 import com.coradec.coracore.model.GenericType;
 import com.coradec.coracore.trouble.RequestRefused;
 import com.coradec.coracore.trouble.ServiceNotAvailableException;
-import com.coradec.coracore.util.ClassUtil;
 import com.coradec.coracore.util.StringUtil;
 import com.coradec.coradir.model.Path;
+import com.coradec.corasession.model.ProxySession;
 import com.coradec.corasession.model.Session;
 import com.coradec.coratext.model.LocalizedText;
 import com.coradec.coratext.model.Text;
@@ -54,13 +56,14 @@ import com.coradec.coratype.ctrl.TypeConverter;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
+import java.nio.channels.ReadableByteChannel;
 import java.util.Base64;
+import java.util.Comparator;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.UUID;
 
 /**
@@ -69,7 +72,7 @@ import java.util.UUID;
 @SuppressWarnings("ClassHasNoToStringMethod")
 public class CMP_Handler extends BasicServiceProvider implements ProtocolHandler {
 
-    private static final String NAME_PROTOCOL = "CMP";
+    public static final String NAME_PROTOCOL = "CMP";
     public static final String SCHEME = NAME_PROTOCOL.toLowerCase();
     public static final Property<Integer> PROP_STANDARD_PORT =
             Property.define("StandardPort", Integer.class, 1024);
@@ -78,22 +81,31 @@ public class CMP_Handler extends BasicServiceProvider implements ProtocolHandler
     static final Property<String> PROP_RECIPIENT_SEPARATOR =
             Property.define("RecipientSeparator", String.class, ",");
 
-    static final Base64.Decoder DECODER = Base64.getMimeDecoder();
-    static final Base64.Encoder ENCODER = Base64.getMimeEncoder();
-    private static final String ATTR_FROM = "#FROM";
-    private static final String ATTR_TO = "#TO";
-    private static final String ATTR_REFERENCE = "#REFERENCE";
-    private static final String ATTR_ANSWER = "#ANSWER";
-    private static final String ATTR_PROBLEM = "#PROBLEM";
-    private static final String ATTR_TYPE = "#TYPE";
-    private static final String ATTR_COMMAND = "COMMAND";
-
     private static final Text TEXT_FAILED_TO_DECODE_REFERENCE =
             LocalizedText.define("FailedToDecodeReference");
     private static final Text TEXT_FAILED_TO_DECODE_ANSWER =
             LocalizedText.define("FailedToDecodeAnswer");
     private static final Text TEXT_FAILED_TO_DECODE_EVENT_TYPE =
             LocalizedText.define("FailedToDecodeEventType");
+    private static final Text TEXT_FAILED_TO_DECODE_RECIPIENT =
+            LocalizedText.define("FailedToDecodeRecipient");
+    private static final Text TEXT_NO_RECIPIENT = LocalizedText.define("NoRecipients");
+    private static final Text TEXT_MULTIPLE_RECIPIENTS_FOR_REQUEST =
+            LocalizedText.define("MultipleRecipientsForRequest");
+    private static final Text TEXT_MESSAGE_WITHOUT_SENDER =
+            LocalizedText.define("MessageWithoutSender");
+    private static final Text TEXT_FAILED_TO_INSTANTIATE =
+            LocalizedText.define("FailedToInstantiate");
+
+    static final Base64.Decoder DECODER = Base64.getMimeDecoder();
+    static final Base64.Encoder ENCODER = Base64.getMimeEncoder();
+
+    @Inject private static Factory<SessionResponse> RESPONSE;
+    @Inject private static Factory<NetworkRequest> NETREQUEST;
+    @Inject private static Factory<SessionRequest> REQUEST;
+    @Inject private static Factory<SessionEvent> EVENT;
+    @Inject private static Factory<SessionInformation> INFORMATION;
+    @Inject private static Factory<ProxySession> PROXY_SESSION;
 
     @Inject Bus bus;
 
@@ -129,32 +141,43 @@ public class CMP_Handler extends BasicServiceProvider implements ProtocolHandler
             return NAME_PROTOCOL.toLowerCase();
         }
 
-        @Override public ByteBuffer serialize(final Information info) {
-            final String delimiter = PROP_DELIMITER.value();
-            final String separator = PROP_SEPARATOR.value();
+        @Override
+        public ByteBuffer serialize(final UUID id, SessionInformation info, final Path recipient) {
+            final String del = PROP_DELIMITER.value();
+            final String sep = PROP_SEPARATOR.value();
             StringBuilder collector = new StringBuilder(4096);
-            ClassUtil.getAttributes(info)
-                     .forEach((key, value) -> collector.append(formatKey(key))
-                                                       .append(separator)
-                                                       .append(formatValue(value))
-                                                       .append(delimiter));
+            final Map<String, Object> attributes = info.getProperties();
+            attributes.put(PROP_CLASS, info.getClass().getName());
+            attributes.entrySet()
+                      .stream()
+                      .sorted(Comparator.comparing(Entry::getKey))
+                      .forEach(e -> collector.append(formatKey(e.getKey()))
+                                             .append(sep)
+                                             .append(formatValue(e.getValue()))
+                                             .append(del));
             if (info instanceof PayloadMessage) {
                 final @Nullable byte[] body = ((PayloadMessage)info).getBody();
-                if (body != null) collector.append(delimiter)
-                                           .append(new String(ENCODER.encode(body),
-                                                   StringUtil.CHARSET));
+                if (body != null && body.length > 0) //
+                    collector.append(del)
+                             .append(new String(ENCODER.encode(body), StringUtil.CHARSET));
             }
-            return ByteBuffer.wrap(collector.toString().getBytes(StringUtil.CHARSET));
+            final String serialized = collector.toString();
+            debug("Message serialized as \"%s\"", serialized);
+            final byte[] serializedBytes = serialized.getBytes(StringUtil.CHARSET);
+            final ByteBuffer buffer = ByteBuffer.allocate(serializedBytes.length + Integer.BYTES);
+            buffer.putInt(serializedBytes.length);
+            buffer.put(serializedBytes);
+            return buffer;
         }
 
-        private Information deserialize(final Session session, final ByteBuffer buffer)
-                throws InvalidDataException {
+        private SessionInformation deserialize(final Session session, final ByteBuffer buffer) {
             final String delimiter = PROP_DELIMITER.value();
             final String separator = PROP_SEPARATOR.value();
-            Map<String, String> attributes = new HashMap<>();
-            byte[] all = new byte[buffer.limit()], body = new byte[0];
+            Map<String, Object> attributes = new HashMap<>();
+            byte[] all = new byte[buffer.limit()], body = null;
             buffer.get(all);
             final String message = new String(all, StringUtil.CHARSET);
+            debug("Deserializing message \"%s\".", message);
             boolean doBody = false;
             for (final String attribute : message.split(delimiter)) {
                 if (attribute.isEmpty()) {
@@ -170,33 +193,42 @@ public class CMP_Handler extends BasicServiceProvider implements ProtocolHandler
                 String bodyPart = message.substring(bodySep + 2);
                 body = DECODER.decode(bodyPart.getBytes(StringUtil.CHARSET));
             }
-            return construct(session, attributes, body);
+            final SessionInformation info = construct(session, attributes);
+            if (body != null && info instanceof PayloadMessage)
+                ((PayloadMessage)info).setBody(body);
+            return info;
         }
 
-        @Override public @Nullable Information read(final SocketChannel channel)
+        @Override @Nullable public SessionInformation read(final ReadableByteChannel channel)
                 throws IOException {
             if (currentInput == null) {
                 if (currentInputLength == null) {
                     currentInputLength = ByteBuffer.allocate(Integer.BYTES);
                 }
-                if (currentInputLength.hasRemaining())
-                    if (channel.read(currentInputLength) == -1) throw new EOFException();
+                if (currentInputLength.hasRemaining()) if (channel.read(currentInputLength) == -1)
+                    throw new EOFException(
+                            String.format("%d more bytes to read", currentInputLength.remaining()));
                 if (currentInputLength.hasRemaining()) return null;
                 currentInputLength.flip();
-                currentInput = ByteBuffer.allocate(currentInputLength.getInt());
+                final int bufferLength = currentInputLength.getInt();
+                currentInput = ByteBuffer.allocate(bufferLength);
+                debug("Length of receive buffer: %d bytes.", bufferLength);
+                currentInputLength = null;
             }
-            if (channel.read(currentInput) == -1) throw new EOFException();
-            Information result = null;
+            if (channel.read(currentInput) == -1) throw new EOFException(
+                    String.format("%d more bytes to read", currentInput.remaining()));
+            SessionInformation result = null;
             if (!currentInput.hasRemaining()) {
                 currentInput.flip();
                 result = deserialize(getSession(), currentInput);
+                currentInput = null;
             }
             return result;
         }
 
-        @SuppressWarnings("unchecked") @Nullable @Override
-        public <V> V decode(final GenericType<? super V> type, @Nullable final byte[] data) {
-            return data == null ? null : (V)TypeConverter.to(type).unmarshal(data);
+        @Nullable @SuppressWarnings("unchecked") @Override
+        public <V> V decode(final GenericType<V> type, @Nullable final byte[] data) {
+            return data == null ? null : TypeConverter.to(type).unmarshal(data);
         }
 
         @Nullable @Override
@@ -205,84 +237,75 @@ public class CMP_Handler extends BasicServiceProvider implements ProtocolHandler
         }
     }
 
-    Information construct(final Session session, final Map<String, String> attributes,
-            final byte[] body) throws InvalidDataException {
-        Information result = null;
-        final String from$ = attributes.remove(ATTR_FROM);
-        final Sender sender = bus.sender(Path.of(from$));
-        List<Recipient> recipientList = new ArrayList<>();
-        for (String to$ : attributes.remove(ATTR_TO).split(PROP_RECIPIENT_SEPARATOR.value())) {
-            recipientList.add(bus.recipient(Path.of(to$)));
-        }
-        Recipient[] recipients = recipientList.toArray(new Recipient[recipientList.size()]);
-        final String reference$ = attributes.remove(ATTR_REFERENCE);
-        if (reference$ != null) { // response, request or voucher
-            final UUID reference;
-            try {
-                reference = UUID.fromString(reference$);
-            } catch (IllegalArgumentException e) {
-                throw new InvalidDataException(TEXT_FAILED_TO_DECODE_REFERENCE.resolve(reference$),
-                        e);
+    /**
+     * Constructs a new instance of session information from the specified attribute map in the
+     * context of the specified session.
+     *
+     * @param session    the session context.
+     * @param attributes the attribute map.
+     * @return a kind of information.
+     */
+    SessionInformation construct(final Session session, final Map<String, Object> attributes) {
+        RecipientResolver.register(bus);
+        try {
+            final String session$ = (String)attributes.get(PROP_SESSION);
+            if (session$ != null) {
+                final UUID sessionId = TypeConverter.to(UUID.class).decode(session$);
+                Session inSession =
+                        Session.lookup(sessionId).orElseGet(() -> PROXY_SESSION.create(sessionId));
             }
-            final String answer$ = attributes.remove(ATTR_ANSWER);
-            if (answer$ != null) { // response
-                final Answer answer;
-                try {
-                    answer = Answer.valueOf(answer$);
-                } catch (IllegalArgumentException e) {
-                    throw new InvalidDataException(TEXT_FAILED_TO_DECODE_ANSWER.resolve(answer$),
-                            e);
+            final String klass$ = (String)attributes.get(PROP_CLASS);
+            if (klass$ != null) try {
+                Class<?> klass = Class.forName(klass$);
+                if (SessionInformation.class.isAssignableFrom(klass)) {
+                    return (SessionInformation)klass.getConstructor(Map.class)
+                                                    .newInstance(attributes);
                 }
-                Object arg = null;
-                switch (answer) {
-                    case OK:
-                        arg = body;
-                        break;
-                    case KO:
-                        final String problem$ = attributes.remove(ATTR_PROBLEM);
-                        if (problem$ != null) {
-                            arg = new RequestFailedException(problem$);
-                        }
-                        break;
-                    case CN:
-                        break;
-                }
-                result = new BasicResponse(session, reference, answer, arg, sender, recipients);
-            } else { // request or voucher
-                String command = attributes.remove(ATTR_COMMAND);
-                result = new NetworkRequest(session, command, attributes, body, sender, recipients);
+            } catch (ClassNotFoundException | IllegalAccessException | InstantiationException |
+                    NoSuchMethodException | InvocationTargetException e) {
+                // fall through, but log anyway:
+                warn(e, TEXT_FAILED_TO_INSTANTIATE, klass$);
             }
-        } else { // event or message
-            final String type$ = attributes.remove(ATTR_TYPE);
-            EventType type;
-            try {
-                type = EventType.valueOf(type$);
-            } catch (IllegalArgumentException e) {
-                throw new InvalidDataException(TEXT_FAILED_TO_DECODE_EVENT_TYPE.resolve(type$), e);
+            debug("Deserializing object with attributes %s", attributes);
+            final String ref = (String)attributes.get(Response.PROP_REFERENCE);
+            if (ref != null) {
+                debug("Reference: %s", ref);
+                return RESPONSE.create(attributes);
             }
-            switch (type) {
-                case MESSAGE:
-                    result = new NetworkMessage(session, attributes, body, sender, recipients);
-                    break;
-                case NOTIFICATION:
-                    result = new NetworkEvent(session, attributes, body, sender);
-                    break;
+            final String eventType = (String)attributes.get(Event.PROP_EVENT_TYPE);
+            if (eventType != null) {
+                debug("Event Type: %s", eventType);
+                return EVENT.create(attributes);
             }
+            final String command = (String)attributes.get(NetworkRequest.PROP_COMMAND);
+            if (command != null) {
+                debug("Command: %s", command);
+                return NETREQUEST.create(attributes);
+            }
+            final String reqstate = (String)attributes.get(Request.PROP_REQUEST_STATE);
+            if (reqstate != null) {
+                debug("Request State: ", reqstate);
+                return REQUEST.create(attributes);
+            }
+            return INFORMATION.create(attributes);
+        } finally {
+            RecipientResolver.unregister(bus);
         }
-        return result;
     }
 
     String formatKey(final String key) {
-        StringBuilder collector = new StringBuilder(128);
-        for (int i = 0, is = key.length(); i < is; ++i) {
-            char c = key.charAt(i);
-            if (Character.isUpperCase(c)) collector.append(' ').append(c);
-            else collector.append(Character.toUpperCase(c));
-        }
-        return collector.toString().trim();
+//        StringBuilder collector = new StringBuilder(128);
+//        for (int i = 0, is = key.length(); i < is; ++i) {
+//            char c = key.charAt(i);
+//            if (Character.isUpperCase(c)) collector.append(' ');
+//            collector.append(Character.toUpperCase(c));
+//        }
+//        return collector.toString().trim();
+        return key;
     }
 
     String formatValue(final Object value) {
         return StringUtil.represent(value);
     }
+
 }

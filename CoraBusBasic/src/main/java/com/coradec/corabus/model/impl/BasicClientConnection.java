@@ -23,13 +23,12 @@ package com.coradec.corabus.model.impl;
 import static java.nio.channels.SelectionKey.*;
 
 import com.coradec.corabus.model.ClientConnection;
-import com.coradec.coracom.model.Information;
+import com.coradec.corabus.view.NetworkProtocol;
 import com.coradec.coracom.model.SessionEvent;
-import com.coradec.coracore.time.Duration;
+import com.coradec.coracom.model.SessionInformation;
 import com.coradec.coracore.trouble.UnimplementedOperationException;
 
 import java.net.URI;
-import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 
 /**
@@ -38,19 +37,16 @@ import java.nio.channels.SocketChannel;
 @SuppressWarnings("ClassHasNoToStringMethod")
 public class BasicClientConnection extends AbstractNetworkConnection implements ClientConnection {
 
-    private final Duration staleConnectionTimeout;
-
-    public BasicClientConnection(final Selector selector, final SocketChannel client,
-            final URI target, final Duration staleConnectionTimeout) {
-        super(selector, client, OP_READ | OP_WRITE, target);
-        this.staleConnectionTimeout = staleConnectionTimeout;
+    public BasicClientConnection(final SocketChannel client, final NetworkProtocol protocol,
+            final URI target) {
+        super(client, protocol, target, OP_READ | OP_WRITE);
     }
 
     @Override protected void eventReceived(final SessionEvent event) {
-
+        throw new UnimplementedOperationException();
     }
 
-    @Override protected void infoReceived(final Information info) {
+    @Override protected void infoReceived(final SessionInformation info) {
         throw new UnimplementedOperationException();
     }
 

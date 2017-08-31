@@ -47,4 +47,12 @@ public class URIgin implements Origin {
     @Override public String toString() {
         return ClassUtil.toString(this);
     }
+
+    @Override public boolean equals(final Object o) {
+        return o instanceof URIgin && ((URIgin)o).toURI().equals(toURI());
+    }
+
+    @Override public int hashCode() {
+        return location != null ? location.hashCode() : 0;
+    }
 }

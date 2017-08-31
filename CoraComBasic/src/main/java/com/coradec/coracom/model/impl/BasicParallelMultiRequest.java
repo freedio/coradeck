@@ -27,9 +27,10 @@ import com.coradec.coracom.model.Information;
 import com.coradec.coracom.model.ParallelMultiRequest;
 import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Request;
-import com.coradec.coracom.model.Sender;
 import com.coradec.coracore.annotation.Implementation;
+import com.coradec.coracore.annotation.Internal;
 import com.coradec.coracore.annotation.Nullable;
+import com.coradec.coracore.model.Origin;
 
 import java.util.Arrays;
 import java.util.List;
@@ -43,6 +44,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @SuppressWarnings("ClassHasNoToStringMethod")
 @Implementation
+@Internal
 public class BasicParallelMultiRequest extends BasicRequest implements ParallelMultiRequest {
 
     private final Queue<Request> requests = new ConcurrentLinkedQueue<>();
@@ -50,27 +52,27 @@ public class BasicParallelMultiRequest extends BasicRequest implements ParallelM
     private final AtomicInteger count = new AtomicInteger();
 
     /**
-     * Initializes a new instance of BasicParallelMultiRequest with the specified sender and list of
-     * recipients.
+     * Initializes a new instance of BasicParallelMultiRequest with the specified sender and
+     * recipient.
      *
-     * @param sender     the sender.
-     * @param recipients the list of recipients
+     * @param sender    the sender.
+     * @param recipient the recipient.
      */
-    public BasicParallelMultiRequest(final Sender sender, final Recipient... recipients) {
-        super(sender, recipients);
+    public BasicParallelMultiRequest(final Origin sender, final Recipient recipient) {
+        super(sender, recipient);
     }
 
     /**
-     * Initializes a new instance of BasicParallelMultiRequest with the specified sender, list of
-     * recipients and a couple of sub-requests.
+     * Initializes a new instance of BasicParallelMultiRequest with the specified sender, recipient
+     * and a couple of sub-requests.
      *
-     * @param requests   the requests to execute.
-     * @param sender     the sender.
-     * @param recipients the list of recipients
+     * @param sender    the sender.
+     * @param recipient the recipient.
+     * @param requests  the requests to execute.
      */
-    public BasicParallelMultiRequest(final List<Request> requests, final Sender sender,
-            final Recipient... recipients) {
-        super(sender, recipients);
+    public BasicParallelMultiRequest(final Origin sender, final Recipient recipient,
+            final List<Request> requests) {
+        super(sender, recipient);
         this.requests.addAll(requests);
     }
 
@@ -100,9 +102,8 @@ public class BasicParallelMultiRequest extends BasicRequest implements ParallelM
     }
 
     @Override public Request and(@Nullable final Request request) {
-        return request == null ? this : isComplete() ? new BasicParallelMultiRequest(
-                Arrays.asList(this, request), getSender(), getRecipientList())
-                                                     : addRequest(request);
+        return request == null ? this : isComplete() ? new BasicParallelMultiRequest(getOrigin(),
+                getRecipient(), Arrays.asList(this, request)) : addRequest(request);
     }
 
     private Request addRequest(final Request request) {

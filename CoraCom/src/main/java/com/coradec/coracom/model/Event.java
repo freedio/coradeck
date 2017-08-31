@@ -25,4 +25,7 @@ package com.coradec.coracom.model;
  */
 public interface Event extends Information {
 
+    String PROP_OCCURRED = "Occurred";
+    String PROP_EVENT_TYPE = "EventType";
+
 }

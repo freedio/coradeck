@@ -23,6 +23,7 @@ package com.coradec.coracore.model;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.util.ClassUtil;
 
+import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -32,15 +33,7 @@ import java.util.stream.Stream;
 /**
  * ​​Representation of a parametrized type.
  */
-public final class GenericType<T> implements Representable, ParameterizedType {
-
-    private final Class<T> type;
-    private final Type[] parameters;
-
-    private GenericType(final Class<T> type, final Type... parameters) {
-        this.type = type;
-        this.parameters = parameters;
-    }
+public final class GenericType<T> implements Representable, ParameterizedType, Serializable {
 
     /**
      * Creates a new parametrized type based on the specified class with the specified parameter
@@ -52,16 +45,26 @@ public final class GenericType<T> implements Representable, ParameterizedType {
      * @return a new parametrized type.
      */
     @SuppressWarnings("unchecked") public static <X> GenericType<X> of(final Class<? super X> type,
-                                                                       Class<?>... parameters) {
+            Class<?>... parameters) {
         return new GenericType(type, parameters);
     }
 
+    private final Class<T> type;
+    private final Type[] parameters;
+
+    private GenericType(final Class<T> type, final Type... parameters) {
+        this.type = type;
+        this.parameters = parameters;
+    }
+
     @Override public String represent() {
+        String typeParameters = Stream.of(parameters)
+                                      .map(ClassUtil::nameOf)
+                                      .collect(Collectors.joining(",", "<", ">"));
+        if ("<>".equals(typeParameters)) typeParameters = "";
         return String.format("%s%s", //
                 ClassUtil.nameOf(type), //
-                Stream.of(parameters)
-                      .map(ClassUtil::nameOf)
-                      .collect(Collectors.joining(",", "<", ">")));
+                typeParameters);
     }
 
     @Override public String toString() {
@@ -95,6 +98,20 @@ public final class GenericType<T> implements Representable, ParameterizedType {
 
     public boolean isInstance(final @Nullable Object value) {
         return type.isInstance(value);
+    }
+
+    /**
+     * Casts the specified object to this generic type.
+     *
+     * @param o the object.
+     * @return the object, cast to this generic type.
+     */
+    public T cast(final Object o) {
+        if (!type.isInstance(o)) throw new ClassCastException(
+                String.format("(%s)%s", represent(), o.getClass().getName()));
+        o.getClass().getTypeParameters();
+        //noinspection unchecked
+        return (T)o;
     }
 
 }

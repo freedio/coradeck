@@ -68,7 +68,7 @@ public class BasicException extends RuntimeException {
      * @param problem the underlying problem.
      */
     public BasicException(@Nullable final Throwable problem) {
-        super(problem);
+        initCause(problem);
     }
 
     /**

@@ -29,13 +29,13 @@ import java.util.Collection;
  */
 public class MultiException extends BasicException {
 
-    private final Collection<Exception> causes;
+    private final Collection<? extends Throwable> causes;
 
-    public MultiException(final Collection<Exception> causes) {
+    public MultiException(final Collection<? extends Throwable> causes) {
         this.causes = causes;
     }
 
-    @ToString public Collection<Exception> getCauses() {
+    @ToString public Collection<? extends Throwable> getCauses() {
         return this.causes;
     }
 

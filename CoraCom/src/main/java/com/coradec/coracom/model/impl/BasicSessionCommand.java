@@ -21,9 +21,11 @@
 package com.coradec.coracom.model.impl;
 
 import com.coradec.coracom.model.Recipient;
-import com.coradec.coracom.model.Sender;
 import com.coradec.coracom.model.SessionCommand;
+import com.coradec.coracore.model.Origin;
 import com.coradec.corasession.model.Session;
+
+import java.util.Map;
 
 /**
  * ​​Abstract implementation of a session based command.
@@ -31,15 +33,25 @@ import com.coradec.corasession.model.Session;
 public abstract class BasicSessionCommand extends BasicSessionRequest implements SessionCommand {
 
     /**
-     * Initializes a new instance of BasicSessionCommand with the specified sender and list of
-     * recipients in the context of the specified session.
+     * Initializes a new instance of BasicSessionCommand with the specified sender and recipient in
+     * the context of the specified session.
      *
-     * @param session    the session context.
-     * @param sender     the sender.
-     * @param recipients the list of recipients
+     * @param session   the session context.
+     * @param sender    the sender.
+     * @param recipient the recipient.
      */
-    public BasicSessionCommand(final Session session, final Sender sender,
-            final Recipient... recipients) {
-        super(session, sender, recipients);
+    public BasicSessionCommand(final Session session, final Origin sender,
+            final Recipient recipient) {
+        super(session, sender, recipient);
     }
+
+    /**
+     * Initializes a new instance of BasicSessionCommand from the specified property map.
+     *
+     * @param properties the property map.
+     */
+    private BasicSessionCommand(final Map<String, Object> properties) {
+        super(properties);
+    }
+
 }

@@ -20,9 +20,11 @@
 
 package com.coradec.coracom.model;
 
+import com.coradec.coracore.model.Origin;
+
 /**
  * ​An internally asynchronous object.
  */
-public interface Asynchronous extends Sender, Recipient {
+public interface Asynchronous extends Origin, Recipient {
 
 }

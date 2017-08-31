@@ -33,17 +33,18 @@ import com.coradec.coracom.model.Message;
 import com.coradec.coracom.model.ParallelMultiRequest;
 import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Request;
-import com.coradec.coracom.model.Sender;
 import com.coradec.coracom.model.SerialMultiRequest;
 import com.coradec.coracom.state.RequestState;
 import com.coradec.coracom.trouble.RequestCancelledException;
 import com.coradec.coracom.trouble.RequestFailedException;
-import com.coradec.coracore.annotation.Attribute;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Inject;
+import com.coradec.coracore.annotation.Internal;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.model.Factory;
+import com.coradec.coracore.model.GenericType;
+import com.coradec.coracore.model.Origin;
 import com.coradec.coracore.trouble.OperationInterruptedException;
 import com.coradec.coracore.trouble.OperationTimedoutException;
 import com.coradec.coratext.model.LocalizedText;
@@ -51,7 +52,9 @@ import com.coradec.coratext.model.Text;
 
 import java.net.URI;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -69,34 +72,48 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
 
     private static final Text TEXT_MESSAGE_BOUNCED = LocalizedText.define("MessageBounced");
     private static final Text TEXT_NOT_EXECUTING = LocalizedText.define("NotExecuting");
-    @Inject private static Factory<MessageQueue> MQ;
-    @Inject private static Factory<ParallelMultiRequest> PARALLEL_MULTI_REQUEST;
-    @Inject private static Factory<SerialMultiRequest> SERIAL_MULTI_REQUEST;
     private static final Text TEXT_CANNOT_HANDLE_MESSAGE =
             LocalizedText.define("CannotHandleMessage");
 
-    RequestState requestState;
+    @Inject private static Factory<MessageQueue> MQ;
+    @Inject private static Factory<ParallelMultiRequest> PARALLEL_MULTI_REQUEST;
+    @Inject private static Factory<SerialMultiRequest> SERIAL_MULTI_REQUEST;
+
     final Semaphore completion = new Semaphore(0);
-    @Nullable Throwable problem;
     final Set<Observer> completionObservers = new HashSet<>();
     Set<Runnable> successCallbacks = new CopyOnWriteArraySet<>();
     Set<Consumer<Throwable>> failureCallbacks = new CopyOnWriteArraySet<>();
-    final Set<RequestState> states = new HashSet<>();
+
+    private RequestState requestState;
+    final Set<RequestState> states;
+    private @Nullable Throwable problem;
 
     /**
-     * Initializes a new instance of BasicRequest with the specified sender and list of recipients.
+     * Initializes a new instance of BasicRequest with the specified sender and recipient.
      *
-     * @param sender     the sender.
-     * @param recipients the list of recipients
+     * @param sender    the sender.
+     * @param recipient the recipient of the request
      */
-    public BasicRequest(final Sender sender, final Recipient... recipients) {
-        super(sender, recipients);
-        requestState = NEW;
+    public BasicRequest(final Origin sender, final Recipient recipient) {
+        super(sender, recipient);
+        this.requestState = NEW;
+        this.states = new HashSet<>(Collections.singleton(NEW));
+    }
+
+    /**
+     * Initializes a new instance of BasicMessage from the specified property map.
+     *
+     * @param properties the property map.
+     */
+    public BasicRequest(final Map<String, Object> properties) {
+        super(properties);
+        this.requestState = get(RequestState.class, PROP_REQUEST_STATE);
+        this.states = get(GenericType.of(Set.class, RequestState.class), PROP_STATES);
     }
 
     protected void setRequestState(final RequestState state) {
-        this.requestState = state;
-        this.states.add(state);
+        requestState = state;
+        states.add(state);
         if (state == SUCCESSFUL) {
             if (!this.successCallbacks.isEmpty()) {
                 for (final Runnable successCallback : this.successCallbacks) {
@@ -130,7 +147,7 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
     }
 
     private void setRequestState(final RequestState state, @Nullable final Throwable problem) {
-        this.problem = problem;
+        if (problem != null) this.problem = problem;
         setRequestState(state);
     }
 
@@ -145,7 +162,7 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
         }
     }
 
-    @Override @ToString @Attribute("State") public RequestState getRequestState() {
+    @Override @ToString public RequestState getRequestState() {
         return requestState;
     }
 
@@ -154,18 +171,20 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
         return MQ.get().inject(new FailMeCommand(amount, unit, reason));
     }
 
-    @Override @ToString @Attribute public Set<RequestState> getStates() {
+    @Override @ToString public Set<RequestState> getStates() {
         return states;
     }
 
-    @Override @ToString @Attribute public @Nullable Throwable getProblem() {
+    @Override @ToString public @Nullable Throwable getProblem() {
         return problem;
     }
 
     @Override public Request standby() throws InterruptedException, RequestFailedException {
+        long then = System.currentTimeMillis();
         try {
             completion.acquire();
         } finally {
+            debug("On standby for %d ms.", System.currentTimeMillis() - then);
             completion.release();
         }
         if (isFailed()) throw Optional.ofNullable(getProblem())
@@ -177,11 +196,13 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
     @Override public Request standby(final long amount, final TimeUnit unit)
             throws OperationTimedoutException, OperationInterruptedException,
                    RequestFailedException {
+        long then = System.currentTimeMillis();
         try {
             if (!completion.tryAcquire(amount, unit)) throw new OperationTimedoutException();
         } catch (InterruptedException e) {
             throw new OperationInterruptedException();
         } finally {
+            debug("On standby for %d ms.", System.currentTimeMillis() - then);
             completion.release();
         }
         if (isFailed()) throw Optional.ofNullable(getProblem())
@@ -237,13 +258,13 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
     }
 
     @Override public Request andThen(final Request request) {
-        return request == null ? this : SERIAL_MULTI_REQUEST.create(Arrays.asList(this, request),
-                getSender(), getRecipients());
+        return request == null ? this : SERIAL_MULTI_REQUEST.create(getOrigin(), getRecipient(),
+                Arrays.asList(this, request));
     }
 
     @Override public Request and(@Nullable final Request request) {
-        return request == null ? this : PARALLEL_MULTI_REQUEST.create(Arrays.asList(this, request),
-                getSender(), getRecipients());
+        return request == null ? this : PARALLEL_MULTI_REQUEST.create(getOrigin(), getRecipient(),
+                Arrays.asList(this, request));
     }
 
     @Override public Request orElse(final Consumer<Throwable> action) {
@@ -259,7 +280,7 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
     }
 
     @Override public void onMessage(final Message message) {
-        if (message.getSender() == this) {
+        if (message.getOrigin() == this) {
             if (message instanceof Command) {
 //                debug("Executing command %s", message);
                 final Command command = (Command)message;
@@ -270,15 +291,15 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
                     command.fail(e);
                 }
             } else error(TEXT_CANNOT_HANDLE_MESSAGE, message);
-        } else error(TEXT_NOT_EXECUTING, message, message.getSender());
+        } else error(TEXT_NOT_EXECUTING, message, message.getOrigin());
+    }
+
+    @Override public String getRecipientId() {
+        return getRecipient().getRecipientId();
     }
 
     @Override public URI toURI() {
         return URI.create(represent());
-    }
-
-    @Override public void bounce(final Message message) {
-        error(TEXT_MESSAGE_BOUNCED, message);
     }
 
     @Override public boolean notify(final Information info) {
@@ -286,6 +307,7 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
         if (request.isSuccessful()) succeed();
         else if (request.isCancelled()) cancel();
         else if (request.isFailed()) fail(request.getProblem());
+        else return false;
         return true;
     }
 
@@ -293,6 +315,14 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
         return info instanceof RequestCompleteEvent;
     }
 
+    @Override protected void collect() {
+        super.collect();
+        set(PROP_REQUEST_STATE, requestState);
+        set(GenericType.of(Set.class, RequestState.class), PROP_STATES, states);
+        if (problem != null) set(PROP_PROBLEM, problem);
+    }
+
+    @Internal
     private abstract class InternalCommand extends BasicCommand {
 
         /**
@@ -300,7 +330,7 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
          * recipients.
          */
         InternalCommand() {
-            super(BasicRequest.this);
+            super(BasicRequest.this, BasicRequest.this);
         }
 
         @Override public boolean isUrgent() {
@@ -308,6 +338,7 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
         }
     }
 
+    @Internal
     private class AddCompletionObserverCommand extends InternalCommand {
 
         private final Observer observer;
@@ -345,7 +376,7 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
             this.request = request;
         }
 
-        @Override @ToString @Attribute public Request getRequest() {
+        @Override @ToString public Request getRequest() {
             return request;
         }
 
@@ -357,13 +388,13 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
         return (Request)super.renew();
     }
 
+    @Internal
     private class FailMeCommand extends BasicDeferredCommand implements Command, Deferred {
 
         private final Supplier<Exception> reason;
 
-        public FailMeCommand(final long amount, final TimeUnit unit,
-                final Supplier<Exception> reason) {
-            super(amount, unit, BasicRequest.this);
+        public FailMeCommand(final long amount, final TimeUnit unit, final Supplier<Exception> reason) {
+            super(BasicRequest.this, BasicRequest.this, amount, unit);
             this.reason = reason;
         }
 

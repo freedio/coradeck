@@ -61,4 +61,15 @@ public interface MessageQueue {
      */
     void allowShutdown();
 
+    /**
+     * Returns the current value of the shutdown lock count.
+     *
+     * @return the shutdown lock count.
+     */
+    int getShutdownLockCount();
+
+    /**
+     * Forces the shutdown lock count to 0.
+     */
+    void clearShutdownLock();
 }

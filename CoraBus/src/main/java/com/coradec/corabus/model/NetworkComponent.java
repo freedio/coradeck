@@ -21,11 +21,11 @@
 package com.coradec.corabus.model;
 
 import com.coradec.coracom.model.Recipient;
-import com.coradec.coracom.model.Sender;
+import com.coradec.coracore.model.Origin;
 
 /**
  * ​A component designed for network activity.
  */
-public interface NetworkComponent extends BusNode, Sender, Recipient {
+public interface NetworkComponent extends BusNode, Origin, Recipient {
 
 }

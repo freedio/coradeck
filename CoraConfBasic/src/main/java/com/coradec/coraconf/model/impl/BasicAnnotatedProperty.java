@@ -55,4 +55,7 @@ public class BasicAnnotatedProperty extends BasicProperty<String> implements Ann
         return getDefaultValue();
     }
 
+    @Override public String value(final Object... args) {
+        return getDefaultValue();
+    }
 }

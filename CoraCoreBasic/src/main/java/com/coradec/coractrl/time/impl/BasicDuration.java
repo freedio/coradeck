@@ -39,11 +39,11 @@ public class BasicDuration implements Duration {
         this.unit = unit;
     }
 
-    public long getAmount() {
+    @Override public long getAmount() {
         return amount;
     }
 
-    public TimeUnit getUnit() {
+    @Override public TimeUnit getUnit() {
         return unit;
     }
 
@@ -53,5 +53,17 @@ public class BasicDuration implements Duration {
 
     @Override public String toString() {
         return String.format("%d %s", getAmount(), getUnit());
+    }
+
+    @Override public boolean equals(final Object o) {
+        return o instanceof Duration &&
+               ((Duration)o).getAmount() == getAmount() &&
+               ((Duration)o).getUnit() == getUnit();
+    }
+
+    @Override public int hashCode() {
+        int result = (int)(getAmount() ^ (getAmount() >>> 32));
+        result = 31 * result + (getUnit() != null ? getUnit().hashCode() : 0);
+        return result;
     }
 }

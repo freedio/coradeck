@@ -22,9 +22,11 @@ package com.coradec.coradir.model.impl;
 
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.util.ClassUtil;
-import com.coradec.coracore.util.NetworkUtil;
 import com.coradec.coradir.model.Path;
+import com.coradec.coradir.model.TranscendentPath;
+import com.coradec.coradir.trouble.CannotTranscendRelativePathException;
 import com.coradec.coradir.trouble.PathEmptyException;
+import com.coradec.coralog.ctrl.impl.Logger;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -37,16 +39,18 @@ import java.util.stream.Collectors;
  * ​​Basic implementation of a directory path.
  */
 @Implementation
-public class BasicPath implements Path {
+public class BasicPath extends Logger implements Path {
 
     private final List<String> path;
 
     /**
      * Initializes a new instance of BasicPath consisting of the specified atomic name.
+     * <p>
+     * The resulting path will be relative.
      *
      * @param name a single name.
      */
-    public BasicPath(String name) {
+    public BasicPath(final String name) {
         path = new ArrayList<>(Collections.singletonList(name));
     }
 
@@ -55,11 +59,15 @@ public class BasicPath implements Path {
      * their appearance.  If the first element is the empty string, the resulting path will be
      * absolute. If the last element is the empty string, the resulting path will refer to a
      * directory.
+     * <p>
+     * Note that an empty argument list will not create an empty path, but a root.  In order to
+     * create an empty path, use {@code new EmptyPath()};
      *
      * @param names a list of names.
      */
-    public BasicPath(String... names) {
-        path = new ArrayList<>(Arrays.asList(names));
+    public BasicPath(final String... names) {
+        if (names.length == 0) path = new ArrayList<>(Collections.singleton(""));
+        else path = new ArrayList<>(Arrays.asList(names));
     }
 
     /**
@@ -69,8 +77,12 @@ public class BasicPath implements Path {
      *
      * @param names a list of names.
      */
-    public BasicPath(List<String> names) {
+    public BasicPath(final List<String> names) {
         path = new ArrayList<>(names);
+    }
+
+    protected List<String> getPath() {
+        return path;
     }
 
     @Override public String represent() {
@@ -82,14 +94,9 @@ public class BasicPath implements Path {
     }
 
     @Override public URI toURI(final String schema) {
-        StringBuilder collector = new StringBuilder(256);
-        collector.append(schema).append(':');
-        if (isAbsolute()) {
-            collector.append("//");
-            collector.append(NetworkUtil.getCanonicalHostName());
-        }
-        collector.append(represent());
-        return URI.create(collector.toString());
+        String collector = schema + ':' + represent();
+        if (collector.length() == schema.length() + 1) collector += Path.separator();
+        return URI.create(collector);
     }
 
     @Override public boolean isTranscendent() {
@@ -98,6 +105,10 @@ public class BasicPath implements Path {
 
     @Override public boolean isAbsolute() {
         return !path.isEmpty() && path.get(0).isEmpty();
+    }
+
+    @Override public boolean isLocalAbsolute() {
+        return isAbsolute() || path.size() > 1 && path.get(0).isEmpty() && !path.get(1).isEmpty();
     }
 
     @Override public Path add(final String name) {
@@ -124,9 +135,39 @@ public class BasicPath implements Path {
     }
 
     @Override public Path localize() {
-        List<String> newPath = new ArrayList<>(path);
+        final List<String> localized = localized();
+        return localized.isEmpty() ? new EmptyPath() : new BasicPath(localized);
+    }
+
+    protected List<String> localized() {
+        List<String> path = new ArrayList<>(this.path);
         while (!path.isEmpty() && path.get(0).isEmpty()) path.remove(0);
-        return new BasicPath(newPath);
+        return path;
+    }
+
+    @Override public TranscendentPath transcend() {
+        if (!isAbsolute()) throw new CannotTranscendRelativePathException();
+        return new BasicTranscendentPath("", localized());
+    }
+
+    @Override public boolean equals(final Object o) {
+        if (this == o) return true;
+        if (!(o instanceof BasicPath)) return false;
+        final BasicPath basicPath = (BasicPath)o;
+        return getPath().equals(basicPath.getPath());
+    }
+
+    @Override public int hashCode() {
+        return getPath().hashCode();
+    }
+
+    /**
+     * Returns the URI representation of the origin.
+     *
+     * @return the URI representation of the origin.
+     */
+    @Override public URI toURI() {
+        return URI.create(represent());
     }
 
 }

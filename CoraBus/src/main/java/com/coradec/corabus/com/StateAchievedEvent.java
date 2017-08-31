@@ -29,6 +29,9 @@ import com.coradec.coracom.model.Event;
  */
 public interface StateAchievedEvent extends Event {
 
+    String PROP_ACHIEVED_STATE = "AchievedState";
+    String PROP_NODE = "Node";
+
     /**
      * Returns the achieved node state.
      *

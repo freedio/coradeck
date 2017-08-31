@@ -26,8 +26,8 @@ import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.*;
 
 import com.coradec.coracom.model.Recipient;
-import com.coradec.coracom.model.Sender;
 import com.coradec.coracore.annotation.Inject;
+import com.coradec.coracore.model.Origin;
 import com.coradec.corajet.test.CoradeckJUnit4TestRunner;
 import com.coradec.corasession.model.Session;
 import org.junit.Test;
@@ -50,7 +50,7 @@ public class BasicHubTest extends BasicBusTestInfrastructure {
     @Test public void normalSetupAndShutdownWithMemberPreloadingShouldWork()
             throws InterruptedException {
         testee.add(initialSession, "member", member);
-        testNormalSetupAndShutdown("proc2", testee, LOADED, 5);
+        testNormalSetupAndShutdown("proc2", testee, LOADED, 8);
     }
 
     @Test public void normalSetupAndShutdownWithMemberPostloadingShouldWork()
@@ -64,16 +64,16 @@ public class BasicHubTest extends BasicBusTestInfrastructure {
 
     private class LoadMember extends Inbetween {
 
-        @Override protected void execute(final Session session, final Sender sender,
-                final Recipient... recipients) throws InterruptedException {
+        @Override protected void execute(final Session session, final Origin sender,
+                final Recipient recipient) throws InterruptedException {
             testee.add(initialSession, "member", member);
         }
     }
 
     private class WaitAbit extends Inbetween {
 
-        @Override protected void execute(final Session session, final Sender sender,
-                final Recipient... recipients) throws InterruptedException {
+        @Override protected void execute(final Session session, final Origin sender,
+                final Recipient recipient) throws InterruptedException {
             Thread.sleep(1000);
         }
     }

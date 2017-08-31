@@ -33,7 +33,8 @@ public final class CoraConf {
 
     private static final CoraConf INSTANCE = new CoraConf();
 
-    public static <X, D extends X> Property<X> define(final String context, final String name,
+    public static <X, D extends X> Property<X> define(final @Nullable String context,
+            final String name,
             final GenericType<X> type, @Nullable final D dflt) {
         return INSTANCE.createProperty(context, name, type, dflt);
     }
@@ -49,7 +50,8 @@ public final class CoraConf {
     }
 
     @SuppressWarnings("unchecked")
-    private <X, D extends X> Property<X> createProperty(final Object context, final String name,
+    private <X, D extends X> Property<X> createProperty(final @Nullable Object context,
+            final String name,
             final GenericType<X> type, @Nullable final D dflt) {
         return (Property<X>)property.of(Property.class, type).get(type, context, name, dflt);
     }

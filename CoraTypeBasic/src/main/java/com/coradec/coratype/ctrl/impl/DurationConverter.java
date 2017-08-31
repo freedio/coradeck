@@ -28,6 +28,7 @@ import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.time.Duration;
 import com.coradec.coratype.trouble.TypeConversionException;
 
+import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -35,6 +36,11 @@ import java.util.concurrent.TimeUnit;
  */
 @Implementation(SINGLETON)
 public class DurationConverter extends BasicTypeConverter<Duration> {
+
+    private static final String[] UNITS = {"ns", "μs", "us", "ms", "s", "m", "h", "d"};
+    private static final TimeUnit[] TIMEUNITS = {
+            NANOSECONDS, MICROSECONDS, MICROSECONDS, MILLISECONDS, SECONDS, MINUTES, HOURS, DAYS
+    };
 
     public DurationConverter() {
         super(Duration.class);
@@ -48,12 +54,39 @@ public class DurationConverter extends BasicTypeConverter<Duration> {
         return parse(value);
     }
 
+    /**
+     * Encodes the specified value into a string representation that can be decoded using {@link
+     * #decode(String)}.
+     *
+     * @param value the value to encode.
+     * @return the encoded object.
+     */
+    @Override public String encode(final Duration value) {
+        final TimeUnit unit = value.getUnit();
+        String u = "";
+        for (int i = 0, is = TIMEUNITS.length; i < is; ++i) {
+            if (unit == TIMEUNITS[i]) u = UNITS[i];
+        }
+        return String.format("%d%s", value.getAmount(), u);
+    }
+
     @Override public Duration unmarshal(final byte[] value) throws TypeConversionException {
-        return Duration.of(unmarshalLong(value), MILLISECONDS);
+        Unmarshaller unmar = getUnmarshaller(value);
+        try {
+            return Duration.of(unmar.readLong(), MILLISECONDS);
+        } catch (IOException e) {
+            throw new TypeConversionException(Duration.class);
+        }
     }
 
     @Override public byte[] marshal(final Duration value) {
-        return marshal(value.toMillis());
+        Marshaller mar = getMarshaller();
+        try {
+            mar.writeLong(value.toMillis());
+            return mar.get();
+        } catch (IOException e) {
+            throw new TypeConversionException(Duration.class);
+        }
     }
 
     /**
@@ -65,20 +98,16 @@ public class DurationConverter extends BasicTypeConverter<Duration> {
      * @throws TypeConversionException if the representation failed to be parsed.
      */
     private Duration parse(final String value) throws TypeConversionException {
-        String[] units = {"ns", "μs", "us", "ms", "s", "m", "h", "d"};
-        TimeUnit[] timeunits = {
-                NANOSECONDS, MICROSECONDS, MICROSECONDS, MILLISECONDS, SECONDS, MINUTES, HOURS, DAYS
-        };
-        for (int i = 0, is = min(timeunits.length, timeunits.length); i < is; ++i) {
-            if (value.endsWith(units[i])) {
+        for (int i = 0, is = min(TIMEUNITS.length, TIMEUNITS.length); i < is; ++i) {
+            if (value.endsWith(UNITS[i])) {
                 final long amount;
                 try {
                     amount = Long.parseLong(
-                            value.substring(0, value.length() - units[i].length()).trim());
+                            value.substring(0, value.length() - UNITS[i].length()).trim());
                 } catch (NumberFormatException e) {
                     throw new TypeConversionException(value, Duration.class, e);
                 }
-                return Duration.of(amount, timeunits[i]);
+                return Duration.of(amount, TIMEUNITS[i]);
             }
         }
         throw new TypeConversionException(value, java.time.Duration.class);

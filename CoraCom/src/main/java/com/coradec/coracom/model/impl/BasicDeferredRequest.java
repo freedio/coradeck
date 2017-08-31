@@ -22,13 +22,13 @@ package com.coradec.coracom.model.impl;
 
 import com.coradec.coracom.model.Deferred;
 import com.coradec.coracom.model.Recipient;
-import com.coradec.coracom.model.Sender;
-import com.coradec.coracore.annotation.Attribute;
 import com.coradec.coracore.annotation.ToString;
+import com.coradec.coracore.model.Origin;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -40,26 +40,42 @@ public class BasicDeferredRequest extends BasicRequest implements Deferred {
     private final long executionTime;
 
     /**
-     * Initializes a new instance of BasicDeferredRequest with the specified delay, sender and list
-     * of recipients.
+     * Initializes a new instance of BasicDeferredRequest with the specified delay, sender and
+     * recipient.
      *
-     * @param amount     the amount of delay.
-     * @param unit       the time unit of delay.
-     * @param sender     the sender.
-     * @param recipients the list of recipients
+     * @param amount    the amount of delay.
+     * @param unit      the time unit of delay.
+     * @param sender    the sender.
+     * @param recipient the recipient.
      */
-    public BasicDeferredRequest(final long amount, final TimeUnit unit, final Sender sender,
-            final Recipient... recipients) {
-        super(sender, recipients);
+    public BasicDeferredRequest(final long amount, final TimeUnit unit, final Origin sender,
+            final Recipient recipient) {
+        super(sender, recipient);
         executionTime = System.currentTimeMillis() + unit.toMillis(amount);
+    }
+
+    /**
+     * Initializes a new instance of BasicDeferredRequest from the specified property map.
+     *
+     * @param properties the property map.
+     */
+    private BasicDeferredRequest(final Map<String, Object> properties) {
+        super(properties);
+        executionTime = get(Long.class, PROP_EXECUTION_TIME);
     }
 
     @Override public long getExecutionTime() {
         return executionTime;
     }
 
-    @ToString @Attribute("On") public LocalDateTime getExecutionTimeStamp() {
-        return LocalDateTime.ofInstant(Instant.ofEpochMilli(executionTime), ZoneId.systemDefault());
+    @ToString public LocalDateTime getExecutionTimeStamp() {
+        return LocalDateTime.ofInstant(Instant.ofEpochMilli(getExecutionTime()),
+                ZoneId.systemDefault());
+    }
+
+    @Override protected void collect() {
+        super.collect();
+        set(PROP_EXECUTION_TIME, executionTime);
     }
 
 }

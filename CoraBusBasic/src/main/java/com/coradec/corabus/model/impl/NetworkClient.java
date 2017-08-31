@@ -20,13 +20,17 @@
 
 package com.coradec.corabus.model.impl;
 
-import static java.nio.channels.SelectionKey.*;
-
+import com.coradec.corabus.com.OutboundMessage;
+import com.coradec.corabus.model.Bus;
+import com.coradec.corabus.model.BusNode;
 import com.coradec.corabus.model.ClientConnection;
 import com.coradec.corabus.model.ServerConnection;
+import com.coradec.corabus.protocol.handler.CMP_Handler;
 import com.coradec.corabus.view.NetworkProtocol;
+import com.coradec.coracom.model.SessionMessage;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.collections.HashCache;
+import com.coradec.coradir.model.Path;
 import com.coradec.corasession.model.Session;
 import com.coradec.coratext.model.LocalizedText;
 import com.coradec.coratext.model.Text;
@@ -36,6 +40,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.nio.channels.SocketChannel;
+import java.util.Optional;
 
 /**
  * The network client.
@@ -49,11 +54,33 @@ public class NetworkClient extends AbstractNetworkComponent {
     private static final Text TEXT_NO_PORT = LocalizedText.define("NoPort");
     static final Text TEXT_INVALID_RESOURCE_IDENTIFIER =
             LocalizedText.define("InvalidResourceIdentifier");
+    private static final Text TEXT_MESSAGE_NOT_SENT = LocalizedText.define("MessageNotSent");
 
     @Inject private HashCache<SocketAddress, ClientConnection> connections;
+    @Inject private Bus bus;
 
     public NetworkClient() {
         super(TEXT_CLIENT_DISCONNECTED);
+        addRoute(OutboundMessage.class, this::receiveOutboundMessage);
+    }
+
+    private void receiveOutboundMessage(final OutboundMessage message) {
+        final SessionMessage content = message.getContent();
+        final Path path = message.getPath();
+        final Session session = content.getSession();
+        final Optional<BusNode> target = bus.lookup(session, path);
+        if (target.isPresent() && !(target.get() instanceof SystemBusProxy)) {
+            content.setRecipent(target.get());
+            inject(content.renew());
+        } else {
+            try {
+                final ServerConnection serverConnection =
+                        getServerConnection(session, path.toURI(CMP_Handler.SCHEME));
+                serverConnection.output(message);
+            } catch (IOException e) {
+                error(e, TEXT_MESSAGE_NOT_SENT, message);
+            }
+        }
     }
 
     /**
@@ -75,9 +102,10 @@ public class NetworkClient extends AbstractNetworkComponent {
             final NetworkProtocol protocol = getService(NetworkProtocol.class, protocol$);
             int port = target.getPort();
             if (port < 1) port = protocol.getStandardPort();
-            server.connect(new InetSocketAddress(target.getHost(), port));
-            server.register(getSelector(), OP_CONNECT);
-            add(session, name, result = new BasicServerConnection(getSelector(), server, target));
+            String host = target.getHost();
+            if (host == null || host.isEmpty()) host = "localhost";
+            server.connect(new InetSocketAddress(host, port));
+            add(session, name, result = new BasicServerConnection(server, protocol, target));
         }
         return result;
     }

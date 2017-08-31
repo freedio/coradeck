@@ -20,9 +20,12 @@
 
 package com.coradec.corabus.model;
 
+import com.coradec.coradir.model.Path;
+
 /**
  * ​API of the application bus.
  */
 public interface ApplicationBus extends BusHub {
 
+    Path PATH = Path.of("/app");
 }

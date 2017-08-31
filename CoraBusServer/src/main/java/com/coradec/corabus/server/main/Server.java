@@ -22,7 +22,7 @@ package com.coradec.corabus.server.main;
 
 import com.coradec.corabus.com.impl.BusSystemTerminatedEvent;
 import com.coradec.corabus.model.Bus;
-import com.coradec.corabus.model.impl.ServerConsole;
+import com.coradec.corabus.model.impl.BusConsole;
 import com.coradec.coracom.ctrl.MessageQueue;
 import com.coradec.coracom.ctrl.Observer;
 import com.coradec.coracom.model.Information;
@@ -42,7 +42,7 @@ public final class Server extends Logger implements Observer {
 
     private final String[] args;
     private final Semaphore lock = new Semaphore(0);
-    private ServerConsole serverConsole;
+    private BusConsole busConsole;
     @Inject private Bus bus;
     @Inject private Session session;
 
@@ -57,7 +57,7 @@ public final class Server extends Logger implements Observer {
     private void launch() {
         CMQ.subscribe(this);
         debug("Setting up the bus...");
-        bus.setup();
+        bus.setup(session);
         debug("Bus set up.");
         try {
             lock.acquire();

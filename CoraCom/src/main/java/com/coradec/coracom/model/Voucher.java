@@ -25,7 +25,9 @@ import com.coradec.coracom.trouble.RequestFailedException;
 import com.coradec.coracom.trouble.ValueNotAvailableException;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.model.GenericType;
+import com.coradec.coracore.model.Origin;
 
+import java.io.Serializable;
 import java.util.Optional;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -39,8 +41,12 @@ import java.util.concurrent.TimeoutException;
  */
 public interface Voucher<V> extends Request {
 
-    static <X> Voucher<X> of(Class<X> type, X value, Sender sender, Recipient... recipients) {
-        return new BasicVoucher<>(type, sender, recipients).setValue(value);
+    String PROP_VALUE = "Value";
+    String PROP_RESULT_TYPE = "ResultType";
+
+    static <X extends Serializable> Voucher<X> of(Origin sender, Recipient recipient, Class<X> type,
+            X value) {
+        return new BasicVoucher<>(sender, recipient, type).setValue(value);
     }
 
     /**

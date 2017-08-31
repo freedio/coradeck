@@ -20,11 +20,22 @@
 
 package com.coradec.coratype.ctrl.impl;
 
+import com.coradec.coracore.annotation.NonNull;
 import com.coradec.coracore.annotation.Nullable;
+import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.model.GenericType;
 import com.coradec.coracore.model.Unknown;
+import com.coradec.coracore.util.StringUtil;
 import com.coradec.coratype.ctrl.TypeConverter;
 import com.coradec.coratype.trouble.TypeConversionException;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInput;
+import java.io.DataInputStream;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
+import java.io.IOException;
 
 /**
  * ​​Basic implementation of a type converter.
@@ -38,7 +49,7 @@ public abstract class BasicTypeConverter<T> implements TypeConverter<T> {
      *
      * @param type the target type (required).
      */
-    protected BasicTypeConverter(final GenericType<T> type) {
+    public BasicTypeConverter(final GenericType<T> type) {
         this.type = type;
     }
 
@@ -47,8 +58,12 @@ public abstract class BasicTypeConverter<T> implements TypeConverter<T> {
      *
      * @param type the target type (required).
      */
-    protected BasicTypeConverter(final Class<T> type) {
+    public BasicTypeConverter(final Class<T> type) {
         this(GenericType.of(type));
+    }
+
+    @ToString public GenericType<T> getType() {
+        return type;
     }
 
     /**
@@ -67,80 +82,167 @@ public abstract class BasicTypeConverter<T> implements TypeConverter<T> {
             return decode((String)value);
         }
         throw new TypeConversionException(value != null ? value.getClass() : Unknown.class,
-                String.format("Failed to convert object ‹%s› to type ‹%s›", value, this.type));
+                String.format("Failed to convert object ‹%s› to type ‹%s›", value, type));
     }
 
-    protected byte[] marshal(final long l) {
-        return marshal(l, Long.BYTES);
+    protected Unmarshaller getUnmarshaller(final byte[] value) {
+        return new Unmarshaller(value);
     }
 
-    protected byte[] marshal(final int i) {
-        return marshal(i, Integer.BYTES);
+    protected Marshaller getMarshaller() {
+        return new Marshaller();
     }
 
-    protected byte[] marshal(final short s) {
-        return marshal(s, Short.BYTES);
+    protected byte[] standardMarshal(final T value) {
+        return encode(value).getBytes(StringUtil.CHARSET);
     }
 
-    protected byte[] marshal(final byte b) {
-        return marshal(b, Byte.BYTES);
+    protected T standardUnmarshal(final byte[] value) {
+        return decode(new String(value, StringUtil.CHARSET));
     }
 
-    protected byte[] marshal(final char c) {
-        return marshal(c, Character.BYTES);
-    }
+    @SuppressWarnings("ClassHasNoToStringMethod")
+    protected class Unmarshaller implements DataInput {
 
-    protected byte[] marshal(final boolean x) {
-        return marshal(x ? -1 : 0, 1);
-    }
+        private final DataInputStream extractor;
 
-    protected byte[] marshal(final float f) {
-        return marshal(Float.floatToRawIntBits(f), Integer.BYTES);
-    }
-
-    protected byte[] marshal(final double d) {
-        return marshal(Double.doubleToRawLongBits(d), Long.BYTES);
-    }
-
-    private byte[] marshal(long l, final int bytes) {
-        byte[] buffer = new byte[bytes];
-        for (int i = 0; i < bytes; ++i) {
-            buffer[i] = (byte)(l & 0xff);
-            l >>>= 8;
+        public Unmarshaller(final byte[] value) {
+            extractor = new DataInputStream(new ByteArrayInputStream(value));
         }
-        return buffer;
-    }
 
-    protected long unmarshalLong(final byte[] value) {
-        long result = 0L;
-        for (int i = value.length; i >= 0; --i) {
-            result = result << 8 | value[i] & 0xff;
+        @Override public void readFully(final @NonNull byte[] b) throws IOException {
+            extractor.readFully(b);
         }
-        return result;
+
+        @Override public void readFully(final @NonNull byte[] b, final int off, final int len)
+                throws IOException {
+            extractor.readFully(b, off, len);
+        }
+
+        @Override public int skipBytes(final int n) throws IOException {
+            return extractor.skipBytes(n);
+        }
+
+        @Override public boolean readBoolean() throws IOException {
+            return extractor.readBoolean();
+        }
+
+        @Override public byte readByte() throws IOException {
+            return extractor.readByte();
+        }
+
+        @Override public int readUnsignedByte() throws IOException {
+            return extractor.readUnsignedByte();
+        }
+
+        @Override public short readShort() throws IOException {
+            return extractor.readShort();
+        }
+
+        @Override public int readUnsignedShort() throws IOException {
+            return extractor.readUnsignedShort();
+        }
+
+        @Override public char readChar() throws IOException {
+            return extractor.readChar();
+        }
+
+        @Override public int readInt() throws IOException {
+            return extractor.readInt();
+        }
+
+        @Override public long readLong() throws IOException {
+            return extractor.readLong();
+        }
+
+        @Override public float readFloat() throws IOException {
+            return extractor.readFloat();
+        }
+
+        @Override public double readDouble() throws IOException {
+            return extractor.readDouble();
+        }
+
+        @SuppressWarnings("deprecation") @Override public String readLine() throws IOException {
+            return extractor.readLine();
+        }
+
+        @Override public @NonNull String readUTF() throws IOException {
+            return extractor.readUTF();
+        }
     }
 
-    protected int unmarshalInt(final byte[] value) {
-        return (int)unmarshalLong(value);
-    }
+    @SuppressWarnings("ClassHasNoToStringMethod")
+    protected class Marshaller implements DataOutput {
 
-    protected short unmarshalShort(final byte[] value) {
-        return (short)(value[0] + 256 * value[1]);
-    }
+        private final DataOutputStream inserter;
+        private final ByteArrayOutputStream buffer;
 
-    protected byte unmarshalByte(final byte[] value) {
-        return value[0];
-    }
+        Marshaller() {
+            inserter = new DataOutputStream(buffer = new ByteArrayOutputStream());
+        }
 
-    protected boolean unmarshalBoolean(final byte[] value) {
-        return value[0] != 0;
-    }
+        @Override public void write(final int b) throws IOException {
+            inserter.write(b);
+        }
 
-    protected float unmarshalFloat(final byte[] value) {
-        return Float.intBitsToFloat(unmarshalInt(value));
-    }
+        @Override public void write(final @NonNull byte[] b) throws IOException {
+            inserter.write(b);
+        }
 
-    protected double unmarshalDouble(final byte[] value) {
-        return Double.longBitsToDouble(unmarshalLong(value));
+        @Override public void write(final @NonNull byte[] b, final int off, final int len)
+                throws IOException {
+            inserter.write(b, off, len);
+        }
+
+        @Override public void writeBoolean(final boolean v) throws IOException {
+            inserter.writeBoolean(v);
+        }
+
+        @Override public void writeByte(final int v) throws IOException {
+            inserter.writeByte(v);
+        }
+
+        @Override public void writeShort(final int v) throws IOException {
+            inserter.writeShort(v);
+        }
+
+        @Override public void writeChar(final int v) throws IOException {
+            inserter.writeChar(v);
+        }
+
+        @Override public void writeInt(final int v) throws IOException {
+            inserter.writeInt(v);
+        }
+
+        @Override public void writeLong(final long v) throws IOException {
+            inserter.writeLong(v);
+        }
+
+        @Override public void writeFloat(final float v) throws IOException {
+            inserter.writeFloat(v);
+        }
+
+        @Override public void writeDouble(final double v) throws IOException {
+            inserter.writeDouble(v);
+        }
+
+        @Override public void writeBytes(final @NonNull String s) throws IOException {
+            inserter.writeBytes(s);
+        }
+
+        @Override public void writeChars(final @NonNull String s) throws IOException {
+            inserter.writeChars(s);
+        }
+
+        @Override public void writeUTF(final @NonNull String s) throws IOException {
+            inserter.writeUTF(s);
+        }
+
+        public byte[] get() throws IOException {
+            inserter.flush();
+            return buffer.toByteArray();
+        }
     }
 
 }

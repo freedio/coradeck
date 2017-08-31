@@ -22,9 +22,10 @@ package com.coradec.corabus.com.impl;
 
 import com.coradec.corabus.com.Resumption;
 import com.coradec.coracom.model.Recipient;
-import com.coradec.coracom.model.Sender;
+import com.coradec.coracom.model.Request;
 import com.coradec.coracom.model.impl.BasicSessionRequest;
 import com.coradec.coracore.annotation.Implementation;
+import com.coradec.coracore.model.Origin;
 import com.coradec.corasession.model.Session;
 
 /**
@@ -34,16 +35,26 @@ import com.coradec.corasession.model.Session;
 public class BasicResumption extends BasicSessionRequest implements Resumption {
 
     /**
-     * Initializes a new instance of BasicResumption with the specified sender and list of
-     * recipients in the context of the specified session.
+     * Initializes a new instance of BasicResumption with the specified sender and recipient in the
+     * context of the specified session.
      *
-     * @param session    the session context.
-     * @param sender     the sender.
-     * @param recipients the list of recipients
+     * @param session   the session context.
+     * @param sender    the sender.
+     * @param recipient the recipient.
      */
-    public BasicResumption(final Session session, final Sender sender,
-                           final Recipient... recipients) {
-        super(session, sender, recipients);
+    public BasicResumption(final Session session, final Origin sender, final Recipient recipient) {
+        super(session, sender, recipient);
+    }
+
+    /**
+     * Initializes a new instance of BasicResumption from the specified request in the context of
+     * the specified session.
+     *
+     * @param session the session context.
+     * @param request the request.
+     */
+    private BasicResumption(final Session session, final Request request) {
+        super(session, request);
     }
 
 }

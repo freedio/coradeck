@@ -25,6 +25,7 @@ import static com.coradec.coracore.model.Scope.*;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coratype.trouble.TypeConversionException;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -57,12 +58,34 @@ public class LocalDateConverter extends BasicTypeConverter<LocalDate> {
         }
     }
 
+    /**
+     * Encodes the specified value into a string representation that can be decoded using {@link
+     * #decode(String)}.
+     *
+     * @param value the value to encode.
+     * @return the encoded object.
+     */
+    @Override public String encode(final LocalDate value) {
+        return String.valueOf(value);
+    }
+
     @Override public LocalDate unmarshal(final byte[] value) throws TypeConversionException {
-        return LocalDate.ofEpochDay(unmarshalLong(value));
+        Unmarshaller unmar = getUnmarshaller(value);
+        try {
+            return LocalDate.ofEpochDay(unmar.readLong());
+        } catch (IOException e) {
+            throw new TypeConversionException(LocalDate.class);
+        }
     }
 
     @Override public byte[] marshal(final LocalDate value) {
-        return marshal(value.toEpochDay());
+        Marshaller mar = getMarshaller();
+        try {
+            mar.writeLong(value.toEpochDay());
+            return mar.get();
+        } catch (IOException e) {
+            throw new TypeConversionException(LocalDate.class);
+        }
     }
 
 }

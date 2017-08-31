@@ -25,6 +25,7 @@ import static com.coradec.coracore.model.Scope.*;
 import com.coradec.coracore.model.Scope;
 
 import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
@@ -34,6 +35,7 @@ import java.lang.annotation.Target;
  * <p>
  * If an implementation also has injection points, it should additionally be marked as Component.
  */
+@Inherited
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE})
 public @interface Implementation {

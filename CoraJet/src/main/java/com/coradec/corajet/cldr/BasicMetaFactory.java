@@ -24,6 +24,7 @@ import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.model.Factory;
 import com.coradec.coracore.model.GenericType;
 import com.coradec.coracore.model.MetaFactory;
+import com.coradec.coracore.trouble.ImplementationNotFoundException;
 import com.coradec.coracore.trouble.ObjectInstantiationFailure;
 
 import java.lang.reflect.InvocationTargetException;
@@ -58,7 +59,7 @@ public class BasicMetaFactory<G> implements MetaFactory<G> {
         }
     }
 
-    @Override public Factory<G> get(final GenericType<? super G> genericType) {
+    @Override public Factory<G> get(final GenericType<G> genericType) {
         try {
             return new ImplementationFactory<>(loader, (Class<? super G>)genericType.getRawType(),
                     genericType.getActualTypeArguments());
@@ -78,26 +79,32 @@ public class BasicMetaFactory<G> implements MetaFactory<G> {
         private final Method implement;
 
         ImplementationFactory(final ClassLoader loader, final Class<? super I> klass,
-                              final Type... typeArgs) throws NoSuchMethodException {
+                final Type... typeArgs) throws NoSuchMethodException {
             this.loader = loader;
             //noinspection JavaReflectionMemberAccess
             this.implement = loader.getClass()
-                                   .getMethod("implement", Class.class, List.class, Object[].class);
+                                   .getMethod("implement", Class.class, List.class, Object.class,
+                                           Object[].class);
             this.klass = klass;
             this.typeArgs = Arrays.asList(typeArgs);
         }
 
         @Override public I get(final Object... args) {
             try {
-                return (I)implement.invoke(loader, klass, typeArgs, args);
-            } catch (IllegalAccessException | InvocationTargetException e) {
-                throw new ObjectInstantiationFailure(klass, e);
+                return (I)implement.invoke(loader, klass, typeArgs, null, args);
+            } catch (IllegalAccessException e) {
+                throw new ImplementationNotFoundException(klass, typeArgs, e, args);
+            } catch (InvocationTargetException e) {
+                final Throwable t = e.getTargetException();
+                throw t instanceof ImplementationNotFoundException
+                      ? (ImplementationNotFoundException)t
+                      : new ImplementationNotFoundException(klass, typeArgs, t, args);
             }
         }
 
         @Override public I create(final Object... args) {
             try {
-                return (I)implement.invoke(loader, klass, typeArgs, args);
+                return (I)implement.invoke(loader, klass, typeArgs, null, args);
             } catch (IllegalAccessException | InvocationTargetException e) {
                 throw new ObjectInstantiationFailure(klass, e);
             }

@@ -27,11 +27,13 @@ import com.coradec.coracom.model.Information;
 import com.coradec.coracom.model.MultiRequest;
 import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Request;
-import com.coradec.coracom.model.Sender;
 import com.coradec.coracom.model.SerialMultiRequest;
 import com.coradec.coracore.annotation.Implementation;
+import com.coradec.coracore.annotation.Internal;
+import com.coradec.coracore.model.Origin;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -42,33 +44,34 @@ import java.util.concurrent.Semaphore;
  */
 @SuppressWarnings("ClassHasNoToStringMethod")
 @Implementation
+@Internal
 public class BasicSerialMultiRequest extends BasicRequest implements SerialMultiRequest {
 
     private final Queue<Request> requests = new ConcurrentLinkedQueue<>();
     private final Semaphore sync = new Semaphore(0);
 
     /**
-     * Initializes a new instance of BasicSerialMultiRequest with the specified sender and list of
-     * recipients.
+     * Initializes a new instance of BasicSerialMultiRequest with the specified sender and
+     * recipient.
      *
-     * @param sender     the sender.
-     * @param recipients the list of recipients
+     * @param sender    the sender.
+     * @param recipient the recipient.
      */
-    public BasicSerialMultiRequest(final Sender sender, final Recipient... recipients) {
-        super(sender, recipients);
+    public BasicSerialMultiRequest(final Origin sender, final Recipient recipient) {
+        this(sender, recipient, Collections.emptyList());
     }
 
     /**
-     * Initializes a new instance of BasicSerialMultiRequest with the specified sender, list of
-     * recipients and a couple of sub-requests.
+     * Initializes a new instance of BasicSerialMultiRequest with the specified sender, recipient
+     * and a couple of sub-requests.
      *
-     * @param requests   the requests to execute (in the order of the list).
-     * @param sender     the sender.
-     * @param recipients the list of recipients
+     * @param sender    the sender.
+     * @param recipient the recipient.
+     * @param requests  the requests to execute (in the order of the list).
      */
-    public BasicSerialMultiRequest(final List<Request> requests, final Sender sender,
-            final Recipient... recipients) {
-        super(sender, recipients);
+    public BasicSerialMultiRequest(final Origin sender, final Recipient recipient,
+            final List<Request> requests) {
+        super(sender, recipient);
         this.requests.addAll(requests);
     }
 
@@ -97,9 +100,8 @@ public class BasicSerialMultiRequest extends BasicRequest implements SerialMulti
     }
 
     @Override public Request andThen(final Request request) {
-        return request == null ? this : isComplete() ? new BasicSerialMultiRequest(
-                Arrays.asList(this, request), getSender(), getRecipientList())
-                                                     : addRequest(request);
+        return request == null ? this : isComplete() ? new BasicSerialMultiRequest(getOrigin(),
+                getRecipient(), Arrays.asList(this, request)) : addRequest(request);
     }
 
     private Request addRequest(final Request request) {

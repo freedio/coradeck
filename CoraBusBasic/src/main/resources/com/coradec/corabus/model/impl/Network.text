@@ -1,0 +1,7 @@
+# Localized text base for default locale of class Network
+
+DisconnectionText: Unexpectedly disconnected from network operations!
+ConnectionAcceptable: Connection on %s has become acceptable.
+Connectible: Connection %s has become connectible.
+Readable: Connection %s has become readable.
+Writable: Connection %s has become writable.

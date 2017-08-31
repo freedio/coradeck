@@ -33,7 +33,8 @@ public class ObjectInstantiationFailure extends BasicException {
     private final Class<?> type;
 
     public ObjectInstantiationFailure(final Class<?> type, final @Nullable Throwable problem) {
-        super(problem instanceof InvocationTargetException ? problem.getCause() : problem);
+        super(problem instanceof InvocationTargetException
+              ? ((InvocationTargetException)problem).getTargetException() : problem);
         this.type = type;
     }
 

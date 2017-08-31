@@ -25,6 +25,8 @@ package com.coradec.coracom.model;
  */
 public interface Deferred extends Information {
 
+    String PROP_EXECUTION_TIME = "Executes";
+
     /**
      * Returns the execution time in millis since the epoch.
      *

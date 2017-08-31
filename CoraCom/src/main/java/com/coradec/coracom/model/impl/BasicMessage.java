@@ -22,58 +22,62 @@ package com.coradec.coracom.model.impl;
 
 import static com.coradec.coracom.state.QueueState.*;
 
+import com.coradec.coracom.ctrl.RecipientResolver;
 import com.coradec.coracom.model.Message;
 import com.coradec.coracom.model.Recipient;
-import com.coradec.coracom.model.Sender;
-import com.coradec.coracore.annotation.Attribute;
+import com.coradec.coracom.model.SessionInformation;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.ToString;
+import com.coradec.coracore.model.Origin;
 import com.coradec.coracore.model.State;
-import com.coradec.coracore.util.ClassUtil;
-import com.coradec.coracore.util.CollectionUtil;
+import com.coradec.corasession.model.Session;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * ​​Basic implementation of a message.
  */
-@SuppressWarnings("WeakerAccess")
+@SuppressWarnings({"WeakerAccess", "ClassHasNoToStringMethod"})
 @Implementation
 public class BasicMessage extends BasicEvent implements Message {
 
-    private final Collection<Recipient> recipients;
-    private int deliveries;  // number of remaining deliveries
+    private final boolean urgent;
+    private Recipient recipient;
+    private RecipientResolver resolver;
 
     /**
-     * Initializes a new instance of BasicMessage with the specified sender and set of recipients.
+     * Initializes a new instance of BasicMessage with the specified sender and recipient.
      *
-     * @param sender     the sender.
-     * @param recipients the recipients.
+     * @param sender    the sender.
+     * @param recipient the recipient.
      */
-    private BasicMessage(final Sender sender, final Collection<Recipient> recipients) {
+    public BasicMessage(final Origin sender, final Recipient recipient) {
         super(sender);
-        this.recipients = new HashSet<>(recipients);
-        deliveries = 0; // not yet dispatched
+        this.recipient = recipient;
+        this.urgent = false;
     }
 
     /**
-     * Initializes a new instance of BasicMessage with the specified sender and list of recipients.
+     * Initializes a new instance of BasicMessage from the specified property map.
      *
-     * @param sender     the sender.
-     * @param recipients the list of recipients
+     * @param properties the property map.
      */
-    public BasicMessage(final Sender sender, Recipient... recipients) {
-        this(sender, CollectionUtil.setOf(recipients));
+    public BasicMessage(final Map<String, Object> properties) {
+        super(properties);
+        final Session session = Session.get(
+                UUID.fromString((String)properties.get(SessionInformation.PROP_SESSION)));
+        this.recipient =
+                RecipientResolver.resolveRecipient(session, get(String.class, PROP_RECIPIENT));
+        this.urgent = get(Boolean.class, PROP_URGENT, false);
     }
 
-    @Override @ToString public Collection<Recipient> getRecipients() {
-        return Collections.unmodifiableCollection(recipients);
+    @Override @ToString public Recipient getRecipient() {
+        return recipient;
     }
 
-    @Override public Recipient[] getRecipientList() {
-        return recipients.toArray(new Recipient[recipients.size()]);
+    @Override public void setRecipent(final Recipient recipient) {
+        this.recipient = recipient;
     }
 
     @Override public void onDeliver() throws IllegalStateException {
@@ -81,31 +85,16 @@ public class BasicMessage extends BasicEvent implements Message {
         if (state != ENQUEUED) throw new IllegalStateException(
                 String.format("Message %s has illegal state %s (should be ENQUEUED)", this,
                         state.name()));
-        if (--deliveries == 0) onDelivered();
     }
 
-    @Override public void onDelivered() {
-        final State state = getState();
-        if (state != ENQUEUED) throw new IllegalStateException(
-                String.format("Message %s has illegal state %s (should be ENQUEUED)", this,
-                        state.name()));
-        setState(DELIVERED);
+    @Override @ToString public boolean isUrgent() {
+        return urgent;
     }
 
-    @Override public void setDeliveries(final int recipients) {
-        deliveries = recipients;
-    }
-
-    @Override public String toString() {
-        return ClassUtil.toString(this);
-    }
-
-    @Override @ToString @Attribute("From") public Sender getSender() {
-        return (Sender)getOrigin();
-    }
-
-    @Override @ToString @Attribute public boolean isUrgent() {
-        return false;
+    @Override protected void collect() {
+        super.collect();
+        set(PROP_RECIPIENT, recipient.getRecipientId());
+        set(PROP_URGENT, urgent);
     }
 
 }

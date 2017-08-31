@@ -42,6 +42,6 @@ public interface MetaFactory<G> {
      * @param genericType the generic type.
      * @return a factory for instances of G.
      */
-    Factory<G> get(GenericType<? super G> genericType);
+    Factory<G> get(GenericType<G> genericType);
 
 }

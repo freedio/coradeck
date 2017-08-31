@@ -24,10 +24,9 @@ import com.coradec.corabus.com.impl.ShutdownRequest;
 import com.coradec.corabus.model.Bus;
 import com.coradec.corabus.model.BusNode;
 import com.coradec.coracom.ctrl.MessageQueue;
-import com.coradec.coracom.model.Message;
-import com.coradec.coracom.model.Sender;
 import com.coradec.coraconf.model.Property;
 import com.coradec.coracore.annotation.Inject;
+import com.coradec.coracore.model.Origin;
 import com.coradec.coradir.model.Path;
 import com.coradec.coralog.ctrl.impl.Logger;
 import com.coradec.corasession.model.Session;
@@ -44,7 +43,7 @@ import java.net.URI;
  * Implementation of the common platform for network integration tests.
  */
 @SuppressWarnings({"ProtectedField", "ClassHasNoToStringMethod"})
-public class NetworkIntegrationTestPlatform extends Logger implements Sender {
+public class NetworkIntegrationTestPlatform extends Logger implements Origin {
 
     private static final Property<File> PROP_JAR_LOCATION =
             Property.define("JarLocation", File.class);
@@ -57,6 +56,7 @@ public class NetworkIntegrationTestPlatform extends Logger implements Sender {
     @Inject Bus bus;
     @Inject MessageQueue messageQueue;
     @Inject Session session;
+    boolean started;
     protected Communication communication = new Communication();
 
     protected void launchClientSetup(final Client client) throws Exception {
@@ -78,7 +78,7 @@ public class NetworkIntegrationTestPlatform extends Logger implements Sender {
     }
 
     protected void startExternalBus() throws IOException {
-        if (communication.isOK()) {
+        if (communication.isOK() && (started = !bus.runs())) {
             final File pkg = PROP_JAR_LOCATION.value();
             debug("Server package pkg: \"%s\"", pkg);
             final Process process = Runtime.getRuntime().exec(String.format("java -jar %s", pkg));
@@ -93,9 +93,9 @@ public class NetworkIntegrationTestPlatform extends Logger implements Sender {
                 do {
                     while (in.ready()) stdout.append((char)in.read());
                     while (err.ready()) stderr.append((char)err.read());
-                    if (stdout.toString().contains("Bus system ready.")) ready = true;
+                    if (stdout.toString().contains("Bus ready.")) ready = true;
                     if (stderr.toString().contains("Server failed.")) failed = true;
-                } while (!ready && !failed && System.currentTimeMillis() - then < 10000);
+                } while (!ready && !failed && System.currentTimeMillis() - then < 15000);
                 debug("Stdout: \"%s\"", stdout.toString().replace("\n", "\n\t"));
                 debug("Stderr: \"%s\"", stderr.toString().replace("\n", "\n\t"));
                 if (failed) throw new IOException("Server setup failed!");
@@ -104,12 +104,11 @@ public class NetworkIntegrationTestPlatform extends Logger implements Sender {
         }
     }
 
-    protected void shutdownExternalBus() {
-        messageQueue.inject(new ShutdownRequest(session, this));
-    }
-
-    @Override public void bounce(final Message message) {
-        error(TEXT_MESSAGE_BOUNCED, message);
+    protected void shutdownExternalBus() throws InterruptedException {
+        if (started) {
+            messageQueue.inject(new ShutdownRequest(session, this, bus.recipient(session, "////")));
+            Thread.sleep(5000);
+        }
     }
 
     @Override public URI toURI() {

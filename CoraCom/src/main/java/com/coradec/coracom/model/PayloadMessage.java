@@ -25,13 +25,22 @@ import com.coradec.coracore.annotation.Nullable;
 /**
  * ​A message with a payload (body).
  */
-public interface PayloadMessage {
+public interface PayloadMessage extends Message {
+
+    String PROP_BODY = "Body";
 
     /**
-     * Returns the response body.
+     * Returns the message body.
      *
-     * @return the response body.
+     * @return the message body.
      */
     @Nullable byte[] getBody();
+
+    /**
+     * Sets the message body to the specified payload.
+     *
+     * @param payload the payload.
+     */
+    void setBody(byte[] payload);
 
 }

@@ -30,6 +30,8 @@ import com.coradec.coracom.model.SessionRequest;
  */
 public interface Invitation extends SessionRequest {
 
+    String PROP_NAME = "Name";
+
     /**
      * Returns the name under which the node is invited.
      *

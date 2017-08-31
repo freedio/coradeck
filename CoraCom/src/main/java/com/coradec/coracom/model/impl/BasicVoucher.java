@@ -21,14 +21,15 @@
 package com.coradec.coracom.model.impl;
 
 import com.coradec.coracom.model.Recipient;
-import com.coradec.coracom.model.Sender;
 import com.coradec.coracom.model.Voucher;
 import com.coradec.coracom.trouble.RequestFailedException;
 import com.coradec.coracom.trouble.ValueNotAvailableException;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.model.GenericType;
+import com.coradec.coracore.model.Origin;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -39,57 +40,66 @@ import java.util.concurrent.TimeoutException;
 @SuppressWarnings("ClassHasNoToStringMethod")
 public class BasicVoucher<V> extends BasicRequest implements Voucher<V> {
 
-    private final GenericType<V> type;
     private @Nullable V value;
+    private final GenericType<V> type;
 
     /**
-     * Initializes a new instance of BasicVoucher with the specified type, sender and list of
-     * recipients.
+     * Initializes a new instance of BasicVoucher with the specified type, sender and recipient.
      *
-     * @param sender     the sender.
-     * @param recipients the list of recipients
+     * @param sender    the sender.
+     * @param recipient the recipient.
+     * @param type      the expected type of result.
      */
-    public BasicVoucher(final GenericType<V> type, final Sender sender,
-            final Recipient... recipients) {
-        super(sender, recipients);
+    public BasicVoucher(final Origin sender, final Recipient recipient, final GenericType<V> type) {
+        super(sender, recipient);
         this.type = type;
     }
 
     /**
-     * Initializes a new instance of BasicVoucher with the specified type, sender and list of
-     * recipients.
+     * Initializes a new instance of BasicVoucher with the specified type, sender and recipient.
      *
-     * @param sender     the sender.
-     * @param recipients the list of recipients
+     * @param sender    the sender.
+     * @param recipient the recipient.
+     * @param type      the expected type of result.
      */
-    public BasicVoucher(final Class<V> type, final Sender sender, final Recipient... recipients) {
-        this(GenericType.of(type), sender, recipients);
+    public BasicVoucher(final Origin sender, final Recipient recipient, final Class<V> type) {
+        this(sender, recipient, GenericType.of(type));
     }
 
-    @Override public GenericType<V> getType() {
+    /**
+     * Initializes a new instance of BasicVoucher from the specified property map.
+     *
+     * @param properties the property map.
+     */
+    public BasicVoucher(final Map<String, Object> properties) {
+        super(properties);
+        //noinspection unchecked
+        this.type = (GenericType<V>)get(GenericType.class, PROP_RESULT_TYPE);
+        this.value = lookup(type, PROP_VALUE).orElse(null);
+    }
+
+    @SuppressWarnings("unchecked") @Override public GenericType<V> getType() {
         return type;
     }
 
     @Override public Optional<V> lookup() {
-        return Optional.ofNullable(value);
+        return Optional.ofNullable(getValue());
     }
 
     @Override public V value()
             throws InterruptedException, RequestFailedException, ValueNotAvailableException {
         standby();
-        if (value == null) throw new ValueNotAvailableException();
-        return value;
+        return lookup().orElseThrow(ValueNotAvailableException::new);
     }
 
     @Override public V value(final long amount, final TimeUnit unit)
             throws InterruptedException, TimeoutException, RequestFailedException,
                    ValueNotAvailableException {
         standby(amount, unit);
-        if (value == null) throw new ValueNotAvailableException();
-        return value;
+        return lookup().orElseThrow(ValueNotAvailableException::new);
     }
 
-    @Override @ToString public @Nullable V getValue() {
+    @SuppressWarnings("unchecked") @Override @ToString public @Nullable V getValue() {
         return value;
     }
 
@@ -98,4 +108,9 @@ public class BasicVoucher<V> extends BasicRequest implements Voucher<V> {
         return this;
     }
 
+    @Override protected void collect() {
+        super.collect();
+        set(PROP_RESULT_TYPE, type);
+        if (value != null) set(PROP_VALUE, value);
+    }
 }

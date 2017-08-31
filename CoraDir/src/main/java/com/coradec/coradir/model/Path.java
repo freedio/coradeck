@@ -23,9 +23,15 @@ package com.coradec.coradir.model;
 import com.coradec.coraconf.model.Property;
 import com.coradec.coracore.model.Factory;
 import com.coradec.coracore.model.GenericFactory;
+import com.coradec.coracore.model.Origin;
 import com.coradec.coracore.model.Representable;
+import com.coradec.coradir.trouble.PathEmptyException;
 
+import java.io.Serializable;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * ​Representation of a directory path.
@@ -54,10 +60,13 @@ import java.net.URI;
  * database on the application level that provides the specified table, it will be used; otherwise a
  * database on the machine bus may applicable; if not, the path will be applied to the system
  * bus.</em></dd> </dl>
+ * <p>
+ * Note: transcendent paths are also considered absolute.
  */
-public interface Path extends Representable {
+public interface Path extends Representable, Serializable, Origin {
 
     Factory<Path> PATH = new GenericFactory<>(Path.class);
+    Factory<TranscendentPath> TRANSPATH = new GenericFactory<>(TranscendentPath.class);
     Property<String> PROP_SEPARATOR = Property.define("Separator", String.class, "/");
 
     /**
@@ -67,7 +76,12 @@ public interface Path extends Representable {
      * @return a path.
      */
     static Path of(final String path) {
-        return PATH.create((Object[])(path.split(PROP_SEPARATOR.value())));
+        if (path.startsWith("//")) {
+            List<String> parts = new ArrayList<>(Arrays.asList(path.substring(2).split("/", 2)));
+            String hostname = parts.remove(0);
+            return TRANSPATH.create(hostname, parts);
+        }
+        return PATH.create((Object[])path.split(PROP_SEPARATOR.value()));
     }
 
     /**
@@ -76,8 +90,20 @@ public interface Path extends Representable {
      * @param names the list of names.
      * @return a path.
      */
-    static Path of(String... names) {
+    static Path of(final String... names) {
         return PATH.create((Object)names);
+    }
+
+    /**
+     * Extracts a path from the specified URI.
+     *
+     * @param uri the URI.
+     * @return a path.
+     */
+    static Path of(final URI uri) {
+        if (uri.getHost() != null) return TranscendentPath.of(uri);
+        final String path = uri.getPath();
+        return path == null ? PATH.create() : PATH.create((Object[])path.split("/"));
     }
 
     /**
@@ -86,8 +112,12 @@ public interface Path extends Representable {
      * @param name the name.
      * @return a path.
      */
-    static Path from(String name) {
+    static Path from(final String name) {
         return PATH.create(name);
+    }
+
+    static String separator() {
+        return PROP_SEPARATOR.value();
     }
 
     /**
@@ -111,6 +141,13 @@ public interface Path extends Representable {
      * @return {@code true} if the path is absolute.
      */
     boolean isAbsolute();
+
+    /**
+     * Checks if the path is (machine or local) absolute, but not transcendent.
+     *
+     * @return {@code true} if the path is absolute, but not transcendent.
+     */
+    boolean isLocalAbsolute();
 
     /**
      * Adds the specified name to the path.
@@ -141,7 +178,7 @@ public interface Path extends Representable {
      *
      * @return the head.
      */
-    String head();
+    String head() throws PathEmptyException;
 
     /**
      * Returns this path without its head.
@@ -157,4 +194,10 @@ public interface Path extends Representable {
      */
     Path localize();
 
+    /**
+     * Returns the transcendent representation of the path.
+     *
+     * @return a transcendent path.
+     */
+    TranscendentPath transcend();
 }

@@ -26,4 +26,6 @@ package com.coradec.coracom.model;
  */
 public interface SerialMultiRequest extends MultiRequest {
 
+    String PROP_REQUESTS = "Requests";
+
 }

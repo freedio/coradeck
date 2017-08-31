@@ -53,7 +53,7 @@ public class DynamicFactory<T> {
      * @param genericType the generic type.
      * @return a generic factory.
      */
-    public Factory<T> of(final GenericType<? super T> genericType) {
+    public Factory<T> of(final GenericType<T> genericType) {
         return META_FACTORY.get(genericType);
     }
 

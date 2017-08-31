@@ -21,13 +21,37 @@
 package com.coradec.corasession.model;
 
 import com.coradec.coracore.annotation.ToString;
+import com.coradec.coracore.model.Representable;
+import com.coradec.corasession.trouble.SessionNotFoundException;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
  * ​​Context for an interaction between systems.
  */
-public interface Session {
+public interface Session extends Representable {
+
+    /**
+     * Returns the session with the specified ID.
+     *
+     * @param sessionId the session ID.
+     * @return the session.
+     * @throws SessionNotFoundException if the specified session was not found.
+     */
+    static Session get(UUID sessionId) throws SessionNotFoundException {
+        return Sessions.get(sessionId);
+    }
+
+    /**
+     * Looks up the session with the specified ID.
+     *
+     * @param sessionId the session ID.
+     * @return the session, or {@link Optional#empty()} if no such session exists.
+     */
+    static Optional<Session> lookup(UUID sessionId) {
+        return Sessions.lookup(sessionId);
+    }
 
     /**
      * Returns the session ID.
@@ -35,4 +59,5 @@ public interface Session {
      * @return the session ID.
      */
     @ToString UUID getId();
+
 }

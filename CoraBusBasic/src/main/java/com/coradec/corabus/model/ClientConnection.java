@@ -20,9 +20,11 @@
 
 package com.coradec.corabus.model;
 
+import com.coradec.coracom.ctrl.NetworkConnection;
+
 /**
  * ​A bus node acting as an (outbound) connection to a client.
  */
-public interface ClientConnection extends BusNode {
+public interface ClientConnection extends BusNode, NetworkConnection {
 
 }

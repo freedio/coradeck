@@ -20,11 +20,9 @@
 
 package com.coradec.corabus.com;
 
-import com.coradec.coracom.model.Message;
-
 /**
  * ​Notification about an inbound client connection.
  */
-public interface ConnectionAcceptableEvent extends Message {
+public interface ConnectionAcceptableEvent extends SocketChannelEvent {
 
 }

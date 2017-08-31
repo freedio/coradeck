@@ -22,9 +22,8 @@ package com.coradec.coracom.model.impl;
 
 import com.coradec.coracom.model.Deferred;
 import com.coradec.coracom.model.Recipient;
-import com.coradec.coracom.model.Sender;
-import com.coradec.coracore.annotation.Attribute;
 import com.coradec.coracore.annotation.ToString;
+import com.coradec.coracore.model.Origin;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -40,16 +39,16 @@ public abstract class BasicDeferredCommand extends BasicCommand implements Defer
 
     /**
      * Initializes a new instance of AbstractDeferred Command with the specified delay, sender and
-     * list of recipients.
+     * recipient.
      *
-     * @param amount     the amount of delay.
-     * @param unit       the delay time unit.
-     * @param sender     the sender.
-     * @param recipients the list of recipients
+     * @param sender    the sender.
+     * @param recipient the recipient.
+     * @param amount    the amount of delay.
+     * @param unit      the delay time unit.
      */
-    protected BasicDeferredCommand(final long amount, final TimeUnit unit, final Sender sender,
-            final Recipient... recipients) {
-        super(sender, recipients);
+    protected BasicDeferredCommand(final Origin sender, final Recipient recipient,
+            final long amount, final TimeUnit unit) {
+        super(sender, recipient);
         executionTime = System.currentTimeMillis() + unit.toMillis(amount);
     }
 
@@ -57,7 +56,7 @@ public abstract class BasicDeferredCommand extends BasicCommand implements Defer
         return executionTime;
     }
 
-    @ToString @Attribute("On") public LocalDateTime getExecutionTimeStamp() {
+    @ToString public LocalDateTime getExecutionTimeStamp() {
         return LocalDateTime.ofInstant(Instant.ofEpochMilli(executionTime), ZoneId.systemDefault());
     }
 

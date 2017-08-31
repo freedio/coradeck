@@ -30,5 +30,4 @@ public enum QueueState implements State {
     ENQUEUED,
     DISPATCHED,
     DELIVERED
-
 }

@@ -29,6 +29,8 @@ import com.coradec.coracom.model.Request;
  */
 public interface RequestCompleteEvent extends Event {
 
+    String PROP_REQUEST = "Request";
+
     /**
      * Returns the complete request.
      *

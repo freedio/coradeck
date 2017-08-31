@@ -20,30 +20,20 @@
 
 package com.coradec.corabus.model.impl;
 
-import com.coradec.corabus.com.ConnectableEvent;
-import com.coradec.corabus.com.ConnectionAcceptableEvent;
-import com.coradec.corabus.com.ReadyToReadEvent;
-import com.coradec.corabus.com.ReadyToSendEvent;
 import com.coradec.corabus.model.NetworkComponent;
-import com.coradec.coracom.ctrl.NetworkConnection;
 import com.coradec.coracom.model.Request;
-import com.coradec.coracom.model.impl.BasicMessage;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.trouble.InitializationError;
 import com.coradec.corasession.model.Session;
 import com.coradec.coratext.model.Text;
 
 import java.io.IOException;
-import java.nio.channels.ClosedSelectorException;
-import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.util.Iterator;
 
 /**
  * B​ase class of all network components.
  */
-public abstract class AbstractNetworkComponent extends BasicBusApplication
-        implements NetworkComponent {
+public abstract class AbstractNetworkComponent extends BasicHub implements NetworkComponent {
 
     private Selector selector;
     private final Text disconnectionText;
@@ -66,88 +56,4 @@ public abstract class AbstractNetworkComponent extends BasicBusApplication
         return selector;
     }
 
-    @Override public void run() {
-        while (!Thread.interrupted()) {
-            final int selected;
-            try {
-                selected = selector.select();
-                if (selected != 0) {
-                    for (Iterator<SelectionKey> it = selector.selectedKeys().iterator();
-                         it.hasNext(); ) {
-                        final SelectionKey key = it.next();
-                        if (key.isAcceptable()) onConnectionAcceptable(key);
-                        else if (key.isConnectable()) onConnectable(key);
-                        else if (key.isReadable()) onReadable(key);
-                        else if (key.isWritable()) onWritable(key);
-                        it.remove();
-                    }
-                } else Thread.sleep(10);
-            } catch (ClosedSelectorException e) {
-                info(disconnectionText);
-                // we're done
-                break;
-            } catch (IOException e) {
-                error(e);
-            } catch (InterruptedException e) {
-                break;
-            }
-        }
-    }
-
-    private void onConnectionAcceptable(final SelectionKey key) {
-        final Object attachment = key.attachment();
-        if (attachment instanceof NetworkConnection)
-            inject(new InternalConnectionAcceptableEvent((NetworkConnection)attachment));
-    }
-
-    private void onConnectable(final SelectionKey key) {
-        final Object attachment = key.attachment();
-        if (attachment instanceof NetworkConnection)
-            inject(new InternalConnectableEvent((NetworkConnection)attachment));
-    }
-
-    private void onReadable(final SelectionKey key) {
-        final Object attachment = key.attachment();
-        if (attachment instanceof NetworkConnection)
-            inject(new InternalReadyToReadEvent((NetworkConnection)attachment));
-    }
-
-    private void onWritable(final SelectionKey key) {
-        final Object attachment = key.attachment();
-        if (attachment instanceof NetworkConnection)
-            inject(new InternalReadyToSendEvent((NetworkConnection)attachment));
-    }
-
-    private class InternalConnectableEvent extends BasicMessage implements ConnectableEvent {
-
-        InternalConnectableEvent(final NetworkConnection recipient) {
-            super(AbstractNetworkComponent.this, recipient);
-        }
-
-    }
-
-    private class InternalReadyToReadEvent extends BasicMessage implements ReadyToReadEvent {
-
-        InternalReadyToReadEvent(final NetworkConnection recipient) {
-            super(AbstractNetworkComponent.this, recipient);
-        }
-
-    }
-
-    private class InternalReadyToSendEvent extends BasicMessage implements ReadyToSendEvent {
-
-        InternalReadyToSendEvent(final NetworkConnection recipient) {
-            super(AbstractNetworkComponent.this, recipient);
-        }
-
-    }
-
-    private class InternalConnectionAcceptableEvent extends BasicMessage
-            implements ConnectionAcceptableEvent {
-
-        InternalConnectionAcceptableEvent(final NetworkConnection recipient) {
-            super(AbstractNetworkComponent.this, recipient);
-        }
-
-    }
 }

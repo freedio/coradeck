@@ -33,4 +33,8 @@ public class CoraJetException extends BasicException {
 
     protected CoraJetException() {
     }
+
+    public CoraJetException(final Throwable problem) {
+        super(problem);
+    }
 }

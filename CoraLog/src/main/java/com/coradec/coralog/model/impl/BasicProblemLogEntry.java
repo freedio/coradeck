@@ -51,7 +51,7 @@ public class BasicProblemLogEntry extends BasicLogEntry<String> implements Probl
      * @param textArgs arguments to the explanatory text (optional).
      */
     public BasicProblemLogEntry(final Origin origin, final LogLevel level, final Throwable problem,
-                                final @Nullable Text text, final @Nullable Object... textArgs) {
+            final @Nullable Text text, final @Nullable Object... textArgs) {
         super(origin, level);
         this.text = text;
         this.problem = problem;
@@ -75,7 +75,10 @@ public class BasicProblemLogEntry extends BasicLogEntry<String> implements Probl
     }
 
     @Override public String getContent() {
-        return getExplanation().map(s -> getProblem().getLocalizedMessage() + ": " + s)
+        return getExplanation().map(s -> Optional.ofNullable(getProblem().getMessage())
+                                                 .map(msg -> msg + ": ")
+                                                 .orElse("") + s)
                                .orElse(String.valueOf(getProblem()));
     }
+
 }

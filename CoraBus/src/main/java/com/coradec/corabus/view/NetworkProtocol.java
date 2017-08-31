@@ -20,13 +20,15 @@
 
 package com.coradec.corabus.view;
 
-import com.coradec.coracom.model.Information;
+import com.coradec.coracom.model.SessionInformation;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.model.GenericType;
+import com.coradec.coradir.model.Path;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.ReadableByteChannel;
+import java.util.UUID;
 
 /**
  * Interprets incoming and outgoing messages and the relation between them.
@@ -48,12 +50,15 @@ public interface NetworkProtocol extends BusService {
     String getScheme();
 
     /**
-     * Serializes the specified information into a byte buffer.
+     * Serializes the specified message with the specified id into a byte buffer on behalf of the
+     * specified recipient.
      *
-     * @param info the information to serialize.
+     * @param id        the message ID.
+     * @param info      the message to serialize.
+     * @param recipient the recipient path.
      * @return the serialized information.
      */
-    ByteBuffer serialize(Information info);
+    ByteBuffer serialize(final UUID id, SessionInformation info, final Path recipient);
 
     /**
      * Reads data from the channel and tries to create a kind of information from it.
@@ -66,7 +71,7 @@ public interface NetworkProtocol extends BusService {
      * @return a kind of information, if one could be created, otherwise {@code null}.
      * @throws IOException if the read operation failed.
      */
-    @Nullable Information read(SocketChannel channel) throws IOException;
+    @Nullable SessionInformation read(ReadableByteChannel channel) throws IOException;
 
     /**
      * Decodes the specified response body into a value of the specified type.
@@ -76,7 +81,7 @@ public interface NetworkProtocol extends BusService {
      * @param data the response body, if any.
      * @return the decoded body.
      */
-    @Nullable <V> V decode(GenericType<? super V> type, @Nullable byte[] data);
+    @Nullable <V> V decode(GenericType<V> type, @Nullable byte[] data);
 
     /**
      * Encodes the specified value into a response body of the specified type.

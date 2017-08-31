@@ -20,11 +20,13 @@
 
 package com.coradec.coracom.model.impl;
 
+import com.coradec.coracom.model.Event;
 import com.coradec.coracom.model.SessionEvent;
-import com.coradec.coracore.annotation.Attribute;
-import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.model.Origin;
 import com.coradec.corasession.model.Session;
+
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * ​​Basic implementation of a session based event.
@@ -46,8 +48,39 @@ public class BasicSessionEvent extends BasicEvent implements SessionEvent {
         this.session = session;
     }
 
-    @Override @ToString @Attribute public Session getSession() {
-        return session;
+    /**
+     * Initializes a new instance of BasicSessionEvent from the specified property map.
+     *
+     * @param properties the property map.
+     */
+    public BasicSessionEvent(final Map<String, Object> properties) {
+        super(properties);
+        this.session = Session.get(get(UUID.class, PROP_SESSION));
     }
 
+    /**
+     * Initializes a new instance of BasicSessionEvent from the specified event in the context of
+     * the specified session.
+     *
+     * @param session the session context.
+     * @param event   the event.
+     */
+    public BasicSessionEvent(final Session session, final Event event) {
+        super(event.getProperties());
+        this.session = session;
+    }
+
+    @Override protected void collect() {
+        super.collect();
+        set(PROP_SESSION, session.getId());
+    }
+
+    /**
+     * Returns the session context.
+     *
+     * @return the session context.
+     */
+    @Override public Session getSession() {
+        return session;
+    }
 }

@@ -20,13 +20,23 @@
 
 package com.coradec.coracom.trouble;
 
+import com.coradec.coracore.annotation.ToString;
+import com.coradec.coracore.model.Origin;
+
 /**
  * ​​Indicates an attempt to send a message with an invalid indication of origin.
  */
 public class InvalidOriginException extends NetworkCommunicationException {
 
-    public InvalidOriginException(final String message) {
-        super(message);
+    private final Origin origin;
+
+    public InvalidOriginException(final Origin origin, final String explanation) {
+        super(explanation);
+        this.origin = origin;
+    }
+
+    @ToString public Origin getOrigin() {
+        return origin;
     }
 
 }

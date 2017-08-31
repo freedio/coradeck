@@ -20,7 +20,6 @@
 
 package com.coradec.coracore.util;
 
-import com.coradec.coracore.annotation.Attribute;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.ctrl.RecursiveObjects;
@@ -39,6 +38,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
@@ -428,23 +428,45 @@ public class ClassUtil {
     }
 
     public static int distance(final Class<?> subclass, final Class<?> reference,
-            final List<Type> types) {
+            final List<Type> typeParameters) {
+        if (!reference.isAssignableFrom(subclass)) return -1000;
         final Class<?>[] interfaces = subclass.getInterfaces();
         if (reference.isInterface() && interfaces.length > 0) {
-            return idistance(interfaces, reference, types);
+            return idistance(interfaces, reference);
+        }
+        int parametrizedContribution = 0;
+        if (!typeParameters.isEmpty()) {
+            List<Type> typeArguments = new ArrayList<>();
+            final Type genericSuperclass = subclass.getGenericSuperclass();
+            if (genericSuperclass instanceof ParameterizedType) typeArguments.addAll(
+                    Arrays.asList(((ParameterizedType)genericSuperclass).getActualTypeArguments()));
+            if (typeArguments.size() != typeParameters.size()) parametrizedContribution = -1000;
+            else for (int i = 0, is = typeParameters.size(); i < is; ++i) {
+                final Type typeArg = typeArguments.get(i);
+                Type typePara = typeParameters.get(i);
+                List<Type> typeParaArgs = Collections.emptyList();
+                if (typePara instanceof ParameterizedType) {
+                    typeParaArgs =
+                            Arrays.asList(((ParameterizedType)typePara).getActualTypeArguments());
+                    typePara = ((ParameterizedType)typePara).getRawType();
+                }
+                if (typePara instanceof Class && typeArg instanceof Class)
+                    parametrizedContribution +=
+                            distance((Class<?>)typeArg, (Class<?>)typePara, typeParaArgs) / 10;
+            }
         }
         final Class<?> superclass = subclass.getSuperclass();
         return superclass == reference //
-               ? 0 : superclass == null ? 1000 : 1 + distance(superclass, reference, types);
+               ? 100 : superclass == null ? 0 : 10 - parametrizedContribution +
+                                                distance(superclass, reference, typeParameters);
     }
 
-    private static int idistance(final Class<?>[] subclasses, final Class<?> reference,
-            final List<Type> types) {
+    private static int idistance(final Class<?>[] subclasses, final Class<?> reference) {
         return Stream.of(subclasses)
                      .filter(reference::isAssignableFrom)
-                     .map(sc -> 1 + idistance(sc.getInterfaces(), reference, types))
-                     .min(Comparator.comparingInt(o -> o))
-                     .orElse(1000);
+                     .map(sc -> 1 + idistance(sc.getInterfaces(), reference))
+                     .max(Comparator.comparingInt(o -> o))
+                     .orElse(0);
     }
 
     /**
@@ -484,10 +506,8 @@ public class ClassUtil {
         final Class<?> klass = o.getClass();
         if (klass.isArray()) return result;
         Stream.of(klass.getMethods())
-              .filter(method -> method.getName().matches("^(is|get)[A-Z0-9].+") &&
-                                method.isAnnotationPresent(Attribute.class))
-              .map(method -> new Tuple(attributeName(method.getAnnotation(Attribute.class).value(),
-                      method.getName()), method))
+              .filter(method -> method.getName().matches("^(is|get)[A-Z0-9].+"))
+              .map(method -> new Tuple(propertyName(method.getName()), method))
               .forEach(p -> {
                   final String name = p.get(0);
                   @Nullable Object value;
@@ -499,7 +519,9 @@ public class ClassUtil {
                                       method.setAccessible(true);
                                       return method.invoke(o);
                                   });
-                          result.put(name, value);
+                          if (value instanceof Optional) //noinspection unchecked
+                              value = ((Optional)value).orElse(null);
+                          if (value != null) result.put(name, value);
                       } catch (PrivilegedActionException e) {
                           throw e.getException();
                       }
@@ -508,10 +530,6 @@ public class ClassUtil {
                   }
               });
         return result;
-    }
-
-    private static String attributeName(final String alias, final String methodName) {
-        return alias.isEmpty() ? propertyName(methodName) : alias;
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")

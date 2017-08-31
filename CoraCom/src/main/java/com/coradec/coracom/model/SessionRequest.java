@@ -20,18 +20,26 @@
 
 package com.coradec.coracom.model;
 
+import com.coradec.coracore.model.Factory;
+import com.coradec.coracore.model.GenericFactory;
 import com.coradec.corasession.model.Session;
 
 /**
  * ​A request in the context of a session.
  */
-public interface SessionRequest extends Request {
+public interface SessionRequest extends Request, SessionMessage {
+
+    Factory<SessionRequest> SESSION_REQUEST = new GenericFactory<>(SessionRequest.class);
 
     /**
-     * Returns the session context.
+     * Wraps a request with a session context into a session request.
      *
-     * @return the session context.
+     * @param session the session context.
+     * @param request the request.
+     * @return a session request.
      */
-    Session getSession();
+    static SessionRequest wrap(Session session, Request request) {
+        return SESSION_REQUEST.create(session, request);
+    }
 
 }

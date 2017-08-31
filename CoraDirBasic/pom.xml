@@ -35,11 +35,35 @@
         <dependency>
             <groupId>com.coradec.coradeck</groupId>
             <artifactId>coradir</artifactId>
-            <version>0.3</version>
         </dependency>
         <dependency>
             <groupId>com.coradec.coradeck</groupId>
             <artifactId>coraconf</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.coradec.coradeck</groupId>
+            <artifactId>coralog</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.coradec.coradeck</groupId>
+            <artifactId>corajet</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.coradec.coradeck</groupId>
+            <artifactId>coraconf-basic</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.coradec.coradeck</groupId>
+            <artifactId>coratext-basic</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.coradec.coradeck</groupId>
+            <artifactId>coralog-basic</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

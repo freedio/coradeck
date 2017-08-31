@@ -27,9 +27,9 @@ import static org.hamcrest.CoreMatchers.*;
 import com.coradec.corabus.com.Resumption;
 import com.coradec.corabus.com.Suspension;
 import com.coradec.coracom.model.Recipient;
-import com.coradec.coracom.model.Sender;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.model.Factory;
+import com.coradec.coracore.model.Origin;
 import com.coradec.corajet.test.CoradeckJUnit4TestRunner;
 import com.coradec.corasession.model.Session;
 import org.hamcrest.MatcherAssert;
@@ -71,13 +71,13 @@ public class BasicBusApplicationTest extends BasicBusTestInfrastructure {
 
     private class SuspendAndResumeTest extends Inbetween {
 
-        @Override protected void execute(final Session session, final Sender sender,
-                                         final Recipient... recipients)
+        @Override protected void execute(final Session session, final Origin sender,
+                final Recipient recipient)
                 throws InterruptedException {
-            Suspension suspension = inject(suspensionFactory.create(session, sender, recipients));
+            Suspension suspension = inject(suspensionFactory.create(session, sender, recipient));
             suspension.standby(1, SECONDS)
                       .andThen(() -> MatcherAssert.assertThat(testee.getState(), is(SUSPENDED)));
-            Resumption resumption = inject(resumptionFactory.create(session, sender, recipients));
+            Resumption resumption = inject(resumptionFactory.create(session, sender, recipient));
             resumption.standby(1, SECONDS)
                       .andThen(() -> MatcherAssert.assertThat(testee.getState(), is(STARTED)));
         }

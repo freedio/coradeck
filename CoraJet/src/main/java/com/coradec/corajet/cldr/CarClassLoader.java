@@ -29,6 +29,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.net.URI;
@@ -96,7 +97,7 @@ public class CarClassLoader extends ClassLoader {
             analyze = injectorClass.getMethod("analyzeClass", String.class, byte[].class,
                     Integer.TYPE, Integer.TYPE);
             implement = injectorClass.getMethod("implementationFor", Class.class, List.class,
-                    Object[].class);
+                    Object.class, Object[].class);
             injector = injectorConstructor.newInstance();
             Syslog.info("Analyzing naked resources ...");
             for (final String file : fileList) {
@@ -377,21 +378,19 @@ public class CarClassLoader extends ClassLoader {
      * Returns an implementation of the specified interface with the specified type and construction
      * arguments.
      *
-     * @param <T>   the base type.
      * @param type  the base type selector.
      * @param types type arguments to match with type parameters of a suitable implementation
      *              class.
+     * @param context the object context ('this' of calling class).
      * @param args  constructor arguments.
-     * @return a suitable instance of an implementation class..
+     * @param <T>   the base type.
+     * @return a suitable instance of an implementation class.
      */
     @SuppressWarnings("unchecked") public <T> T implement(final Class<? super T> type,
-            final List<Type> types, Object... args) throws ClassNotFoundException {
+            final List<Type> types, Object context, Object... args)
+            throws ClassNotFoundException, InvocationTargetException, IllegalAccessException {
         if (injector == null) throw new IllegalStateException("No injector!");
-        try {
-            return (T)implement.invoke(injector, type, types, args);
-        } catch (final Exception e) {
-            throw new ClassNotFoundException(type.getName(), e);
-        }
+        return (T)implement.invoke(injector, type, types, context, args);
     }
 
     /**

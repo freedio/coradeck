@@ -57,6 +57,17 @@ public class FileConverter extends BasicTypeConverter<File> {
         return new File(value);
     }
 
+    /**
+     * Encodes the specified value into a string representation that can be decoded using {@link
+     * #decode(String)}.
+     *
+     * @param value the value to encode.
+     * @return the encoded object.
+     */
+    @Override public String encode(final File value) {
+        return value.getPath();
+    }
+
     @Override public File unmarshal(final byte[] value) throws TypeConversionException {
         return decode(new String(value, StringUtil.CHARSET));
     }

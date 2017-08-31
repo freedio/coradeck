@@ -24,12 +24,12 @@ import static java.nio.channels.SelectionKey.*;
 
 import com.coradec.corabus.com.ConnectionAcceptableEvent;
 import com.coradec.corabus.com.Invitation;
+import com.coradec.corabus.com.impl.BasicFocusChangedEvent;
+import com.coradec.corabus.com.impl.BasicKeyProcessedEvent;
 import com.coradec.corabus.view.BusContext;
 import com.coradec.corabus.view.NetworkProtocol;
 import com.coradec.coracom.model.Request;
-import com.coradec.coraconf.model.Property;
 import com.coradec.coracore.annotation.Nullable;
-import com.coradec.coracore.time.Duration;
 import com.coradec.coracore.trouble.InitializationError;
 import com.coradec.corasession.model.Session;
 import com.coradec.coratext.model.LocalizedText;
@@ -51,9 +51,6 @@ public class NetworkServer extends AbstractNetworkComponent {
     private static final Text TEXT_SERVER_DISCONNECTED = LocalizedText.define("ServerDisconnected");
     private static final Text TEXT_CONNECTION_ACCEPTED = LocalizedText.define("ConnectionAccepted");
     private static final Text TEXT_UNKNOWN_SOCKET_TYPE = LocalizedText.define("UnknownSocketType");
-
-    private static final Property<Duration> PROP_STALE_CLIENT_TIMEOUT =
-            Property.define("StaleClientTimeout", Duration.class, null);
 
     private final String protocol$;
     private NetworkProtocol protocol;
@@ -83,10 +80,12 @@ public class NetworkServer extends AbstractNetworkComponent {
     @Override protected @Nullable Request onInitialize(final Session session) {
         final @Nullable Request request = super.onInitialize(session);
         try {
+            final InetSocketAddress endpoint = new InetSocketAddress(port);
+            debug("Opening server socket for accept on %s", endpoint);
             server = ServerSocketChannel.open();
             server.configureBlocking(false);
-            server.socket().bind(new InetSocketAddress(port));
-            server.register(getSelector(), OP_ACCEPT, this);
+            server.socket().bind(endpoint);
+            inject(new BasicFocusChangedEvent(this, server, OP_ACCEPT));
             this.session = session;
             return request;
         } catch (IOException e) {
@@ -100,11 +99,12 @@ public class NetworkServer extends AbstractNetworkComponent {
             if (client != null) {
                 client.configureBlocking(false);
                 final URI uri = uriOf(client);
-                add(session, uri.toString(), new BasicClientConnection(getSelector(), client, uri,
-                        PROP_STALE_CLIENT_TIMEOUT.value()));
+                add(session, uri.toString(), new BasicClientConnection(client, protocol, uri));
             }
         } catch (IOException e) {
             error(e);
+        } finally {
+            inject(new BasicKeyProcessedEvent(this, event.getSelectionKey()));
         }
     }
 

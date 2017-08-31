@@ -21,11 +21,15 @@
 package com.coradec.coracom.model;
 
 import com.coradec.coracom.state.QueueState;
+import com.coradec.coracore.model.GenericType;
 import com.coradec.coracore.model.Origin;
 import com.coradec.coracore.model.State;
+import com.coradec.coracore.trouble.PropertyNotFoundException;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -33,12 +37,81 @@ import java.util.UUID;
  */
 public interface Information extends Serializable {
 
+    String PROP_ORIGIN = "Origin";
+    String PROP_CREATED_AT = "CreatedAt";
+    String PROP_ID = "Id";
+    String PROP_STATE = "State";
+    String PROP_CLASS = "Class";
+
     /**
      * Returns the exact timestamp of creation.
      *
      * @return the creation timestamp.
      */
     LocalDateTime getCreatedAt();
+
+    /**
+     * Returns the property with the specified name, cast or converted to the specified generic
+     * type, if such a property exists.
+     *
+     * @param <T>  the requested property type.
+     * @param type the property type selector.
+     * @param name the property name.
+     * @return the property value, or {@link Optional#empty()} if the property does not exist or has
+     * no value.
+     */
+    <T> Optional<T> lookup(GenericType<T> type, String name);
+
+    /**
+     * Returns the property with the specified name, cast or converted to the specified type, if
+     * such a property exists.
+     *
+     * @param <T>  the requested property type.
+     * @param type the property type selector.
+     * @param name the property name.
+     * @return the property value, or {@link Optional#empty()} if the property does not exist or has
+     * no value.
+     */
+    <T> Optional<T> lookup(Class<T> type, String name);
+
+    /**
+     * Returns the property map of this information.  This map can be fed into the constructor to
+     * copy the information.
+     *
+     * @return the property map of this information.
+     */
+    Map<String, Object> getProperties();
+
+    /**
+     * Returns the property with the specified name, cast or converted to the specified type.
+     *
+     * @param <T>  the requested property type.
+     * @param type the property type selector.
+     * @param name the property name.
+     * @return the property value.
+     */
+    <T> T get(Class<T> type, String name) throws PropertyNotFoundException;
+
+    /**
+     * Returns the property with the specified name, cast or converted to the specified generic
+     * type.
+     *
+     * @param <T>  the requested property type.
+     * @param type the property type selector.
+     * @param name the property name.
+     * @return the property value.
+     */
+    <T> T get(GenericType<T> type, String name) throws PropertyNotFoundException;
+
+    /**
+     * Returns the property with the specified name, cast or converted to the specified type, or the
+     * specified default value if the property is not defined.
+     *
+     * @param type the property type selector.
+     * @param name the property name.
+     * @return the property value.
+     */
+    <T, D extends T> T get(Class<T> type, String name, D dflt);
 
     /**
      * Returns the information processing state.

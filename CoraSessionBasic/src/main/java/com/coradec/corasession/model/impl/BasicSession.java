@@ -24,6 +24,7 @@ import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.util.ClassUtil;
 import com.coradec.corasession.model.Session;
+import com.coradec.corasession.model.Sessions;
 
 import java.util.UUID;
 
@@ -36,7 +37,12 @@ public class BasicSession implements Session {
     private final UUID id;
 
     public BasicSession() {
-        this.id = UUID.randomUUID();
+        this(UUID.randomUUID());
+    }
+
+    protected BasicSession(UUID id) {
+        this.id = id;
+        Sessions.register(id, this);
     }
 
     @Override @ToString public UUID getId() {
@@ -45,5 +51,9 @@ public class BasicSession implements Session {
 
     @Override public String toString() {
         return ClassUtil.toString(this);
+    }
+
+    @Override public String represent() {
+        return id.toString();
     }
 }

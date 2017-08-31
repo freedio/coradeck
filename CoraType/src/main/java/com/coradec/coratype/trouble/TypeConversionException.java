@@ -20,8 +20,10 @@
 
 package com.coradec.coratype.trouble;
 
+import com.coradec.coracore.annotation.NonNull;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
+import com.coradec.coracore.model.GenericType;
 
 /**
  * ​​Indicates a failure to cast, decode or convert a type.
@@ -29,39 +31,53 @@ import com.coradec.coracore.annotation.ToString;
 public class TypeConversionException extends TypeException {
 
     private final String representation;
-    private final Class<?> fromType;
+    private @Nullable Class<?> fromClass;
+    private @Nullable GenericType<?> fromType;
 
-    public TypeConversionException(final Class<?> fromType) {
-        this.fromType = fromType;
+    public TypeConversionException(final @NonNull Class<?> fromType) {
+        this.fromClass = fromType;
         representation = null;
     }
 
-    public TypeConversionException(final Class<?> fromType, final Throwable problem) {
+    public TypeConversionException(final @NonNull Class<?> fromType, final Throwable problem) {
         super(problem);
-        this.fromType = fromType;
+        this.fromClass = fromType;
         representation = null;
     }
 
-    public TypeConversionException(final Class<?> fromType, final String explanation) {
-        super(explanation);
-        this.fromType = fromType;
-        representation = null;
+    public TypeConversionException(final @NonNull Class<?> fromType, final String explanation) {
+        this(null, fromType, explanation);
     }
 
-    public TypeConversionException(final String repr, final Class<?> fromType,
-            final Throwable problem) {
+    public TypeConversionException(final String repr, final @NonNull Class<?> fromType, final Throwable problem) {
         super(problem);
+        this.representation = repr;
+        this.fromClass = fromType;
+    }
+
+    public TypeConversionException(final String repr, final @NonNull GenericType<?> fromType) {
         this.representation = repr;
         this.fromType = fromType;
     }
 
-    public TypeConversionException(final String repr, final Class<?> fromType) {
-        this.fromType = fromType;
-        representation = repr;
+    public TypeConversionException(final String repr, final @NonNull Class<?> fromType) {
+        this.representation = repr;
+        this.fromClass = fromType;
     }
 
-    @ToString public Class<?> getFromType() {
+    public TypeConversionException(final @Nullable String repr, final @NonNull Class<?> fromType,
+            final String explanation) {
+        super(explanation);
+        representation = repr;
+        fromClass = fromType;
+    }
+
+    @Nullable @ToString public GenericType<?> getGenericType() {
         return this.fromType;
+    }
+
+    @Nullable @ToString public Class<?> getType() {
+        return this.fromClass;
     }
 
     @ToString @Nullable public String getRepresentation() {

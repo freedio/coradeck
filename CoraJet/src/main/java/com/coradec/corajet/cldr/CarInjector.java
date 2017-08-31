@@ -26,16 +26,18 @@ import static org.objectweb.asm.Opcodes.*;
 
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Inject;
+import com.coradec.coracore.annotation.NonNull;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.model.Factory;
+import com.coradec.coracore.model.GenericType;
 import com.coradec.coracore.model.InjectionMode;
 import com.coradec.coracore.model.Scope;
-import com.coradec.coracore.trouble.BasicException;
+import com.coradec.coracore.trouble.CannotInstantiateClassFailure;
+import com.coradec.coracore.trouble.ImplementationNotFoundException;
 import com.coradec.coracore.trouble.ObjectInstantiationFailure;
 import com.coradec.coracore.util.ClassUtil;
 import com.coradec.coracore.util.StringUtil;
-import com.coradec.corajet.trouble.ImplementationNotFoundException;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
@@ -47,6 +49,7 @@ import org.objectweb.asm.Opcodes;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -174,7 +177,7 @@ public class CarInjector {
                             return type;
                         }).collect(Collectors.toList());
                         field.setAccessible(true);
-                        field.set(instance, implementationFor(fieldType, typeArgs));
+                        field.set(instance, implementationFor(fieldType, typeArgs, instance));
                         Syslog.debug("Field %s of %s set to %s", name, instance,
                                 StringUtil.toString(field.get(instance)));
                     }
@@ -194,7 +197,7 @@ public class CarInjector {
      * @param instance the instance to finish.
      */
     public static void finish(Object instance) {
-        Syslog.debug(">>> %s.finish()", instance);
+//        Syslog.debug(">>> %s.finish()", instance);
 //        Class<?> klass = instance.getClass();
 //        while (klass.isMemberClass()) ;
         try {
@@ -254,11 +257,11 @@ public class CarInjector {
         Class<?> interfaceClass = ClassUtil.classForDescriptor(interfaceType);
         final List<Type> typeArgs = extractTypeParameters(interfaceType);
         Syslog.debug("i.e. %s%s", interfaceClass.getName(), StringUtil.toString(typeArgs));
-        return implementationFor(interfaceClass, typeArgs);
+        return implementationFor(interfaceClass, typeArgs, null);
     }
 
     public static Object implementationFor(final Class<?> interfaceClass, final List<Type> types,
-            Object... args) throws ObjectInstantiationFailure {
+            @Nullable Object context, Object... args) throws ObjectInstantiationFailure {
         if (Factory.class.isAssignableFrom(interfaceClass)) {
             return new ObjectFactory(types);
         }
@@ -268,25 +271,24 @@ public class CarInjector {
             //noinspection ConstantConditions
             return ics.stream()
                       .filter(ic -> ic.matches(interfaceClass, types))
-                      .sorted(Comparator.comparingInt(ic -> ic.relevanceFor(interfaceClass, types)))
-                      .findFirst()
+                      .sorted(Comparator.comparingInt(o -> o.relevanceFor(interfaceClass, types)))
                       .map(ic -> {
                           try {
                               Syslog.debug("Instantiating %s%s%s",
                                       ClassUtil.nameOf(ic.getEmbeddedClass()),
                                       StringUtil.toString(types, '<', '>'),
                                       StringUtil.toString(args, '(', ')'));
-                              return ic.instantiate(interfaceClass, types, args);
+                              return ic.instantiate(interfaceClass, types, context, args);
+                          } catch (CannotInstantiateClassFailure e) {
+                              return null;
                           } catch (ObjectInstantiationFailure e) {
                               failed[0] = e;
                               return null;
                           }
                       })
                       .filter(Objects::nonNull)
+                      .findFirst()
                       .orElseGet(() -> alternatives(interfaceClass, types, args, failed[0]));
-//                      .orElseThrow(() -> failed[0] != null //
-//                                         ? failed[0] : new ImplementationNotFoundException(
-//                              interfaceClass.getName(), types, args));
         } catch (ObjectInstantiationFailure e) {
             throw e;
         } catch (Exception e) {
@@ -324,8 +326,11 @@ public class CarInjector {
         if (type.isAssignableFrom(List.class)) {
             return (T)Collections.emptyList();
         }
-        if (problem != null) throw BasicException.wrapIfNecessary(problem);
-        throw new ImplementationNotFoundException(type.getName(), types, args);
+        if (problem != null) {
+            Syslog.error("Last error message (not necessarily representative): %s",
+                    problem.toString());
+        }
+        throw new ImplementationNotFoundException(type, types, args);
     }
 
     /**
@@ -409,7 +414,7 @@ public class CarInjector {
                         ((ParameterizedType)genericSuperclass).getActualTypeArguments();
                 if (types.size() == typeArgs.length) {
                     for (int i = 0, is = typeArgs.length; i < is; ++i) {
-                        if (!sameType(types.get(i), typeArgs[i])) return false;
+                        if (!assignable(typeArgs[i], types.get(i))) return false;
                     }
                     return true;
                 }
@@ -417,8 +422,39 @@ public class CarInjector {
             return false;
         }
 
-        private boolean sameType(final Type type, final Type typeArg) {
-            return type.getTypeName().equals(typeArg.getTypeName());
+        private boolean assignable(final Type typePara, final Type TypeArg) {
+            if (typePara instanceof Class) {
+                if (TypeArg instanceof GenericType) {
+                    final GenericType<?> genericType = (GenericType<?>)TypeArg;
+                    return ((Class)typePara).isAssignableFrom((Class<?>)genericType.getRawType()) &&
+                           genericType.getActualTypeArguments().length == 0;
+                }
+                if (TypeArg instanceof Class) {
+                    return ((Class)typePara).isAssignableFrom((Class<?>)TypeArg);
+                }
+            } else if (typePara instanceof ParameterizedType &&
+                       TypeArg instanceof ParameterizedType) {
+                if (((ParameterizedType)typePara).getRawType()
+                                                 .equals(((ParameterizedType)TypeArg).getRawType
+                                                         ())) {
+                    final Type[] typeParaArgs =
+                            ((ParameterizedType)typePara).getActualTypeArguments();
+                    final Type[] typeArgArgs =
+                            ((ParameterizedType)typePara).getActualTypeArguments();
+                    if (typeParaArgs.length == typeArgArgs.length) {
+                        for (int i = 0, is = typeParaArgs.length; i < is; ++i) {
+                            final Type typeParaArg = typeParaArgs[i];
+                            final Type typeArgArg = typeArgArgs[i];
+                            if (typeParaArg instanceof Class &&
+                                typeArgArg instanceof Class &&
+                                ((Class)typeParaArg).isAssignableFrom((Class)typeArgArg))
+                                return true;
+                        }
+                    }
+                }
+                return false;
+            }
+            return TypeArg.getTypeName().equals(typePara.getTypeName());
         }
 
         /**
@@ -433,116 +469,28 @@ public class CarInjector {
          *                                    more of several reasons..
          */
         @SuppressWarnings("unchecked") T instantiate(final Class<?> iface, final List<Type> types,
-                final Object[] values) throws ObjectInstantiationFailure {
+                @Nullable Object context, final Object[] values) throws ObjectInstantiationFailure {
             Syslog.debug("Instantiating %s%s", //
                     klass.getName(), StringUtil.toString(typeParameters)
                                                .replaceFirst("^\\[", "<")
                                                .replaceFirst("]$", ">"));
-            T result = tryFactoryMethod(iface, types, values);
+            T result = tryFactoryMethod(iface, types, context, values);
             if (result != null) return result;
             Scope scope, conScope = null;
             Constructor<?> constructor = null;
             Object[] args = null;
             List<ParameterizedType> parametrized, conPara = null;
-            outer:
             for (final Constructor<?> constr : klass.getConstructors()) {
                 Syslog.trace("Examining constructor %s", constr);
-                scope = this.scope;
-                parametrized = new ArrayList<>();
-                final Type[] paras = constr.getGenericParameterTypes();
-                final Object[] arguments = new Object[paras.length];
-                for (int i = 0, is = paras.length; i < is; i++) {
-                    final Type para = paras[i];
-                    if (para instanceof ParameterizedType) {
-                        ParameterizedType paraType = (ParameterizedType)para;
-                        Syslog.trace("Parameter %d is parametrized type (%s)", i,
-                                StringUtil.toString(para));
-                        if (scope == SINGLETON) scope = PARAMETRIZED;
-                        parametrized.add(paraType);
-                        final Type[] typeArgs = paraType.getActualTypeArguments();
-                        final Type rawType = paraType.getRawType();
-                        if (rawType == Class.class && typeArgs.length == 1) {
-                            Syslog.trace("Found class argument with type args %s and types %s",
-                                    StringUtil.toString(typeArgs), StringUtil.toString(types));
-                            for (final TypeVariable<? extends Class<? super T>> typeParameter :
-                                    typeParameters) {
-                                if (typeArgs[0].getTypeName().equals(typeParameter.getTypeName())) {
-                                    arguments[i] = types.get(i);
-                                }
-                            }
-                            if (arguments[i] == null) {
-                                Syslog.trace("Found class argument %s",
-                                        StringUtil.toString(typeArgs), StringUtil.toString(values));
-                                if (values.length > i && values[i] instanceof Class)
-                                    arguments[i] = values[i];
-                                else continue outer;
-                            }
-                        } else if (rawType instanceof Class) {
-                            Object value;
-                            Class<?> klass = (Class<?>)rawType;
-                            if (values.length > i && klass.isInstance(values[i])) value = values[i];
-                            else if (hasAnnotation(constr, i, Inject.class)) try {
-                                value = implementationFor(klass, Collections.EMPTY_LIST);
-                            } catch (ImplementationNotFoundException | ObjectInstantiationFailure
-                                    e) {
-                                continue outer;
-                            }
-                            else continue outer;
-                            arguments[i] = value;
-                        } else {
-                            Syslog.warn("Found parametrized type %s with type args %s → skipping " +
-                                        "constructor", para, StringUtil.toString(typeArgs));
-                            continue outer;
-                        }
-                    } else if (para instanceof Class<?>) {
-                        Syslog.trace("Parameter %d is %s", i, para);
-                        Class<?> klass = (Class<?>)para;
-                        if (klass.isPrimitive()) klass = ClassUtil.getBoxingType(klass);
-                        Object value;
-                        if (klass.isArray() && i + 1 == is && klass.isInstance(values))
-                            value = values;
-                        else if (values.length > i && klass.isInstance(values[i]))
-                            value = values[i];
-                        else if (hasAnnotation(constr, i, Inject.class)) try {
-                            value = implementationFor(klass, Collections.EMPTY_LIST);
-                        } catch (ImplementationNotFoundException | ObjectInstantiationFailure e) {
-                            continue outer;
-                        }
-                        else if (klass.isArray()) {
-                            value = Array.newInstance(klass.getComponentType(), 0);
-                        } else continue outer;
-                        arguments[i] = value;
-                    } else if (para instanceof TypeVariable) {
-                        TypeVariable<?> typeVar = (TypeVariable<?>)para;
-                        Syslog.trace("Parameter %d is %s", i, ClassUtil.toString(typeVar, typeVar));
-                        // For the time being we assume any object argument will do;
-                        // TODO check the next argument against the bounds of this type variable;
-                        // if the argument is not assignment compatible, continue outer.
-                        // The following code fragments represent an approach:
-//                        typeVar.getBounds();
-//                        for (final TypeVariable<? extends Class<? super T>> typeParameter :
-//                                typeParameters) {
-//                            if (typeArgs[0].getTypeName().equals(typeParameter.getTypeName())) {
-//                                arguments[i] = types.get(i);
-//                            }
-//                        }
-//                        continue outer;
-                        Object value;
-                        if (values.length > i) value = values[i];
-                        else continue outer;
-                        arguments[i] = value;
-                    } else {
-                        Syslog.warn("Found unrecognizable parameter type %s",
-                                ClassUtil.toString(para, para));
-                        continue outer;
-                    }
-                }
-                if (args == null || arguments.length > args.length) {
+                final Match match =
+                        match(constr.getGenericParameterTypes(), values, types, this.scope, context,
+                                constr);
+                if (match != null && (args == null || match.getArgs().length > args.length)) {
                     // override best choice so far (if any) only if new one has more arguments.
                     constructor = constr;
-                    conPara = parametrized;
-                    args = arguments;
-                    conScope = scope;
+                    conPara = match.getParametrizedTypes();
+                    args = match.getArgs();
+                    conScope = match.getScope();
                 }
             }
             if (constructor == null) {
@@ -557,7 +505,7 @@ public class CarInjector {
                             "type args %s and arguments %s!", StringUtil.toString(types),
                             StringUtil.toString(values));
                 }
-                throw new ObjectInstantiationFailure(klass, message);
+                throw new CannotInstantiateClassFailure(klass, message);
             }
             try {
                 Syslog.trace("Using %s with %s in scope %s", constructor, StringUtil.toString(args),
@@ -612,103 +560,36 @@ public class CarInjector {
                             "overhead for this solution, particularly with singletons.", message,
                             Factory.class.getName(), message.replaceFirst("^.+\\.", ""));
                 }
-                throw new ObjectInstantiationFailure(klass, e);
+                Throwable t = (e instanceof InvocationTargetException)
+                              ? ((InvocationTargetException)e).getTargetException() : e;
+                Syslog.error(t);
+                throw t instanceof ObjectInstantiationFailure ? (ObjectInstantiationFailure)t
+                                                              : new ObjectInstantiationFailure(
+                                                                      klass, t);
             }
         }
 
-        private T tryFactoryMethod(final Class<?> iface, final List<Type> types,
-                final Object[] values) {
+        @Nullable private T tryFactoryMethod(final Class<?> iface, final List<Type> types,
+                @Nullable final Object context, final Object[] values) {
             Scope scope, conScope = null;
             Method factoryMethod = null;
             Object[] args = null;
             List<ParameterizedType> parametrized, conPara = null;
-            outer:
             for (final Method method : klass.getMethods()) {
                 if (!Modifier.isStatic(method.getModifiers())) continue;
                 if (!method.isAnnotationPresent(com.coradec.coracore.annotation.Constructor.class))
                     continue;
                 if (!iface.isAssignableFrom(method.getReturnType())) continue;
                 Syslog.trace("Examining factory method %s", method);
-                scope = this.scope;
-                parametrized = new ArrayList<>();
-                final Type[] paras = method.getGenericParameterTypes();
-                final Object[] arguments = new Object[paras.length];
-                for (int i = 0, is = paras.length; i < is; i++) {
-                    final Type para = paras[i];
-                    if (para instanceof ParameterizedType) {
-                        ParameterizedType paraType = (ParameterizedType)para;
-                        Syslog.trace("Parameter %d is parametrized type (%s)", i,
-                                StringUtil.toString(para));
-                        if (scope == SINGLETON) scope = PARAMETRIZED;
-                        parametrized.add(paraType);
-                        final Type[] typeArgs = paraType.getActualTypeArguments();
-                        if (paraType.getRawType() == Class.class && typeArgs.length == 1) {
-                            Syslog.trace("Found class argument with type args %s and types %s",
-                                    StringUtil.toString(typeArgs), StringUtil.toString(types));
-                            for (final TypeVariable<? extends Class<? super T>> typeParameter :
-                                    typeParameters) {
-                                if (typeArgs[0].getTypeName().equals(typeParameter.getTypeName())) {
-                                    arguments[i] = types.get(i);
-                                }
-                            }
-                            if (arguments[i] == null) {
-                                Syslog.trace("Found class argument %s",
-                                        StringUtil.toString(typeArgs), StringUtil.toString(values));
-                                if (values.length > i && values[i] instanceof Class)
-                                    arguments[i] = values[i];
-                                else continue outer;
-                            }
-                        } else {
-                            Syslog.warn("Found parametrized type %s with type args %s → skipping " +
-                                        "constructor", para, StringUtil.toString(typeArgs));
-                            continue outer;
-                        }
-                    } else if (para instanceof Class<?>) {
-                        Syslog.trace("Parameter %d is %s", i, para);
-                        Class<?> klass = (Class<?>)para;
-                        if (klass.isPrimitive()) klass = ClassUtil.getBoxingType(klass);
-                        Object value;
-                        if (values.length > i && klass.isInstance(values[i])) value = values[i];
-                        else if (hasAnnotation(method, i, Inject.class)) try {
-                            value = implementationFor(klass, Collections.EMPTY_LIST);
-                        } catch (ImplementationNotFoundException | ObjectInstantiationFailure e) {
-                            continue outer;
-                        }
-                        else if (klass.isArray()) {
-                            value = Array.newInstance(klass.getComponentType(), 0);
-                        } else continue outer;
-                        arguments[i] = value;
-                    } else if (para instanceof TypeVariable) {
-                        TypeVariable<?> typeVar = (TypeVariable<?>)para;
-                        Syslog.trace("Parameter %d is %s", i, ClassUtil.toString(typeVar, typeVar));
-                        // For the time being we assume any object argument will do;
-                        // TODO check the next argument against the bounds of this type variable;
-                        // if the argument is not assignment compatible, continue outer.
-                        // The following code fragments represent an approach:
-//                        typeVar.getBounds();
-//                        for (final TypeVariable<? extends Class<? super T>> typeParameter :
-//                                typeParameters) {
-//                            if (typeArgs[0].getTypeName().equals(typeParameter.getTypeName())) {
-//                                arguments[i] = types.get(i);
-//                            }
-//                        }
-//                        continue outer;
-                        Object value;
-                        if (values.length > i) value = values[i];
-                        else continue outer;
-                        arguments[i] = value;
-                    } else {
-                        Syslog.warn("Found unrecognizable parameter type %s",
-                                ClassUtil.toString(para, para));
-                        continue outer;
-                    }
-                }
-                if (args == null || arguments.length > args.length) {
+                final Match match =
+                        match(method.getGenericParameterTypes(), values, types, this.scope, context,
+                                method);
+                if (match != null && (args == null || match.getArgs().length > args.length)) {
                     // override best choice so far (if any) only if new one has more arguments.
                     factoryMethod = method;
-                    conPara = parametrized;
-                    args = arguments;
-                    conScope = scope;
+                    conPara = match.getParametrizedTypes();
+                    args = match.getArgs();
+                    conScope = match.getScope();
                 }
             }
             if (factoryMethod == null) {
@@ -747,15 +628,162 @@ public class CarInjector {
             }
         }
 
-        private boolean hasAnnotation(final Constructor<?> constr, int i,
-                final Class<? extends Annotation> annotation) {
-            for (final Annotation a : constr.getParameterAnnotations()[i]) {
-                if (annotation.isInstance(a)) return true;
+        private @Nullable Match match(final Type[] paras, final Object[] values,
+                final List<Type> types, final Scope scope, @Nullable final Object context,
+                final Executable method) {
+            final Match result = new Match();
+            result.setScope(scope);
+            int p = 0, ps = paras.length, pp;
+            int v = 0, vs = values.length, vlast = vs - 1;
+            int a = 0, as = paras.length;
+            int t = 0, ts = types.size();
+            final Object[] args = new Object[as];
+            final List<ParameterizedType> ptypes = new ArrayList<>();
+            while (p < ps && a < as) {
+                final Type para = paras[pp = p++];
+                if (para instanceof ParameterizedType) {
+                    final ParameterizedType paraType = (ParameterizedType)para;
+                    Syslog.trace("Parameter %d is parametrized type (%s)", pp,
+                            StringUtil.toString(para));
+                    if (scope == SINGLETON) result.setScope(PARAMETRIZED);
+                    ptypes.add(paraType);
+                    final Type[] typeArgs = paraType.getActualTypeArguments();
+                    final Type rawType = paraType.getRawType();
+                    if (rawType == Class.class && typeArgs.length == 1) {
+                        Syslog.trace("Found class argument with type args %s and types %s",
+                                StringUtil.toString(typeArgs), StringUtil.toString(types));
+                        for (final TypeVariable<? extends Class<? super T>> typeParameter :
+                                typeParameters) {
+                            if (typeArgs[0].getTypeName().equals(typeParameter.getTypeName())) {
+                                if (v < vs && values[v] == types.get(t)) ++v;
+                                if (t < ts) args[a++] = types.get(t++);
+                            }
+                        }
+                        if (args[pp] == null) {
+                            Syslog.trace("Found class argument %s", StringUtil.toString(typeArgs),
+                                    StringUtil.toString(args));
+                            if (v < vs && values[v] instanceof Class) args[a++] = values[v++];
+                            else return null;
+                        }
+                    } else if (rawType instanceof Class) {
+                        Object x;
+                        Class<?> klass = (Class<?>)rawType;
+                        if (v < vs && klass.isInstance(values[v])) x = values[v++];
+                        else if (hasAnnotation(method, pp, Inject.class)) try {
+                            x = implementationFor(klass, Collections.EMPTY_LIST, null);
+                        } catch (ObjectInstantiationFailure e) {
+                            return null;
+                        }
+                        else return null;
+                        args[a++] = x;
+                    } else {
+                        Syslog.warn("Found parametrized type %s with type args %s → skipping " +
+                                    "constructor", para, StringUtil.toString(typeArgs));
+                        return null;
+                    }
+                } else if (para instanceof Class<?>) {
+                    Syslog.trace("Parameter %d is %s", pp, para);
+                    Class<?> klass = (Class<?>)para;
+                    if (klass.isPrimitive()) klass = ClassUtil.getBoxingType(klass);
+                    Object value;
+                    final boolean varargs = klass.isArray() && p == ps;
+                    //noinspection ConstantConditions,LoopConditionNotUpdatedInsideLoop
+                    do {
+                        if (varargs) {
+                            if (v == vs) {
+                                value = Array.newInstance(klass.getComponentType(), 0);
+                                break;
+                            }
+                            if (v == vlast && klass.getComponentType().isInstance(values[v])) {
+                                value = Array.newInstance(klass.getComponentType(), 1);
+                                ((Object[])value)[0] = values[v++];
+                                break;
+                            }
+                            if (v == vlast && klass.isInstance(values[v])) {
+                                value = values[v++];
+                                break;
+                            }
+                            if (isTypeOf(klass.getComponentType(), values, v, vs)) {
+                                value = Array.newInstance(klass.getComponentType(), vs - v);
+                                //noinspection SuspiciousSystemArraycopy
+                                System.arraycopy(values, v, value, 0, vs - v);
+                                v = vs;
+                                break;
+                            }
+                        }
+                        if (v < vs &&
+                            (klass.isInstance(values[v]) ||
+                             values[v] == null &&
+                             !method.getAnnotatedParameterTypes()[a].isAnnotationPresent(
+                                     NonNull.class))) {
+                            value = values[v++];
+                            break;
+                        }
+                        if (pp == 0 && klass.isInstance(context)) {
+                            value = context;
+                            break;
+                        }
+                        if (hasAnnotation(method, pp, Inject.class)) try {
+                            value = implementationFor(klass, Collections.EMPTY_LIST, null);
+                            break;
+                        } catch (ObjectInstantiationFailure e) {
+                            return null;
+                        }
+                        if (klass.isArray()) {
+                            value = Array.newInstance(klass.getComponentType(), 0);
+                            break;
+                        }
+                        return null;
+                    } while (false);
+                    args[a++] = value;
+                } else if (para instanceof TypeVariable) {
+                    TypeVariable<?> typeVar = (TypeVariable<?>)para;
+                    Syslog.trace("Parameter %d is %s", pp, ClassUtil.toString(typeVar, typeVar));
+                    // For the time being we assume any object argument will do;
+                    // TODO check the next argument against the bounds of this type variable;
+                    // if the argument is not assignment compatible, continue outer.
+                    // The following code fragments represent an approach:
+//                        typeVar.getBounds();
+//                        for (final TypeVariable<? extends Class<? super T>> typeParameter :
+//                                typeParameters) {
+//                            if (typeArgs[0].getTypeName().equals(typeParameter.getTypeName())) {
+//                                args[a++] = types.get(t++);
+//                            }
+//                        }
+//                        return null;
+                    Object value;
+                    if (v < vs) value = values[v++];
+                    else return null;
+                    args[a++] = value;
+                } else {
+                    Syslog.warn("Found unrecognizable parameter type %s",
+                            ClassUtil.toString(para, para));
+                    return null;
+                }
             }
-            return false;
+            while (t < ts) {
+                if (v < vs && values[v] == types.get(t)) ++v;
+                ++t;
+            }
+            if (a == as && p == ps && v == vs) {
+                result.setArgs(args);
+                result.setParametrizedTypes(ptypes);
+                return result;
+            }
+//            Syslog.info("args: %d/%d, typeparas: %d/%d, values: %d/%d", a, as, p, ps, v, vs);
+//            if (v < vs) Syslog.info("values: %s", StringUtil.toString(values));
+            return null;
         }
 
-        private boolean hasAnnotation(final Method factoryMethod, int i,
+        private boolean isTypeOf(final Class<?> klass, final Object[] values, final int from,
+                final int to) {
+            for (int i = from; i < to; ++i) {
+                if (!klass.isInstance(values[i])) return false;
+            }
+            return true;
+        }
+
+        private boolean hasAnnotation(final Executable factoryMethod, int i,
                 final Class<? extends Annotation> annotation) {
             for (final Annotation a : factoryMethod.getParameterAnnotations()[i]) {
                 if (annotation.isInstance(a)) return true;
@@ -804,12 +832,12 @@ public class CarInjector {
         @Override public T get(final Object... args) {
             T result;
             try {
-                result = (T)implementationFor(rawType, typeArgs, args);
+                result = (T)implementationFor(rawType, typeArgs, null, args);
                 Syslog.debug("ObjectFactory(%s%s).get(%s) → %s", ClassUtil.nameOf(getRawType()),
                         typeArgs.isEmpty() ? "" : typeArgs, ClassUtil.toString(args, args),
                         StringUtil.toString(result));
                 return result;
-            } catch (ImplementationNotFoundException | ObjectInstantiationFailure e) {
+            } catch (ObjectInstantiationFailure e) {
                 Syslog.error(e);
                 throw e;
             }
@@ -818,12 +846,12 @@ public class CarInjector {
         @Override public T create(final Object... args) {
             T result;
             try {
-                result = (T)implementationFor(rawType, typeArgs, args);
+                result = (T)implementationFor(rawType, typeArgs, null, args);
                 Syslog.debug("ObjectFactory(%s%s).create(%s) → %s", ClassUtil.nameOf(getRawType()),
                         typeArgs.isEmpty() ? "" : typeArgs, ClassUtil.toString(args, args),
                         StringUtil.toString(result));
                 return result;
-            } catch (ImplementationNotFoundException | ObjectInstantiationFailure e) {
+            } catch (ObjectInstantiationFailure e) {
                 Syslog.error(e);
                 throw e;
             }
@@ -831,6 +859,38 @@ public class CarInjector {
 
         @Override public String toString() {
             return ClassUtil.toString(this);
+        }
+    }
+
+    @SuppressWarnings("ClassHasNoToStringMethod")
+    private static class Match {
+
+        private Scope scope;
+        private Object[] args;
+        private List<ParameterizedType> parametrizedTypes;
+
+        Scope getScope() {
+            return scope;
+        }
+
+        Object[] getArgs() {
+            return args;
+        }
+
+        List<ParameterizedType> getParametrizedTypes() {
+            return parametrizedTypes;
+        }
+
+        void setScope(final Scope scope) {
+            this.scope = scope;
+        }
+
+        void setArgs(final Object[] args) {
+            this.args = args;
+        }
+
+        void setParametrizedTypes(final List<ParameterizedType> parametrizedTypes) {
+            this.parametrizedTypes = parametrizedTypes;
         }
     }
 

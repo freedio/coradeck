@@ -27,7 +27,7 @@ import java.util.Map;
 /**
  * ​Generalize information coming across the wire.
  */
-public interface NetworkInformation {
+public interface NetworkInformation extends SessionInformation {
 
     /**
      * Returns additional attributes by name in their generic form as String.

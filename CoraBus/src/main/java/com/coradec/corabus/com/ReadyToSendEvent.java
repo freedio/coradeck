@@ -20,11 +20,9 @@
 
 package com.coradec.corabus.com;
 
-import com.coradec.coracom.model.Message;
-
 /**
  * ​Notification about an opportunity to send data.
  */
-public interface ReadyToSendEvent extends Message {
+public interface ReadyToSendEvent extends SocketChannelEvent {
 
 }

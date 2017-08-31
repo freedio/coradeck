@@ -21,36 +21,71 @@
 package com.coradec.coracom.model.impl;
 
 import com.coradec.coracom.model.Recipient;
-import com.coradec.coracom.model.Sender;
+import com.coradec.coracom.model.Request;
 import com.coradec.coracom.model.SessionRequest;
-import com.coradec.coracore.annotation.Attribute;
-import com.coradec.coracore.annotation.ToString;
+import com.coradec.coracore.annotation.Implementation;
+import com.coradec.coracore.model.Origin;
 import com.coradec.corasession.model.Session;
+
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * ​​Basic implementation of a session based request.
  */
 @SuppressWarnings("ClassHasNoToStringMethod")
+@Implementation
 public class BasicSessionRequest extends BasicRequest implements SessionRequest {
 
     private final Session session;
 
     /**
-     * Initializes a new instance of BasicSessionRequest with the specified sender and list of
-     * recipients in the context of the specified session.
+     * Initializes a new instance of BasicSessionRequest with the specified sender and recipient in
+     * the context of the specified session.
      *
-     * @param session    the session context.
-     * @param sender     the sender.
-     * @param recipients the list of recipients
+     * @param session   the session context.
+     * @param sender    the sender.
+     * @param recipient the recipient.
      */
-    public BasicSessionRequest(final Session session, final Sender sender,
-                               final Recipient... recipients) {
-        super(sender, recipients);
+    public BasicSessionRequest(final Session session, final Origin sender,
+            final Recipient recipient) {
+        super(sender, recipient);
         this.session = session;
     }
 
-    @Override @ToString @Attribute public Session getSession() {
-        return session;
+    /**
+     * Initializes a new instance of BasicSessionRequest from the specified property map.
+     *
+     * @param properties the property map.
+     */
+    public BasicSessionRequest(final Map<String, Object> properties) {
+        super(properties);
+        this.session = Session.get(get(UUID.class, PROP_SESSION));
     }
 
+    /**
+     * Initializes a new instance of BasicSessionRequest from the specified request in the context
+     * of the specified session.
+     *
+     * @param session the session context.
+     * @param request the request.
+     */
+    public BasicSessionRequest(final Session session, final Request request) {
+        super(request.getProperties());
+        this.session = session;
+    }
+
+    @Override protected void collect() {
+        set(PROP_SESSION, session.getId());
+        super.collect();
+    }
+
+    /**
+     * Returns the session context.
+     *
+     * @return the session context.
+     */
+    @Override public Session getSession() {
+        return session;
+    }
 }

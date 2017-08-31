@@ -1,4 +1,0 @@
-# Localized text base for default locale of class ServerConsole
-
-ServerConsoleTitle: "Server Console"
-ShutdownActionName: Shutdown

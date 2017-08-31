@@ -36,13 +36,12 @@ import com.coradec.corabus.view.Member;
 import com.coradec.corabus.view.impl.BasicBusContext;
 import com.coradec.coracom.model.Message;
 import com.coradec.coracom.model.ParallelMultiRequest;
-import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Request;
 import com.coradec.coracom.model.SerialMultiRequest;
 import com.coradec.coracom.model.impl.BasicSessionCommand;
 import com.coradec.coracom.model.impl.BasicSessionRequest;
-import com.coradec.coracore.annotation.Attribute;
 import com.coradec.coracore.annotation.Inject;
+import com.coradec.coracore.annotation.Internal;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.model.Factory;
@@ -145,7 +144,7 @@ public class BasicHub extends BasicNode implements BusHub {
         replaceRoute(AddMemberRequest.class, this::addMember);
         Request result = null;
         if (candidates.isEmpty()) setState(LOADED);
-        else result = inject(SERIALMRQ.create(candidates, this)).andThen(
+        else result = inject(SERIALMRQ.create(this, this, candidates)).andThen(
                 () -> execute(() -> setState(LOADED)));
         return result;
     }
@@ -187,9 +186,8 @@ public class BasicHub extends BasicNode implements BusHub {
         final Map<String, Member> members = getMembers();
         final int memberCount = members.size();
         debug("Unloading %d member%s.", memberCount, memberCount == 1 ? "" : "s");
-        final Request result = memberCount == 0 ? null : inject(
-                PARALLELMRQ.create(members.values().stream().map(Member::dismiss).collect(toList()),
-                        this, new Object[] {}));
+        final Request result = memberCount == 0 ? null : inject(PARALLELMRQ.create(this, this,
+                members.values().stream().map(Member::dismiss).collect(toList())));
         setState(UNLOADED);
         return result;
     }
@@ -221,8 +219,8 @@ public class BasicHub extends BasicNode implements BusHub {
         final Member member = getMembers().get(head);
         if (member == null)
             throw new MemberNotFoundException(path.represent().replace(head, '→' + head + '←'));
-        if (member instanceof BusHub)
-            return ((BusHub)member.getNode()).lookup(session, path.tail());
+        final BusNode node = member.getNode();
+        if (node instanceof BusHub) return ((BusHub)node).lookup(session, path.tail());
         return Optional.empty();
     }
 
@@ -271,10 +269,8 @@ public class BasicHub extends BasicNode implements BusHub {
             if (path.isName()) {
                 final String name = path.represent();
                 final Invitation invitation =
-                        inject(INVITATION.create(session, name, new InternalBusContext(session),
-                                this, new Recipient[] {
-                                        request.getNode()
-                                }));
+                        inject(INVITATION.create(session, this, request.getNode(), name,
+                                new InternalBusContext(session)));
                 invitation.andThen(() -> inject(new AddMemberCommand(session, name,
                         invitation.getMember())).reportCompletionTo(request)).orElse(request::fail);
             } else {
@@ -396,6 +392,7 @@ public class BasicHub extends BasicNode implements BusHub {
         }
     }
 
+    @Internal
     private class AddMemberRequest extends BasicSessionRequest {
 
         private final Path path;
@@ -410,28 +407,29 @@ public class BasicHub extends BasicNode implements BusHub {
          * @param node    the member node.
          */
         AddMemberRequest(final Session session, final Path path, final BusNode node) {
-            super(session, BasicHub.this);
+            super(session, BasicHub.this, BasicHub.this);
             this.path = path;
             this.node = node;
         }
 
-        @ToString @Attribute public Path getPath() {
+        @ToString public Path getPath() {
             return path;
         }
 
-        @ToString @Attribute public BusNode getNode() {
+        @ToString public BusNode getNode() {
             return node;
         }
 
     }
 
+    @Internal
     private class AddMemberCommand extends BasicSessionCommand {
 
         private final String name;
         private final Member member;
 
         AddMemberCommand(final Session session, final String name, final Member member) {
-            super(session, BasicHub.this);
+            super(session, BasicHub.this, BasicHub.this);
             this.name = name;
             this.member = member;
         }

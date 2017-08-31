@@ -1,0 +1,6 @@
+# Localized text base for default locale of class BusConsole
+
+ServerConsoleTitle: "Bus Console"
+ShutdownActionName: Shutdown
+ClearShutdownLock: Unlock
+

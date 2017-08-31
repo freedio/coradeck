@@ -24,16 +24,17 @@ import static java.time.temporal.ChronoUnit.*;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.*;
 
-import com.coradec.coracore.annotation.Attribute;
-import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.trouble.ResourceFileNotFoundException;
 import org.junit.Test;
 
+import java.lang.reflect.Type;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
@@ -49,22 +50,13 @@ public class ClassUtilTest {
         assertThat(result, is("(" + s + ")"));
     }
 
-    @Test public void testToStringWithoutAnnotatedAttributes() {
+    @Test public void testToString() {
         Object testee = new UnannotatedObject();
         final String s = testee.getClass().getName().replace('$', '.');
 
         final String result = ClassUtil.toString(testee);
 
         assertThat(result, is("(" + s + ")"));
-    }
-
-    @Test public void testToStringWithAnnotatedAttributes() {
-        final Object testee = new AnnotatedObject();
-        final String s = testee.getClass().getName().replace('$', '.');
-
-        final String result = ClassUtil.toString(testee);
-
-        assertThat(result, is("(" + s + " (TheAnswer: Integer 42))"));
     }
 
     @Test public void testToStringWithForeignClasses() {
@@ -106,10 +98,26 @@ public class ClassUtilTest {
         assertThat(attributes.containsKey("HiddenInnerAttribute"), is(false));
         assertThat(attributes.containsKey("PublicAttribute"), is(true));
         assertThat(attributes.containsKey("PublicInnerAttribute"), is(true));
-        assertThat(attributes.containsKey("RenamedAttribute"), is(false));
-        assertThat(attributes.containsKey("RenamedInnerAttribute"), is(false));
-        assertThat(attributes.containsKey("Answer"), is(true));
-        assertThat(attributes.containsKey("Scent"), is(true));
+        assertThat(attributes.containsKey("AbsentAttribute"), is(false));
+        assertThat(attributes.containsKey("AbsentInnerAttribute"), is(false));
+    }
+
+    @Test public void testDistance() {
+        final List<Type> types = Collections.emptyList();
+        assertThat(ClassUtil.distance(AA.class, A.class, types), is(100));
+        assertThat(ClassUtil.distance(AAA.class, A.class, types), is(110));
+        assertThat(ClassUtil.distance(AAA.class, AA.class, types), is(100));
+        assertThat(ClassUtil.distance(ZZ.class, Z.class, types), is(1));
+        assertThat(ClassUtil.distance(ZZZ.class, Z.class, types), is(2));
+        assertThat(ClassUtil.distance(ZZZ.class, ZZ.class, types), is(1));
+        assertThat(ClassUtil.distance(BZ.class, Z.class, types), is(1));
+        assertThat(ClassUtil.distance(BZZ.class, Z.class, types), is(2));
+        assertThat(ClassUtil.distance(BZZ.class, ZZ.class, types), is(1));
+        assertThat(ClassUtil.distance(BBZZ.class, BZ.class, types), is(100));
+        assertThat(ClassUtil.distance(A.class, AA.class, types), is(-1000));
+        assertThat(ClassUtil.distance(BZ.class, A.class, types), is(-1000));
+        assertThat(ClassUtil.distance(A.class, Z.class, types), is(-1000));
+        assertThat(ClassUtil.distance(BZ.class, ZZ.class, types), is(-1000));
     }
 
     private class EmptyObject {
@@ -132,22 +140,6 @@ public class ClassUtilTest {
 
     }
 
-    private class AnnotatedObject {
-
-        public String getInvalid() {
-            return "This should not be shown";
-        }
-
-        @ToString public int getTheAnswer() {
-            return 42;
-        }
-
-        @Override public String toString() {
-            return ClassUtil.toString(this);
-        }
-
-    }
-
     @SuppressWarnings("ClassHasNoToStringMethod")
     private class OuterObject {
 
@@ -155,16 +147,12 @@ public class ClassUtilTest {
         private final String publicAttribute = "public";
         private final int renamedAttribute = 42;
 
-        public String getHiddenAttribute() {
+        private String getHiddenAttribute() {
             return hiddenAttribute;
         }
 
-        @Attribute public String getPublicAttribute() {
+        public String getPublicAttribute() {
             return publicAttribute;
-        }
-
-        @Attribute("Answer") public int getRenamedAttribute() {
-            return renamedAttribute;
         }
 
     }
@@ -176,17 +164,49 @@ public class ClassUtilTest {
         private final Duration publicInnerAttribute = Duration.of(2, SECONDS);
         private final long renamedInnerAttribute = 4711L;
 
-        public LocalDate getHiddenInnerAttribute() {
+        private LocalDate getHiddenInnerAttribute() {
             return hiddenInnerAttribute;
         }
 
-        @Attribute public Duration getPublicInnerAttribute() {
+        public Duration getPublicInnerAttribute() {
             return publicInnerAttribute;
         }
 
-        @Attribute("Scent") public long getRenamedInnerAttribute() {
-            return renamedInnerAttribute;
-        }
+    }
+
+    interface Z {
+
+    }
+
+    interface ZZ extends Z {
+
+    }
+
+    interface ZZZ extends ZZ {
+
+    }
+
+    class A {
+
+    }
+
+    class AA extends A {
+
+    }
+
+    class AAA extends AA {
+
+    }
+
+    class BZ implements Z {
+
+    }
+
+    class BZZ implements ZZ {
+
+    }
+
+    class BBZZ extends BZ implements ZZ {
 
     }
 

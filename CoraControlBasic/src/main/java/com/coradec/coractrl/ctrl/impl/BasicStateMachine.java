@@ -31,9 +31,9 @@ import com.coradec.coracom.model.impl.BasicCommand;
 import com.coradec.coracom.model.impl.BasicEvent;
 import com.coradec.coracom.model.impl.BasicRequest;
 import com.coradec.coracom.state.RequestState;
-import com.coradec.coracore.annotation.Attribute;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Inject;
+import com.coradec.coracore.annotation.Internal;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.model.Factory;
 import com.coradec.coracore.model.State;
@@ -260,8 +260,8 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
         return ClassUtil.toString(this);
     }
 
-    private class InternalStartMachineRequest extends BasicRequest
-            implements StartStateMachineRequest {
+    @Internal
+    private class InternalStartMachineRequest extends BasicRequest implements StartStateMachineRequest {
 
         private final List<State> states = new ArrayList<>();
         private final ReentrantLock lock = new ReentrantLock();
@@ -270,7 +270,7 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
          * Initializes a new instance of InternalStartMachineRequest.
          */
         InternalStartMachineRequest() {
-            super(BasicStateMachine.this);
+            super(BasicStateMachine.this, BasicStateMachine.this);
         }
 
         void addState(final State state) {
@@ -301,6 +301,7 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")
+    @Internal
     private class InternalExecuteStateTransitionRequest extends BasicRequest
             implements ExecuteStateTransitionRequest {
 
@@ -313,7 +314,7 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
         }
 
         @ToString public Recipient getAgent() {
-            return getRecipientList()[0];
+            return getRecipient();
         }
 
         @ToString public StateTransition getTransition() {
@@ -323,12 +324,13 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")
+    @Internal
     private class PerformStateTransitionCommand extends BasicCommand {
 
         private final InternalStartMachineRequest trigger;
 
         PerformStateTransitionCommand(final InternalStartMachineRequest request) {
-            super(BasicStateMachine.this);
+            super(BasicStateMachine.this, BasicStateMachine.this);
             trigger = request;
             preventMessageQueueShutdown();
         }
@@ -415,7 +417,7 @@ public class BasicStateMachine extends BasicAgent implements StateMachine {
             this.state = state;
         }
 
-        @Override @ToString @Attribute public State getReachedState() {
+        @Override @ToString public State getReachedState() {
             return state;
         }
 

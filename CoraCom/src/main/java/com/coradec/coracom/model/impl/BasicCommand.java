@@ -22,7 +22,9 @@ package com.coradec.coracom.model.impl;
 
 import com.coradec.coracom.model.Command;
 import com.coradec.coracom.model.Recipient;
-import com.coradec.coracom.model.Sender;
+import com.coradec.coracore.model.Origin;
+
+import java.util.Map;
 
 /**
  * ​​Basic implementation of a command.
@@ -30,14 +32,22 @@ import com.coradec.coracom.model.Sender;
 public abstract class BasicCommand extends BasicRequest implements Command {
 
     /**
-     * Initializes a new instance of BasicCommand with the specified sender and list of
-     * recipients.
+     * Initializes a new instance of BasicCommand with the specified sender and recipient.
      *
-     * @param sender     the sender.
-     * @param recipients the list of recipients
+     * @param sender    the sender.
+     * @param recipient the recipient.
      */
-    protected BasicCommand(final Sender sender, final Recipient... recipients) {
-        super(sender, recipients);
+    protected BasicCommand(final Origin sender, final Recipient recipient) {
+        super(sender, recipient);
+    }
+
+    /**
+     * Initializes a new instance of BasicMessage from the specified property map.
+     *
+     * @param properties the property map.
+     */
+    private BasicCommand(final Map<String, Object> properties) {
+        super(properties);
     }
 
 }

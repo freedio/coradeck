@@ -28,11 +28,15 @@ import org.junit.runners.model.InitializationError;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 /**
  * ​​A JUnit 4 test runner for coradeck modules.
+ *
+ * Note that this test runner will always execute methods alphabetically.
  */
 @SuppressWarnings("ClassHasNoToStringMethod")
 public class CoradeckJUnit4TestRunner extends BlockJUnit4ClassRunner {
@@ -93,7 +97,10 @@ public class CoradeckJUnit4TestRunner extends BlockJUnit4ClassRunner {
 
     @Override protected List<FrameworkMethod> computeTestMethods() {
         try {
-            return getTestClass().getAnnotatedMethods(getTestAnnotation());
+            final List<FrameworkMethod> methods =
+                    new ArrayList<>(getTestClass().getAnnotatedMethods(getTestAnnotation()));
+            methods.sort(Comparator.comparing(FrameworkMethod::getName));
+            return methods;
         } catch (ClassNotFoundException e) {
             return Collections.emptyList();
         }

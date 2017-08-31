@@ -29,7 +29,6 @@ import com.coradec.coraconf.trouble.ConfigurationNotFoundException;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
-import com.coradec.coracore.model.DynamicFactory;
 import com.coradec.coracore.model.GenericType;
 import com.coradec.coracore.util.ClassUtil;
 import com.coradec.coratype.ctrl.TypeConverter;
@@ -51,8 +50,6 @@ import java.util.stream.Collectors;
 public class BasicConfiguration implements Configuration {
 
     private static final Map<String, String> APPLICATION_CONFIOURATION = new HashMap<>();
-
-    private static final DynamicFactory<TypeConverter<?>> FACTORY = new DynamicFactory<>();
 
     private static final String CONF_FILE_PATTERN =
             System.getProperty("com.coradec.coraconf.model.Configuration.FileTemplate",
@@ -119,27 +116,25 @@ public class BasicConfiguration implements Configuration {
     }
 
     private <T> Optional<T> transform(final GenericType<T> type, final String name,
-                                      final Object... args) {
+            final Object... args) {
         return Optional.ofNullable(getRawProperties().get(name))
                        .map(s -> String.format(s, args))
-                       .map(s -> ((TypeConverter<T>)FACTORY.of(TypeConverter.class, type).get(type))
-                               .convert(s));
+                       .map(s -> TypeConverter.to(type).convert(s));
     }
 
-    @Override public <T> Optional<T> lookup(final Class<? super T> type, final String name,
-                                            final Object... args) {
+    @Override
+    public <T> Optional<T> lookup(final Class<T> type, final String name, final Object... args) {
         return lookup(GenericType.of(type), name, args);
     }
 
     @Override public <T> Optional<T> lookup(final GenericType<T> type, final String name,
-                                            final Object... args) {
+            final Object... args) {
         if (args.length == 0) {
             return Optional.ofNullable(getProperties().compute(name, (key, value) -> //
                     value != null //
                     ? value //
                     : transform(type, key, args).orElse(null)))
-                           .map(o -> ((TypeConverter<T>)FACTORY.of(TypeConverter.class, type)
-                                                               .get(type)).convert(o));
+                           .map(o -> TypeConverter.to(type).convert(o));
         } else return transform(type, name, args);
     }
 

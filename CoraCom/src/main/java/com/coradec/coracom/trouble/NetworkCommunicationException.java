@@ -29,4 +29,6 @@ public class NetworkCommunicationException extends CommunicationException {
         super(message);
     }
 
+    public NetworkCommunicationException() {
+    }
 }

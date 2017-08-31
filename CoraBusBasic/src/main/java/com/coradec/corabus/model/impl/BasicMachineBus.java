@@ -39,7 +39,8 @@ public class BasicMachineBus extends BasicHub implements MachineBus {
 
     @Override protected @Nullable Request onInitialize(final Session session) {
         final Request request = super.onInitialize(session);
-        add(initSession, Path.from("console"), new ServerConsole());
+        add(initSession, Path.from("console"), new BusConsole());
+        add(initSession, Path.from("echo"), new EchoServiceProvider());
         return request;
     }
 

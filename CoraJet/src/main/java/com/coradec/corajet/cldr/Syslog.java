@@ -94,7 +94,7 @@ public final class Syslog {
         if (!level.below(SYSLOG_LEVEL)) {
             LocalTime time = LocalTime.now();
             final StackTraceElement ste = Thread.currentThread().getStackTrace()[3];
-            out.printf("%-13s%-5s %s(%d)%n", time, level.getTag(),
+            out.printf("%-13s%-5s at %s(%d)%n", time, level.getTag(),
                     String.format("%s.%s", ste.getClassName(), ste.getMethodName()),
                     ste.getLineNumber());
             if (text != null) out.printf("                   %s%n", text);

@@ -50,6 +50,10 @@ public interface Property<T> {
         return CoraConf.define(ExecUtil.getCallerStackFrame().getClassFileName(), name, type);
     }
 
+    static <X> Property<X> of(GenericType<X> type, String name, X value) {
+        return CoraConf.define(null, name, type, value);
+    }
+
     /**
      * Returns the property name.
      *

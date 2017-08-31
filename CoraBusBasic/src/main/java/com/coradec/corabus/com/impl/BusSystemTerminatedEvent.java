@@ -23,12 +23,29 @@ package com.coradec.corabus.com.impl;
 import com.coradec.coracom.model.impl.BasicEvent;
 import com.coradec.coracore.model.Origin;
 
+import java.util.Map;
+
 /**
  * ​​Indicates the termination of the bus system.
  */
 public class BusSystemTerminatedEvent extends BasicEvent {
 
+    /**
+     * Initializes a new instance of BasicEvent from the specified sender.
+     *
+     * @param origin the sender.
+     */
     public BusSystemTerminatedEvent(final Origin origin) {
         super(origin);
     }
+
+    /**
+     * Initializes a new instance of BasicEvent from the specified property map.
+     *
+     * @param properties the property map.
+     */
+    private BusSystemTerminatedEvent(final Map<String, Object> properties) {
+        super(properties);
+    }
+
 }

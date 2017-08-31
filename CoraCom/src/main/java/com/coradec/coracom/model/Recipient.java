@@ -23,7 +23,7 @@ package com.coradec.coracom.model;
 /**
  * ​Recipient of a message.
  */
-public interface Recipient {
+public interface Recipient extends Target {
 
     /**
      * Callback invoked when a new message is ready for processing.
@@ -32,4 +32,10 @@ public interface Recipient {
      */
     void onMessage(Message message);
 
+    /**
+     * Returns the recipient ID.
+     *
+     * @return the recipient ID.
+     */
+    String getRecipientId();
 }

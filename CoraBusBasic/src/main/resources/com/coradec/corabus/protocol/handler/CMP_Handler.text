@@ -3,3 +3,8 @@
 FailedToDecodeReference: Failed to decode reference \"%s\"!
 FailedToDecodeAnswer: Failed to decode answer \"%s\"!
 FailedToDecodeEventType: Failed to decode event type \"%s\"!
+FailedToDecodeRecipient: Failed to decode recipient \"%s\"!
+NoRecipients: No recipients!
+MultipleRecipientsForRequest: Multiple recipients specified for request: %s!
+MessageWithoutSender: Message without sender!
+FailedToInstantiate: Failed to instantiate class %s!

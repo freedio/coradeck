@@ -42,5 +42,5 @@ public interface PropertyResolver {
      * @return the resolved property value.
      */
     <R> Optional<R> resolve(final GenericType<R> type, @Nullable String context, String name,
-                            Object[] args);
+            Object[] args);
 }

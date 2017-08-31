@@ -26,6 +26,7 @@ import static com.coradec.corabus.state.NodeState.*;
 import com.coradec.corabus.com.Invitation;
 import com.coradec.corabus.com.MetaStateChangedEvent;
 import com.coradec.corabus.com.StateAchievedEvent;
+import com.coradec.corabus.model.Bus;
 import com.coradec.corabus.model.BusNode;
 import com.coradec.corabus.state.MetaState;
 import com.coradec.corabus.state.NodeState;
@@ -36,7 +37,6 @@ import com.coradec.corabus.view.BusService;
 import com.coradec.corabus.view.Member;
 import com.coradec.coracom.model.Request;
 import com.coradec.coracom.model.impl.BasicEvent;
-import com.coradec.coracore.annotation.Attribute;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
@@ -73,6 +73,7 @@ public class BasicNode extends BasicAgent implements BusNode {
     @Inject private static Factory<Request> REQUEST;
     @Inject private static Factory<MetaStateChangedEvent> META_STATE_CHANGED_EVENT;
     private static final DefaultBusContext DEFAULT_CONTEXT = new DefaultBusContext();
+    @Inject private static Bus BUS;
 
     @Inject StateMachine stateMachine;
     private NodeState state;
@@ -119,11 +120,11 @@ public class BasicNode extends BasicAgent implements BusNode {
     }
 
     @Override @ToString public URI getIdentifier() {
-        return getPath().toURI("corabus");
+        return getPath().toURI(BUS.getProtocolScheme());
     }
 
     @ToString @Override public Path getPath() {
-        return getContext().getPath(name);
+        return isAttached() ? getContext().getPath(name) : Path.from(name);
     }
 
     protected BusContext getContext() {
@@ -132,6 +133,10 @@ public class BasicNode extends BasicAgent implements BusNode {
 
     private void setContext(final BusContext context) {
         this.context = context;
+    }
+
+    @ToString @Override public boolean isAttached() {
+        return context != DEFAULT_CONTEXT;
     }
 
     /**
@@ -225,7 +230,7 @@ public class BasicNode extends BasicAgent implements BusNode {
      * Shuts the node down.
      */
     protected void shutdown() {
-        debug("%s: Received request to shutdown.");
+        debug("%s: Received request to shutdown.", this);
         stateMachine.setTargetState(DETACHED);
         stateMachine.start();
     }
@@ -471,6 +476,14 @@ public class BasicNode extends BasicAgent implements BusNode {
             setMetaState(GOING_DOWN);
     }
 
+    @Override public String getRecipientId() {
+        return represent();
+    }
+
+    @Override public String represent() {
+        return context == null ? getClass().getName() : getPath().represent();
+    }
+
     @Override public String toString() {
         return ClassUtil.toString(this);
     }
@@ -682,12 +695,14 @@ public class BasicNode extends BasicAgent implements BusNode {
             this.state = state;
         }
 
-        @Override @ToString @Attribute public NodeState getAchievedState() {
+        @Override @ToString public NodeState getAchievedState() {
             return state;
         }
 
-        @Override public BusNode getNode() {
+        @Override @ToString public BusNode getNode() {
             return BasicNode.this;
         }
+
     }
+
 }

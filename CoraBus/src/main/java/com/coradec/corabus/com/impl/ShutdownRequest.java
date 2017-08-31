@@ -20,33 +20,40 @@
 
 package com.coradec.corabus.com.impl;
 
-import com.coradec.corabus.com.BusControlRequest;
 import com.coradec.corabus.model.Bus;
 import com.coradec.coracom.model.Recipient;
-import com.coradec.coracom.model.Sender;
 import com.coradec.coracore.annotation.Inject;
+import com.coradec.coracore.model.Origin;
 import com.coradec.corasession.model.Session;
 
-import java.util.Collections;
+import java.util.Map;
 
 /**
  * ​​Request to shut down the bus system.
  */
-public class ShutdownRequest extends NetworkRequest implements BusControlRequest {
+public class ShutdownRequest extends BasicNetworkRequest {
 
     @Inject private static Bus BUS;
 
     /**
-     * Initializes a new instance of ShutdownRequest with the specified sender and list of
-     * recipients in the context of the specified session.
+     * Initializes a new instance of ShutdownRequest with the specified sender and recipients in the
+     * context of the specified session.
      *
-     * @param session    the session context.
-     * @param sender     the sender.
-     * @param recipients the list of recipients
+     * @param session   the session context.
+     * @param sender    the sender.
+     * @param recipient the recipient.
      */
-    public ShutdownRequest(final Session session, final Sender sender,
-            final Recipient... recipients) {
-        super(session, "SHUTDOWN", Collections.emptyMap(), null, sender, BUS.recipient("/"));
+    public ShutdownRequest(final Session session, final Origin sender, final Recipient recipient) {
+        super(session, sender, recipient, "SHUTDOWN");
+    }
+
+    /**
+     * Initializes a new instance of ShutdownRequest from the specified property map.
+     *
+     * @param properties the property map.
+     */
+    public ShutdownRequest(final Map<String, Object> properties) {
+        super(properties);
     }
 
 }

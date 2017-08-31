@@ -29,6 +29,7 @@ import com.coradec.coratext.ctrl.ApplicationTextBase;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.MissingFormatArgumentException;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -46,10 +47,14 @@ public class BasicApplicationTextBase implements ApplicationTextBase {
     }
 
     @Override public Optional<String> lookup(final String name, final Object... args) {
-        return Optional.ofNullable(String.format(applicationTextBase.get(name), args));
+        try {
+            return Optional.of(String.format(applicationTextBase.get(name), args));
+        } catch (MissingFormatArgumentException | NullPointerException e) {
+            return Optional.ofNullable(applicationTextBase.get(name));
+        }
     }
 
-    @Override public <T> Optional<T> lookup(final Class<? super T> type, final String name,
+    @Override public <T> Optional<T> lookup(final Class<T> type, final String name,
                                             final Object... args) {
         throw new UnsupportedOperationException();
     }

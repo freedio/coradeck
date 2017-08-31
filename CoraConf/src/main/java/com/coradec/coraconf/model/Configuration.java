@@ -66,7 +66,7 @@ public interface Configuration {
      * @param args the arguments.
      * @return the property value, if available.
      */
-    <T> Optional<T> lookup(Class<? super T> type, String name, Object... args);
+    <T> Optional<T> lookup(Class<T> type, String name, Object... args);
 
     /**
      * Looks up the property with the specified name and arguments, cast to the specified generic

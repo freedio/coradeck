@@ -28,12 +28,12 @@ import com.coradec.coracom.ctrl.Observer;
 import com.coradec.coracom.model.Information;
 import com.coradec.coracom.model.Message;
 import com.coradec.coracom.model.Recipient;
-import com.coradec.coracom.model.Sender;
 import com.coradec.coracom.model.impl.BasicCommand;
 import com.coradec.coracom.model.impl.BasicEvent;
 import com.coradec.coracom.model.impl.BasicInformation;
 import com.coradec.coracom.model.impl.BasicMessage;
 import com.coradec.coracore.annotation.Inject;
+import com.coradec.coracore.annotation.Internal;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.ctrl.AutoOrigin;
 import com.coradec.coracore.model.Origin;
@@ -44,14 +44,13 @@ import com.coradec.corajet.cldr.Syslog;
 import com.coradec.corajet.test.CoradeckJUnit4TestRunner;
 import com.coradec.coralog.ctrl.impl.Logger;
 import org.junit.AfterClass;
-import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.runners.MethodSorters;
 
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -61,7 +60,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @SuppressWarnings("PackageVisibleField")
 @RunWith(CoradeckJUnit4TestRunner.class)
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class CentralMessageQueueTest {
 
     public static final String SYSLOG_LEVEL = "INFORMATION";
@@ -96,11 +94,11 @@ public class CentralMessageQueueTest {
     /**
      * Runs 100 test LOAD_TEST_AGENTS in parallel, each sending 10..500 messages to itself.
      */
-    @Test public void testLoad() throws InterruptedException {
+    @Test public void aa_testLoad() throws InterruptedException {
+        Syslog.info("Performing the load test ... (should take less than 50 seconds)");
         APPROVED.set(0);
         GENERATED.set(0);
         APPROVED.set(0);
-        Syslog.info("Performing the load test ... (should take less than 50 seconds)");
         int nAgents = 100;
         long elapsed = System.currentTimeMillis();
         new LoadTestExecutor().launch(nAgents);
@@ -122,7 +120,7 @@ public class CentralMessageQueueTest {
         assertThat(termLock.availablePermits(), is(0)); // All tests reported finished.
     }
 
-    @Test public void testSequence() throws InterruptedException {
+    @Test public void cc_testSequence() throws InterruptedException {
         Syslog.info("Performing the sequence test ... (should take less than 50 seconds)");
         CMQ.resetUsage();
         long elapsed = System.currentTimeMillis();
@@ -156,7 +154,7 @@ public class CentralMessageQueueTest {
         assertThat(termLock.availablePermits(), is(0)); // All tests reported finished.
     }
 
-    @Test public void testInformationDispatch() throws InterruptedException {
+    @Test public void bb_testInformationDispatch() throws InterruptedException {
         Syslog.info(
                 "Performing the information delivery test ... (should take less than 50 seconds)");
         APPROVED.set(0);
@@ -176,7 +174,7 @@ public class CentralMessageQueueTest {
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")
-    private final class LoadTestAgent extends Logger implements Sender, Recipient {
+    private final class LoadTestAgent extends Logger implements Origin, Recipient {
 
         private final int id;
         private final int genSize;
@@ -214,6 +212,15 @@ public class CentralMessageQueueTest {
             DISPATCHED.incrementAndGet();
         }
 
+        /**
+         * Returns the recipient ID.
+         *
+         * @return the recipient ID.
+         */
+        @Override public String getRecipientId() {
+            return "LoadTestAgent";
+        }
+
         ConcurrentLinkedQueue<Message> getMessages() {
             return messages;
         }
@@ -233,19 +240,17 @@ public class CentralMessageQueueTest {
             CMQ.inject(message);
         }
 
-        @Override public void bounce(final Message message) {
-            Syslog.error(message.toString());
-        }
-
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")
+    @Internal
     private class ExecuteLoadTestAgentCommand extends BasicCommand {
 
         private final LoadTestAgent agent;
 
-        public ExecuteLoadTestAgentCommand(final Sender sender, final LoadTestAgent agent) {
-            super(sender);
+        ExecuteLoadTestAgentCommand(final Origin sender, final Recipient recipient,
+                final LoadTestAgent agent) {
+            super(sender, recipient);
             this.agent = agent;
             LOAD_TEST_AGENTS.add(agent);
         }
@@ -255,7 +260,7 @@ public class CentralMessageQueueTest {
         }
     }
 
-    private class LoadTestExecutor implements Sender, Recipient {
+    private class LoadTestExecutor implements Origin, Recipient {
 
         @Override public String represent() {
             return getClass().getSimpleName();
@@ -273,17 +278,22 @@ public class CentralMessageQueueTest {
             } else Syslog.error("Invalid message: " + message);
         }
 
+        /**
+         * Returns the recipient ID.
+         *
+         * @return the recipient ID.
+         */
+        @Override public String getRecipientId() {
+            return "LoadTestExecutor";
+        }
+
         @Override public URI toURI() {
             return URI.create(represent());
         }
 
-        @Override public void bounce(final Message message) {
-            Syslog.error("Message bounced: %s", message.toString());
-        }
-
         void launch(final int nAgents) throws InterruptedException {
             for (int i = 0; i < nAgents; ++i) {
-                CMQ.inject(new ExecuteLoadTestAgentCommand(this, new LoadTestAgent()));
+                CMQ.inject(new ExecuteLoadTestAgentCommand(this, this, new LoadTestAgent()));
             }
         }
     }
@@ -291,12 +301,13 @@ public class CentralMessageQueueTest {
     private class StopMessage extends BasicMessage {
 
         /**
-         * Initializes a new instance of StopMessage with the specified sender.
+         * Initializes a new instance of StopMessage with the specified agent as sender and
+         * recipient.
          *
-         * @param sender the sender.
+         * @param agent the agent.
          */
-        public StopMessage(final Sender sender) {
-            super(sender);
+        public StopMessage(final LoadTestAgent agent) {
+            super(agent, agent);
         }
 
     }
@@ -308,14 +319,24 @@ public class CentralMessageQueueTest {
                 ((AddCharacterCommand)message).execute();
             } else Syslog.error("Cannot process message %s", message);
         }
+
+        /**
+         * Returns the recipient ID.
+         *
+         * @return the recipient ID.
+         */
+        @Override public String getRecipientId() {
+            return "SequenceTestAgent";
+        }
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")
+    @Internal
     private class AddCharacterCommand extends BasicCommand {
 
         private final char c;
 
-        public AddCharacterCommand(final Sender sender, Recipient recipient, final char c) {
+        public AddCharacterCommand(final Origin sender, Recipient recipient, final char c) {
             super(sender, recipient);
             this.c = c;
         }
@@ -327,7 +348,7 @@ public class CentralMessageQueueTest {
 
     }
 
-    private class SequenceTestExecutor implements Sender {
+    private class SequenceTestExecutor implements Origin {
 
         void launch(final int rounds, final Recipient agent) {
             for (int i = 0; i < rounds; ++i) {
@@ -347,13 +368,10 @@ public class CentralMessageQueueTest {
             return URI.create(represent());
         }
 
-        @Override public void bounce(final Message message) {
-            Syslog.error("Message bounced: %s", message.toString());
-        }
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")
-    private class InfoTestExecutor implements Sender {
+    private class InfoTestExecutor implements Origin {
 
         private final List<InfoTestAgent> agents = new ArrayList<>();
         private final int[] distribution = new int[3];
@@ -406,10 +424,6 @@ public class CentralMessageQueueTest {
             return URI.create(represent());
         }
 
-        @Override public void bounce(final Message message) {
-            Syslog.error("Message bounced: %s", message.toString());
-        }
-
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")
@@ -431,6 +445,7 @@ public class CentralMessageQueueTest {
             }
             if (!interestedIn.isInstance(info)) ++mismatch;
             else ++match;
+//            debug("%d: %d matches, %d mismatches", getId(), match, mismatch);
             return false;
         }
 
@@ -500,5 +515,16 @@ public class CentralMessageQueueTest {
         public StopEvent(final Origin origin) {
             super(origin);
         }
+
+        /**
+         * Initializes a new instance of BasicEvent from the specified property map.
+         *
+         * @param properties the property map.
+         */
+        private StopEvent(final Map<String, Object> properties) {
+            super(properties);
+        }
+
     }
+
 }

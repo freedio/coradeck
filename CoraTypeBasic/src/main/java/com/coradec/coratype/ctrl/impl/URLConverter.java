@@ -58,6 +58,17 @@ public class URLConverter extends BasicTypeConverter<URL> {
         }
     }
 
+    /**
+     * Encodes the specified value into a string representation that can be decoded using {@link
+     * #decode(String)}.
+     *
+     * @param value the value to encode.
+     * @return the encoded object.
+     */
+    @Override public String encode(final URL value) {
+        return value.toString();
+    }
+
     @Override public URL unmarshal(final byte[] value) throws TypeConversionException {
         return decode(new String(value, StringUtil.CHARSET));
     }

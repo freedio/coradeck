@@ -26,6 +26,7 @@ import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.SocketAddress;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.Enumeration;
 import java.util.List;
 
@@ -125,6 +126,18 @@ public final class NetworkUtil {
             // ignore
         }
         return hostname;
+    }
+
+    /**
+     * Returns the canonical host name of the specified host.
+     *
+     * @param hostname the host.
+     * @return the canonical host name.
+     * @throws UnknownHostException if the host is unknown.
+     */
+    public static String getCanonicalHostName(String hostname) throws UnknownHostException {
+        if (hostname == null || hostname.isEmpty()) hostname = getCanonicalHostName();
+        return InetAddress.getByName(hostname).getCanonicalHostName();
     }
 
     /**

@@ -29,12 +29,13 @@ import com.coradec.coracom.model.Message;
 import com.coradec.coracom.model.MultiRequest;
 import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Request;
-import com.coradec.coracom.model.Sender;
 import com.coradec.coracom.model.impl.BasicCommand;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Inject;
+import com.coradec.coracore.annotation.Internal;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
+import com.coradec.coracore.model.Origin;
 import com.coradec.coracore.util.ClassUtil;
 import com.coradec.coractrl.ctrl.Agent;
 import com.coradec.coralog.ctrl.impl.Logger;
@@ -56,7 +57,7 @@ import java.util.function.Consumer;
  */
 @SuppressWarnings("PublicField")
 @Implementation
-public class BasicAgent extends Logger implements Agent, Recipient, Sender {
+public class BasicAgent extends Logger implements Agent, Recipient, Origin {
 
     private static final Map<Class<?>, AtomicInteger> IDS = new ConcurrentHashMap<>();
     private static final Text TEXT_MESSAGE_BOUNCED = LocalizedText.define("MessageBounced");
@@ -170,7 +171,19 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
                               })
                               .count() != 0;
         }
-        if (!onMessage(processed, message)) warn(TEXT_MESSAGE_UNPROCESSED, message, this);
+        if (!onMessage(processed, message)) {
+            warn(TEXT_MESSAGE_UNPROCESSED, message, this);
+            if (message instanceof Request) ((Request)message).cancel();
+        }
+    }
+
+    /**
+     * Returns the recipient ID.
+     *
+     * @return the recipient ID.
+     */
+    @Override public String getRecipientId() {
+        return String.format("%s#%d", getClass().getName(), getId());
     }
 
     /**
@@ -248,10 +261,6 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
         return URI.create("agent:" + represent());
     }
 
-    @Override public void bounce(final Message message) {
-        error(TEXT_MESSAGE_BOUNCED, message);
-    }
-
     /**
      * Allows the message queue to shut down as an important asynchronous process is running.
      */
@@ -282,13 +291,14 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")
+    @Internal
     private class AddRouteCommand<R extends Message> extends BasicCommand {
 
         private final Class<? super R> selector;
         private final Consumer<? extends Message> processor;
 
         AddRouteCommand(final Class<? super R> selector, final Consumer<R> processor) {
-            super(BasicAgent.this);
+            super(BasicAgent.this, BasicAgent.this);
             this.selector = selector;
             this.processor = processor;
         }
@@ -306,16 +316,22 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
                 warn(TEXT_ROUTE_ALREADY_SET, selector);
             }
         }
+
+        @Override public String getRecipientId() {
+            return BasicAgent.this.getRecipientId();
+        }
+
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")
+    @Internal
     private class ReplaceRouteCommand<R extends Message> extends BasicCommand {
 
         private final Class<? super R> selector;
         private final Consumer<? extends Message> processor;
 
         public ReplaceRouteCommand(final Class<? super R> selector, final Consumer<R> processor) {
-            super(BasicAgent.this);
+            super(BasicAgent.this, BasicAgent.this);
             this.selector = selector;
             this.processor = processor;
         }
@@ -331,15 +347,21 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
         @Override public void execute() {
             getRoutes().put(getSelector(), getProcessor());
         }
+
+        @Override public String getRecipientId() {
+            return BasicAgent.this.getRecipientId();
+        }
+
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")
+    @Internal
     private class RemoveRouteCommand<R extends Message> extends BasicCommand {
 
         private final Class<? super R> selector;
 
         RemoveRouteCommand(final Class<? super R> selector) {
-            super(BasicAgent.this);
+            super(BasicAgent.this, BasicAgent.this);
             this.selector = selector;
         }
 
@@ -351,15 +373,20 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
             getRoutes().remove(getSelector());
         }
 
+        @Override public String getRecipientId() {
+            return BasicAgent.this.getRecipientId();
+        }
+
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")
+    @Internal
     private class InternalCommandWrapper extends BasicCommand {
 
         private final Runnable task;
 
         InternalCommandWrapper(final Runnable task) {
-            super(BasicAgent.this);
+            super(BasicAgent.this, BasicAgent.this);
             this.task = task;
         }
 
@@ -371,6 +398,11 @@ public class BasicAgent extends Logger implements Agent, Recipient, Sender {
                 fail(e);
             }
         }
+
+        @Override public String getRecipientId() {
+            return BasicAgent.this.getRecipientId();
+        }
+
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")

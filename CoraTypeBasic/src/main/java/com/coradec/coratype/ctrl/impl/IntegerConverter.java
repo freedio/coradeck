@@ -25,6 +25,8 @@ import static com.coradec.coracore.model.Scope.*;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coratype.trouble.TypeConversionException;
 
+import java.io.IOException;
+
 /**
  * ​​A type converter for class {@link Integer}.
  */
@@ -47,11 +49,33 @@ public class IntegerConverter extends BasicTypeConverter<Integer> {
         }
     }
 
+    /**
+     * Encodes the specified value into a string representation that can be decoded using {@link
+     * #decode(String)}.
+     *
+     * @param value the value to encode.
+     * @return the encoded object.
+     */
+    @Override public String encode(final Integer value) {
+        return String.valueOf(value);
+    }
+
     @Override public Integer unmarshal(final byte[] value) throws TypeConversionException {
-        return unmarshalInt(value);
+        Unmarshaller unmar = getUnmarshaller(value);
+        try {
+            return unmar.readInt();
+        } catch (IOException e) {
+            throw new TypeConversionException(Integer.class, e);
+        }
     }
 
     @Override public byte[] marshal(final Integer value) {
-        return marshal((int)value);
+        Marshaller mar = getMarshaller();
+        try {
+            mar.writeInt(value);
+            return mar.get();
+        } catch (IOException e) {
+            throw new TypeConversionException(Integer.class, e);
+        }
     }
 }

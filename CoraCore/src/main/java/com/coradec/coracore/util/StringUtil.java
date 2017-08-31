@@ -142,7 +142,9 @@ public final class StringUtil {
             return (String)((Optional)o).map(StringUtil::toString).orElse(NULL_REPR);
         }
         if (o instanceof List) //
-            return ((List<?>)o).stream().map(StringUtil::toString).collect(joining(", ", "[", "]"));
+            return toString((Collection<?>)o, '[',
+                    ']');// ((List<?>)o).stream().map(StringUtil::toString).collect(joining(", ",
+        // "[", "]"));
         if (o instanceof Collection) //
             return toString((Collection<?>)o, '(', ')');
         if (o instanceof Map) //
@@ -273,10 +275,10 @@ public final class StringUtil {
     }
 
     public static String toString(final Collection<?> o, final char start, final char end) {
-        return ((Collection<?>)o).stream()
-                                 .map(StringUtil::toString)
-                                 .collect(
-                                         joining(", ", String.valueOf(start), String.valueOf(end)));
+        final Object[] array = o.toArray();
+        return Stream.of(array)
+                     .map(StringUtil::toString)
+                     .collect(joining(", ", String.valueOf(start), String.valueOf(end)));
     }
 
     public static String toString(final Object[] o, final char start, final char end) {

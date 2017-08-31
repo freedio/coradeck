@@ -20,18 +20,26 @@
 
 package com.coradec.coracom.model;
 
+import com.coradec.coracore.model.Factory;
+import com.coradec.coracore.model.GenericFactory;
 import com.coradec.corasession.model.Session;
 
 /**
  * ​Event with a session context.
  */
-public interface SessionEvent {
+public interface SessionEvent extends Event, SessionInformation {
+
+    Factory<SessionEvent> SESSION_EVENT = new GenericFactory<>(SessionEvent.class);
 
     /**
-     * Returns the session context.
+     * Wraps an event with a session context into a session event.
      *
-     * @return the session context.
+     * @param session the session context.
+     * @param event the event.
+     * @return a session event.
      */
-    Session getSession();
+    static SessionEvent wrap(Session session, Event event) {
+        return SESSION_EVENT.create(session, event);
+    }
 
 }

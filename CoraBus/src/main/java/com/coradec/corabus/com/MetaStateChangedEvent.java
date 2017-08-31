@@ -20,6 +20,7 @@
 
 package com.coradec.corabus.com;
 
+import com.coradec.corabus.state.MetaState;
 import com.coradec.coracom.model.Event;
 
 /**
@@ -27,4 +28,20 @@ import com.coradec.coracom.model.Event;
  */
 public interface MetaStateChangedEvent extends Event {
 
+    String PROP_OLD_STATE = "OldState";
+    String PROP_NEW_STATE = "NewState";
+
+    /**
+     * Returns the old state.
+     *
+     * @return the old state.
+     */
+    MetaState getOldState();
+
+    /**
+     * Returns the new state.
+     *
+     * @return the new state.
+     */
+    MetaState getNewState();
 }

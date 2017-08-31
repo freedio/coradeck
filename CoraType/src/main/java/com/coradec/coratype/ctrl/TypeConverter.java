@@ -23,6 +23,7 @@ package com.coradec.coratype.ctrl;
 import com.coradec.coracore.model.Factory;
 import com.coradec.coracore.model.GenericFactory;
 import com.coradec.coracore.model.GenericType;
+import com.coradec.coratype.module.CoraType;
 import com.coradec.coratype.trouble.TypeConversionException;
 
 /**
@@ -36,7 +37,11 @@ public interface TypeConverter<V> {
     Factory<TypeConverter<?>> FACTORY = new GenericFactory(TypeConverter.class);
 
     @SuppressWarnings("unchecked") static <T> TypeConverter<T> to(GenericType<T> type) {
-        return (TypeConverter<T>)FACTORY.get(type);
+        return CoraType.find(type);
+    }
+
+    @SuppressWarnings("unchecked") static <T> TypeConverter<T> to(Class<T> type) {
+        return CoraType.find(GenericType.of(type));
     }
 
     /**
@@ -58,6 +63,15 @@ public interface TypeConverter<V> {
     V decode(String value) throws TypeConversionException;
 
     /**
+     * Encodes the specified value into a string representation that can be decoded using {@link
+     * #decode(String)}.
+     *
+     * @param value the value to encode.
+     * @return the encoded object.
+     */
+    String encode(V value);
+
+    /**
      * Unmarshals the specified byte array into an object of the target type, if possible.
      *
      * @param value the value to unmarshal.
@@ -67,10 +81,12 @@ public interface TypeConverter<V> {
     V unmarshal(byte[] value) throws TypeConversionException;
 
     /**
-     * Marshals the specified value into a byte array.
+     * Marshals the specified value into a byte array that can be unmarshalled using {@link
+     * #unmarshal(byte[])}.
      *
      * @param value the value to marshal.
      * @return the encoded object.
      */
     byte[] marshal(V value);
+
 }

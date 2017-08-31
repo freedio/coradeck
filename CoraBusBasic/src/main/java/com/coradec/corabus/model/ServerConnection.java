@@ -20,9 +20,21 @@
 
 package com.coradec.corabus.model;
 
+import com.coradec.corabus.com.OutboundMessage;
+import com.coradec.coracom.ctrl.NetworkConnection;
+
+import java.io.IOException;
+
 /**
  * ​A bus node that acts as an (inbound) connection to the server.
  */
-public interface ServerConnection extends BusNode {
+public interface ServerConnection extends BusNode, NetworkConnection {
+
+    /**
+     * Sends the content of the specified outbound message to its recipient path.
+     *
+     * @param message the message.
+     */
+    void output(OutboundMessage message) throws IOException;
 
 }

@@ -24,6 +24,7 @@ import com.coradec.coracom.ctrl.Observer;
 import com.coradec.coracom.state.RequestState;
 import com.coradec.coracom.trouble.RequestFailedException;
 import com.coradec.coracore.annotation.Nullable;
+import com.coradec.coracore.trouble.OperationInterruptedException;
 import com.coradec.coracore.trouble.OperationTimedoutException;
 
 import java.util.Set;
@@ -35,6 +36,45 @@ import java.util.function.Supplier;
  * ​An event that needs permission to happen.
  */
 public interface Request extends Message, Observer {
+
+    String PROP_REQUEST_STATE = "RequestState";
+    String PROP_STATES = "States";
+    String PROP_PROBLEM = "Problem";
+
+    /**
+     * Returns the current request state.
+     * <p>
+     * <span style="color:red">RequestState is not to be confused with State.  RequestState is used
+     * to track progress of the request, while the simple State is used to track message processing
+     * <em>before</em> request processing starts taking place.</span>
+     * <p>
+     * After being created, the request is in state NEW.  While being processing its state changes
+     * to SUBMITTED.  If the request is cancelled, its state changes to CANCELLED (a terminal
+     * state).  If it fails during processing, it becomes FAILED (a terminal state) and the Problem
+     * attribute may receive a meaningful value.  If processing succeeds, the request becomes
+     * SUCCESSFUL (a terminal state).
+     * <p>
+     * Terminal states of a request are also broadcast as events.
+     *
+     * @return the request state.
+     * @see #getState()
+     */
+    RequestState getRequestState();
+
+    /**
+     * Returns the complete set of states the request has ever had.
+     *
+     * @return the request state history.
+     */
+    Set<RequestState> getStates();
+
+    /**
+     * Returns the problem in case of a failure.
+     *
+     * @return the problem, or {@code null} if the request did not fail, or failed without an
+     * indication of a problem.
+     */
+    @Nullable Throwable getProblem();
 
     /**
      * Waits for the request to become complete.
@@ -52,29 +92,15 @@ public interface Request extends Message, Observer {
      * @param amount the amount of time.
      * @param unit   the time unit.
      * @return this request, for method chaining.
-     * @throws OperationTimedoutException if the set time limit expired without the request becoming
-     *                                    complete.
-     * @throws InterruptedException       if the thread was interrupted while waiting for the
-     *                                    request to complete.
-     * @throws RequestFailedException     if the request failed.
+     * @throws OperationTimedoutException    if the set time limit expired without the request
+     *                                       becoming complete.
+     * @throws OperationInterruptedException if the thread was interrupted while waiting for the
+     *                                       request to complete.
+     * @throws RequestFailedException        if the request failed.
      */
     Request standby(long amount, TimeUnit unit)
-            throws OperationTimedoutException, InterruptedException, RequestFailedException;
-
-    /**
-     * Returns the complete set of states the request has ever had.
-     *
-     * @return the request state history.
-     */
-    Set<RequestState> getStates();
-
-    /**
-     * Returns the problem in case of a failure.
-     *
-     * @return the problem, or {@code null} if the request did not fail, or failed without an
-     * indication of a problem.
-     */
-    @Nullable Throwable getProblem();
+            throws OperationTimedoutException, OperationInterruptedException,
+                   RequestFailedException;
 
     /**
      * Asynchronously marks the request as successful.
@@ -182,26 +208,6 @@ public interface Request extends Message, Observer {
      * @return {@code true} if the request is complete, otherwise {@code false}.
      */
     boolean isComplete();
-
-    /**
-     * Returns the current request state.
-     * <p>
-     * <span style="color:red">RequestState is not to be confused with State.  RequestState is used
-     * to track progress of the request, while the simple State is used to track message processing
-     * <em>before</em> request processing starts taking place.</span>
-     * <p>
-     * After being created, the request is in state NEW.  While being processing its state changes
-     * to SUBMITTED.  If the request is cancelled, its state changes to CANCELLED (a terminal
-     * state).  If it fails during processing, it becomes FAILED (a terminal state) and the Problem
-     * attribute may receive a meaningful value.  If processing succeeds, the request becomes
-     * SUCCESSFUL (a terminal state).
-     * <p>
-     * Terminal states of a request are also broadcast as events.
-     *
-     * @return the request state.
-     * @see #getState()
-     */
-    RequestState getRequestState();
 
     /**
      * Fail the request with a timeout if it has not become successful after the specified amount of

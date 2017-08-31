@@ -30,16 +30,16 @@ import com.coradec.coracom.model.Information;
 import com.coradec.coracom.model.Message;
 import com.coradec.coracom.model.Recipient;
 import com.coradec.coracom.model.Request;
-import com.coradec.coracom.model.Sender;
+import com.coradec.coracom.model.Target;
 import com.coradec.coracom.model.impl.BasicCommand;
 import com.coradec.coracom.trouble.InformationWithoutOriginException;
-import com.coradec.coracom.trouble.MessageUndeliverableException;
 import com.coradec.coracom.trouble.QueueException;
 import com.coradec.coraconf.model.Property;
-import com.coradec.coracore.annotation.Attribute;
 import com.coradec.coracore.annotation.Implementation;
+import com.coradec.coracore.annotation.Internal;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coracore.annotation.ToString;
+import com.coradec.coracore.model.Origin;
 import com.coradec.coracore.time.Duration;
 import com.coradec.coracore.trouble.OperationInterruptedException;
 import com.coradec.coractrl.ctrl.MultiThreadedMessageQueue;
@@ -54,7 +54,6 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.URI;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -72,7 +71,7 @@ import java.util.concurrent.locks.ReentrantLock;
 @SuppressWarnings({"ClassHasNoToStringMethod", "PackageVisibleField"})
 @Implementation(SINGLETON)
 public class CentralMessageQueue extends Logger
-        implements MultiThreadedMessageQueue, Sender, Recipient {
+        implements MultiThreadedMessageQueue, Origin, Recipient {
 
     static final AtomicInteger MP_ID_GEN = new AtomicInteger(0);
 
@@ -90,12 +89,13 @@ public class CentralMessageQueue extends Logger
 
     private final int lowWaterMark;
     private final int highWaterMark;
-    final Map<Recipient, RecipientQueue> queueMap;
+    final Map<Target, TargetQueue> queueMap;
     final BlockingQueue<Deferred> deferredQueue;
-    final Queue<RecipientQueue> queueQueue;
+    final Queue<TargetQueue> queueQueue;
     final Semaphore queues, qman, iq;
     final Queue<MessageProcessor> processors;
     final Collection<Observer> observers;
+    final ReentrantLock obslock = new ReentrantLock();
     final Thread scheduler = new Scheduler();
     boolean running;
     AtomicInteger maxUsed = new AtomicInteger(0);
@@ -134,37 +134,40 @@ public class CentralMessageQueue extends Logger
         }
         if (info.getOrigin() == null) throw new InformationWithoutOriginException(info);
         if (info instanceof Deferred && !isDue((Deferred)info)) scheduleDeferred((Deferred)info);
-        else if (info instanceof Message) {
-            Message message = (Message)info;
-            Collection<Recipient> recipients = message.getRecipients();
-            if (recipients.isEmpty()) {
-                final Sender sender = message.getSender();
-                if (sender instanceof Recipient)
-                    recipients = Collections.singleton((Recipient)sender);
-                if (recipients.isEmpty()) throw new MessageUndeliverableException(message);
-            }
-            message.setDeliveries(recipients.size());
+        else {
             try {
                 qman.acquire();
-                for (Recipient recipient : recipients) {
+                if (info instanceof Message) {
                     info.onEnqueue();
-                    queueMap.computeIfAbsent(recipient, r -> {
-                        final RecipientQueue queue = new RecipientQueue(r);
-                        queueQueue.add(queue);
-                        queues.release();
-                        boost();
-                        return queue;
-                    }).add(message);
-                }
+                    dispatchMessage(info, ((Message)info).getRecipient());
+                } else dispatchInfo(info, observers);
             } catch (InterruptedException e) {
                 throw new OperationInterruptedException();
             } finally {
                 qman.release();
             }
-        } else {
-            inject(new DispatchInfoCommand(info));
         }
         return info;
+    }
+
+    private <I extends Information> void dispatchInfo(final I info,
+            final Collection<Observer> observers) throws InterruptedException {
+        obslock.lock();
+        for (Observer observer : observers) {
+            dispatchMessage(info, observer);
+        }
+        obslock.unlock();
+    }
+
+    private <I extends Information> void dispatchMessage(final I info, final Target target)
+            throws InterruptedException {
+        queueMap.computeIfAbsent(target, t -> {
+            final TargetQueue queue = new TargetQueue(t);
+            queueQueue.add(queue);
+            queues.release();
+            boost();
+            return queue;
+        }).add(info);
     }
 
     boolean isDue(final Deferred info) {
@@ -190,6 +193,22 @@ public class CentralMessageQueue extends Logger
 
     @Override public void allowShutdown() {
         preventShutdown.decrementAndGet();
+    }
+
+    /**
+     * Returns the current value of the shutdown lock count.
+     *
+     * @return the shutdown lock count.
+     */
+    @Override public int getShutdownLockCount() {
+        return preventShutdown.get();
+    }
+
+    /**
+     * Forces the shutdown lock count to 0.
+     */
+    @Override public void clearShutdownLock() {
+        preventShutdown.set(0);
     }
 
     @Override public void subscribe(final Observer observer) {
@@ -233,7 +252,7 @@ public class CentralMessageQueue extends Logger
             out.printf("                         Running? %s%n", String.valueOf(running));
             out.printf(" Unhandled requests by recipient: %n");
             queueQueue.forEach(rq -> {
-                out.printf("%-32s: %d%n", rq.getRecipient(), rq.size());
+                out.printf("%-32s: %d%n", rq.getTarget(), rq.size());
                 out.printf("                     ==> Request: %s%n", rq.peek());
             });
             out.println("--- Stack dumps of active workers ---");
@@ -252,7 +271,7 @@ public class CentralMessageQueue extends Logger
         }
     }
 
-    private void boost() {
+    void boost() {
         final int qsize = queueQueue.size();
         if (qsize > processors.size() && processors.size() < highWaterMark) startThread();
     }
@@ -266,19 +285,23 @@ public class CentralMessageQueue extends Logger
     }
 
     @Override public void onMessage(final Message message) {
-        if (message instanceof DispatchInfoCommand ||
-            message instanceof AddSubscriberCommand ||
+        if (message instanceof AddSubscriberCommand ||
             message instanceof RemoveSubscriberCommand) {
             ((Command)message).execute();
         } else error(TEXT_CANNOT_PROCESS_MESSAGE, message);
     }
 
-    @Override public URI toURI() {
-        return URI.create(represent());
+    /**
+     * Returns the recipient ID.
+     *
+     * @return the recipient ID.
+     */
+    @Override public String getRecipientId() {
+        return "CMQ";
     }
 
-    @Override public void bounce(final Message message) {
-        error(TEXT_MESSAGE_BOUNCED, message);
+    @Override public URI toURI() {
+        return URI.create(represent());
     }
 
     private class MessageProcessor extends Thread {
@@ -292,35 +315,36 @@ public class CentralMessageQueue extends Logger
 
         @Override public void run() {
             final Duration patience = PROP_PATIENCE.value();
-//            debug("%s starting (patience = %s).", getName(), patience);
             do {
                 try {
                     if (!queues.tryAcquire(patience.getAmount(), patience.getUnit()))
                         if (isOdd()) break;
                         else continue;
-                    final RecipientQueue queue;
-                    final Recipient recipient;
+                    final TargetQueue queue;
+                    final Target target;
                     try {
                         qman.acquire();
                         queue = queueQueue.remove();
-                        recipient = queue.getRecipient();
+                        target = queue.getTarget();
                         if (queue.isEmpty()) {
-                            queueMap.remove(recipient);
+                            queueMap.remove(target);
                             continue;
                         }
                     } finally {
                         qman.release();
                     }
-                    final Message message = queue.poll();
-//                    debug("%s: Acquired %s", getName(), message);
+                    final Information message = queue.poll();
                     if (message != null) {
-//                        debug("Delivering message %s to recipient %s", message, recipient);
                         message.onDeliver();
-                        recipient.onMessage(message);
-//                        debug("%s: Delivered %s", getName(), message);
+                        if (target instanceof Recipient && message instanceof Message)
+                            ((Recipient)target).onMessage((Message)message);
+                        else if (target instanceof Observer) {
+                            Observer observer = (Observer)target;
+                            if (observer.wants(message) && observer.notify(message))
+                                inject(new RemoveSubscriberCommand(observer));
+                        }
                         try {
                             qman.acquire();
-//                            debug("%s: Returning queue queue", getName());
                             queueQueue.add(queue);
                             queues.release();
                         } finally {
@@ -328,37 +352,36 @@ public class CentralMessageQueue extends Logger
                         }
                     }
                 } catch (InterruptedException e) {
-//                    debug("%s interrupted.", getName());
                     break;
                 } catch (Exception e) {
                     error(e);
                 }
             } while (true);
-//            debug("%s terminated.", getName());
             processors.remove(this);
             currentUsed.set(processors.size());
         }
     }
 
-    private class RecipientQueue {
+    private class TargetQueue {
 
-        private final Recipient recipient;
-        private final LinkedList<Message> mainQueue = new LinkedList<>();
-        private final LinkedList<Message> prioQueue = new LinkedList<>();
+        private final Target recipient;
+        private final LinkedList<Information> mainQueue = new LinkedList<>();
+        private final LinkedList<Information> prioQueue = new LinkedList<>();
         private final ReentrantLock queueLock = new ReentrantLock();
 
-        public RecipientQueue(final Recipient recipient) {
+        public TargetQueue(final Target recipient) {
             this.recipient = recipient;
         }
 
-        @ToString public Recipient getRecipient() {
+        @ToString public Target getTarget() {
             return recipient;
         }
 
-        void add(final Message message) throws InterruptedException {
+        void add(final Information info) throws InterruptedException {
             queueLock.lock();
             try {
-                (message.isUrgent() ? prioQueue : mainQueue).add(message);
+                (info instanceof Message && ((Message)info).isUrgent() ? prioQueue : mainQueue).add(
+                        info);
             } finally {
                 queueLock.unlock();
             }
@@ -368,10 +391,10 @@ public class CentralMessageQueue extends Logger
             return size() == 0;
         }
 
-        @Nullable Message poll() {
+        @Nullable Information poll() {
             queueLock.lock();
             try {
-                @Nullable Message result = prioQueue.poll();
+                @Nullable Information result = prioQueue.poll();
                 if (result == null) result = mainQueue.poll();
                 return result;
             } finally {
@@ -388,10 +411,10 @@ public class CentralMessageQueue extends Logger
             }
         }
 
-        Message peek() {
+        Information peek() {
             queueLock.lock();
             try {
-                @Nullable Message result = prioQueue.peek();
+                @Nullable Information result = prioQueue.peek();
                 if (result == null) result = mainQueue.peek();
                 return result;
             } finally {
@@ -403,7 +426,14 @@ public class CentralMessageQueue extends Logger
     private class ShutMeDown implements Runnable {
 
         @Override public void run() {
-            while (preventShutdown.get() != 0) Thread.yield();
+            while (preventShutdown.get() != 0) {
+                debug("Cannot terminate yet: %d locks.", preventShutdown.get());
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    break;
+                }
+            }
             running = false;
             while (!queueQueue.isEmpty()) Thread.yield();
             scheduler.interrupt();
@@ -411,43 +441,20 @@ public class CentralMessageQueue extends Logger
         }
     }
 
-    private class DispatchInfoCommand extends BasicCommand {
-
-        private final Information info;
-
-        public DispatchInfoCommand(final Information info) {
-            super(CentralMessageQueue.this);
-            this.info = info;
-        }
-
-        @Override public void execute() {
-            for (final Observer observer : observers)
-                try {
-                    if (observer.wants(info)) {
-                        if (observer.notify(info)) inject(new RemoveSubscriberCommand(observer));
-                    }
-                } catch (Exception e) {
-                    error(e, TEXT_OBSERVER_NASTY, observer);
-                }
-            succeed();
-        }
-
-        @ToString @Attribute public Information getInfo() {
-            return info;
-        }
-    }
-
+    @Internal
     private class AddSubscriberCommand extends BasicCommand {
 
         private final Observer observer;
 
         public AddSubscriberCommand(final Observer observer) {
-            super(CentralMessageQueue.this);
+            super(CentralMessageQueue.this, CentralMessageQueue.this);
             this.observer = observer;
         }
 
         @Override public void execute() {
+            obslock.lock();
             observers.add(observer);
+            obslock.unlock();
             succeed();
         }
 
@@ -457,17 +464,20 @@ public class CentralMessageQueue extends Logger
 
     }
 
+    @Internal
     private class RemoveSubscriberCommand extends BasicCommand {
 
         private final Observer observer;
 
         public RemoveSubscriberCommand(final Observer observer) {
-            super(CentralMessageQueue.this);
+            super(CentralMessageQueue.this, CentralMessageQueue.this);
             this.observer = observer;
         }
 
         @Override public void execute() {
+            obslock.lock();
             observers.remove(observer);
+            obslock.unlock();
             succeed();
         }
 
