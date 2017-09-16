@@ -1,0 +1,13 @@
+# Localized text base for default locale of class BasicXmlParser
+
+FailedToParse: Failed to parse document %s!
+InvalidNameStartCharacter: Invalid name start character ‹%c› in document %s at %d.%d!
+InvalidToken: Invalid token ‹%c› encountered in document %s at %d.%d!
+AnonymousEmptyTag: Tag without identifier in document %s at %d.%d!
+MissingTag: No tag at closing in document %s at %d.%d!
+AttributeWithoutName: Encountered an attribute without a name in document %s at %d.%d!
+PIWithoutName: Processing instruction without a name encountered in document %s at %d.%d!
+InvalidHexCharRef: Invalid hex character reference «&#x%s;» encountered in document %s at %d.%d!
+NonCompliantComment: Encountered non-compliant comment «%s» in document %s at %d.%d (\
+    contains -- or ends with -)!
+AttributeRedefinition: Attribute «%s» redefined in document %s at %d.%d!

@@ -1,0 +1,1 @@
+A simple one   liner with no CR/LF.
