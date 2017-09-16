@@ -55,6 +55,17 @@
         <module>CoraBusServer</module>
         <module>CoraDir</module>
         <module>CoraDirBasic</module>
+        <module>CoraBusServicePOI</module>
+        <module>CoraGUI</module>
+        <module>CoraGUISwing</module>
+        <module>CoraGUIHTML</module>
+        <module>CoraDB</module>
+        <module>CoraDbBasic</module>
+        <module>CoraData</module>
+        <module>CoraDataBase</module>
+        <module>CoraDoc</module>
+        <module>CoraDocBasic</module>
+        <module>CoraDocXML</module>
     </modules>
 
     <properties>
@@ -202,6 +213,56 @@
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coradir-basic</artifactId>
+                <version>0.3</version>
+            </dependency>
+            <dependency>
+                <groupId>com.coradec.coradeck</groupId>
+                <artifactId>coragui</artifactId>
+                <version>0.3</version>
+            </dependency>
+            <dependency>
+                <groupId>com.coradec.coradeck</groupId>
+                <artifactId>coragui-swing</artifactId>
+                <version>0.3</version>
+            </dependency>
+            <dependency>
+                <groupId>com.coradec.coradeck</groupId>
+                <artifactId>coragui-html</artifactId>
+                <version>0.3</version>
+            </dependency>
+            <dependency>
+                <groupId>com.coradec.coradeck</groupId>
+                <artifactId>coradb</artifactId>
+                <version>0.3</version>
+            </dependency>
+            <dependency>
+                <groupId>com.coradec.coradeck</groupId>
+                <artifactId>coradb-basic</artifactId>
+                <version>0.3</version>
+            </dependency>
+            <dependency>
+                <groupId>com.coradec.coradeck</groupId>
+                <artifactId>coradata</artifactId>
+                <version>0.3</version>
+            </dependency>
+            <dependency>
+                <groupId>com.coradec.coradeck</groupId>
+                <artifactId>coradata-base</artifactId>
+                <version>0.3</version>
+            </dependency>
+            <dependency>
+                <groupId>com.coradec.coradeck</groupId>
+                <artifactId>coradoc</artifactId>
+                <version>0.3</version>
+            </dependency>
+            <dependency>
+                <groupId>com.coradec.coradeck</groupId>
+                <artifactId>coradoc-basic</artifactId>
+                <version>0.3</version>
+            </dependency>
+            <dependency>
+                <groupId>com.coradec.coradeck</groupId>
+                <artifactId>coradoc-xml</artifactId>
                 <version>0.3</version>
             </dependency>
         </dependencies>

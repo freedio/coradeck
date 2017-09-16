@@ -45,11 +45,13 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.jar.Manifest;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -341,7 +343,8 @@ public class CarClassLoader extends ClassLoader {
 
     @Override protected Class<?> loadClass(final String name, final boolean resolve)
             throws ClassNotFoundException {
-        Class<?> klass;
+        Class<?> klass = findLoadedClass(name);
+        if (klass != null) return klass;
         try {
             klass = findClass(name);
             if (resolve) resolveClass(klass);
@@ -378,12 +381,12 @@ public class CarClassLoader extends ClassLoader {
      * Returns an implementation of the specified interface with the specified type and construction
      * arguments.
      *
-     * @param type  the base type selector.
-     * @param types type arguments to match with type parameters of a suitable implementation
-     *              class.
+     * @param type    the base type selector.
+     * @param types   type arguments to match with type parameters of a suitable implementation
+     *                class.
      * @param context the object context ('this' of calling class).
-     * @param args  constructor arguments.
-     * @param <T>   the base type.
+     * @param args    constructor arguments.
+     * @param <T>     the base type.
      * @return a suitable instance of an implementation class.
      */
     @SuppressWarnings("unchecked") public <T> T implement(final Class<? super T> type,
@@ -470,6 +473,21 @@ public class CarClassLoader extends ClassLoader {
 
     private static String toResourceName(final String name) {
         return name.replace('.', '/') + ".class";
+    }
+
+    public Set<String> getImplementations() {
+        return Collections.unmodifiableSet(implementations);
+    }
+
+    public Set<Class<?>> getImplementationClasses() {
+        return implementations.stream().map(name -> {
+            try {
+                return findClass(name);
+            } catch (ClassNotFoundException e) {
+                // ignore this class
+                return null;
+            }
+        }).filter(Objects::nonNull).collect(Collectors.toSet());
     }
 
     public void showImplementations() {

@@ -81,6 +81,9 @@ public abstract class BasicTypeConverter<T> implements TypeConverter<T> {
         if (value instanceof String) {
             return decode((String)value);
         }
+        if (value instanceof byte[]) {
+            return unmarshal((byte[])value);
+        }
         throw new TypeConversionException(value != null ? value.getClass() : Unknown.class,
                 String.format("Failed to convert object ‹%s› to type ‹%s›", value, type));
     }

@@ -200,12 +200,36 @@ public final class StringUtil {
         return buffer.append(']').toString();
     }
 
-    private static String escape(final char o) {
-        final int i = "\f\r\n\0\b\7".indexOf(o);
-        if (i != -1) return "\\" + "frn0ba".charAt(i);
+    public static String escape(final char o) {
+        final int i = "\f\7\r\n\0\b'\\\"".indexOf(o);
+        if (i != -1) return "\\" + "farn0b'\"\\".charAt(i);
         if (o < ' ') return "\\" + Integer.toOctalString(o);
         if (o > 255) return "\\u" + String.format("%04x", (int)o);
         return String.valueOf(o);
+    }
+
+    /**
+     * Returns a copy of the specified string with each special character (including the specified
+     * additional special characters) escaped.
+     *
+     * @param s        the string.
+     * @param toEscape additional characters to escape.
+     * @return a fully escaped copy.
+     */
+    public static String escape(final String s, final String toEscape) {
+        StringBuilder collector = new StringBuilder(s.length() * 2);
+        for (int i = 0, is = s.length(); i < is; ++i) {
+            char c = s.charAt(i);
+            int x = toEscape.indexOf(c);
+            collector.append(x != -1 ? "\\" + c : escape(c));
+        }
+        return collector.toString();
+    }
+
+    public static char unescape(final char c) {
+        final int i = "farn0b'\"\\".indexOf(c);
+        if (i != -1) return "\f\7\r\n\0\b\'\"\\".charAt(i);
+        return c;
     }
 
     private static String ppArray(final Object o, Function<Object, String> objArray,

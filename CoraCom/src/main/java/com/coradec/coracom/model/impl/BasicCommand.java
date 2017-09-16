@@ -46,7 +46,7 @@ public abstract class BasicCommand extends BasicRequest implements Command {
      *
      * @param properties the property map.
      */
-    private BasicCommand(final Map<String, Object> properties) {
+    public BasicCommand(final Map<String, Object> properties) {
         super(properties);
     }
 

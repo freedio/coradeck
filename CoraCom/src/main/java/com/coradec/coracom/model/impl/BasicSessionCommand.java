@@ -50,7 +50,7 @@ public abstract class BasicSessionCommand extends BasicSessionRequest implements
      *
      * @param properties the property map.
      */
-    private BasicSessionCommand(final Map<String, Object> properties) {
+    public BasicSessionCommand(final Map<String, Object> properties) {
         super(properties);
     }
 

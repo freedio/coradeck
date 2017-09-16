@@ -224,8 +224,8 @@ public class CarInjector {
                                                         .getActualTypeArguments());
                                 field.set(instance,
                                         implementationFor(fieldType, typeArgs, instance));
-                                Syslog.debug("Field %s of %s set to %s", name, instance,
-                                        StringUtil.toString(field.get(instance)));
+//                                Syslog.debug("Field %s of %s set to %s", name, instance,
+//                                        StringUtil.toString(field.get(instance)));
                             } catch (Exception e) {
                                 Syslog.error(e);
                             }
@@ -628,6 +628,7 @@ public class CarInjector {
             }
         }
 
+        @SuppressWarnings({"LoopStatementThatDoesntLoop", "ConstantConditions"})
         private @Nullable Match match(final Type[] paras, final Object[] values,
                 final List<Type> types, final Scope scope, @Nullable final Object context,
                 final Executable method) {
@@ -652,8 +653,7 @@ public class CarInjector {
                     if (rawType == Class.class && typeArgs.length == 1) {
                         Syslog.trace("Found class argument with type args %s and types %s",
                                 StringUtil.toString(typeArgs), StringUtil.toString(types));
-                        for (final TypeVariable<? extends Class<? super T>> typeParameter :
-                                typeParameters) {
+                        for (final TypeVariable<? extends Class<? super T>> typeParameter : typeParameters) {
                             if (typeArgs[0].getTypeName().equals(typeParameter.getTypeName())) {
                                 if (v < vs && values[v] == types.get(t)) ++v;
                                 if (t < ts) args[a++] = types.get(t++);
@@ -687,7 +687,6 @@ public class CarInjector {
                     if (klass.isPrimitive()) klass = ClassUtil.getBoxingType(klass);
                     Object value;
                     final boolean varargs = klass.isArray() && p == ps;
-                    //noinspection ConstantConditions,LoopConditionNotUpdatedInsideLoop
                     do {
                         if (varargs) {
                             if (v == vs) {

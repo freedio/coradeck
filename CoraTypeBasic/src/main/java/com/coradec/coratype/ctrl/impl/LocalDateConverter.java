@@ -74,7 +74,7 @@ public class LocalDateConverter extends BasicTypeConverter<LocalDate> {
         try {
             return LocalDate.ofEpochDay(unmar.readLong());
         } catch (IOException e) {
-            throw new TypeConversionException(LocalDate.class);
+            throw new TypeConversionException(LocalDate.class, e);
         }
     }
 
@@ -84,7 +84,7 @@ public class LocalDateConverter extends BasicTypeConverter<LocalDate> {
             mar.writeLong(value.toEpochDay());
             return mar.get();
         } catch (IOException e) {
-            throw new TypeConversionException(LocalDate.class);
+            throw new TypeConversionException(LocalDate.class, e);
         }
     }
 

@@ -38,7 +38,7 @@ public final class ExecUtil {
     private static final Set<String> SYNTHETIC_CLASSES = new HashSet<>(
             Arrays.asList("sun.reflect.DelegatingMethodAccessorImpl",
                     "sun.reflect.NativeMethodAccessorImpl"));
-    @Inject private static Factory<StackFrame> STACKFRAME_FACTORY;
+    @Inject private static Factory<StackFrame> STACKFRAME;
 
     private ExecUtil() {
     }
@@ -118,7 +118,7 @@ public final class ExecUtil {
      * @return a stack frame.
      */
     public static StackFrame getStackFrame(final int level, final String realClassName) {
-        return STACKFRAME_FACTORY.get(extract(level + 2, Thread.currentThread().getStackTrace()),
+        return STACKFRAME.get(extract(level + 2, Thread.currentThread().getStackTrace()),
                 realClassName);
     }
 
@@ -129,7 +129,7 @@ public final class ExecUtil {
      * @return a stack frame.
      */
     public static StackFrame getStackFrame(final int level) {
-        return STACKFRAME_FACTORY.get(extract(level + 2, Thread.currentThread().getStackTrace()));
+        return STACKFRAME.get(extract(level + 2, Thread.currentThread().getStackTrace()));
     }
 
     /**

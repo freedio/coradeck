@@ -70,7 +70,6 @@ import java.util.function.Supplier;
 @Implementation
 public class BasicRequest extends BasicMessage implements Request, Asynchronous {
 
-    private static final Text TEXT_MESSAGE_BOUNCED = LocalizedText.define("MessageBounced");
     private static final Text TEXT_NOT_EXECUTING = LocalizedText.define("NotExecuting");
     private static final Text TEXT_CANNOT_HANDLE_MESSAGE =
             LocalizedText.define("CannotHandleMessage");

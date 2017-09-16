@@ -39,9 +39,21 @@ public class TypeConversionException extends TypeException {
         representation = null;
     }
 
+    public TypeConversionException(final @NonNull GenericType<?> fromType) {
+        this.fromType = fromType;
+        representation = null;
+    }
+
     public TypeConversionException(final @NonNull Class<?> fromType, final Throwable problem) {
         super(problem);
         this.fromClass = fromType;
+        representation = null;
+    }
+
+    public TypeConversionException(final @NonNull GenericType<?> fromType,
+            final Throwable problem) {
+        super(problem);
+        this.fromType = fromType;
         representation = null;
     }
 
