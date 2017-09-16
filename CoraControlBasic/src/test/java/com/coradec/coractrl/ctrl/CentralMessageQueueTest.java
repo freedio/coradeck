@@ -120,11 +120,11 @@ public class CentralMessageQueueTest {
         assertThat(termLock.availablePermits(), is(0)); // All tests reported finished.
     }
 
-    @Test public void cc_testSequence() throws InterruptedException {
+    @Test public void bb_testSequence() throws InterruptedException {
         Syslog.info("Performing the sequence test ... (should take less than 50 seconds)");
         CMQ.resetUsage();
         long elapsed = System.currentTimeMillis();
-        final int rounds = 30000;
+        final int rounds = 20000;
         final SequenceTestAgent agent = new SequenceTestAgent();
         new SequenceTestExecutor().launch(rounds, agent);
         termLock.tryAcquire(rounds, 50, SECONDS);
@@ -154,7 +154,7 @@ public class CentralMessageQueueTest {
         assertThat(termLock.availablePermits(), is(0)); // All tests reported finished.
     }
 
-    @Test public void bb_testInformationDispatch() throws InterruptedException {
+    @Test public void cc_testInformationDispatch() throws InterruptedException {
         Syslog.info(
                 "Performing the information delivery test ... (should take less than 50 seconds)");
         APPROVED.set(0);
