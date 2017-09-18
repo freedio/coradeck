@@ -18,27 +18,12 @@
  *
  */
 
-package com.coradec.coracore.trouble;
-
-import com.coradec.coracore.annotation.ToString;
+package com.coradec.coragui.model;
 
 /**
- * ​​Indicates a failure to instantiate a class.
+ * ​Enumeration of widget properties.
  */
-public class ClassInstantiationFailure extends BasicException {
-
-    private final String name;
-
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
-        super(problem);
-        this.name = name;
-    }
-
-    public ClassInstantiationFailure(final String name) {
-        this.name = name;
-    }
-
-    @ToString public String getName() {
-        return name;
-    }
+public enum WidgetProperty {
+    TOP,
+    LEFT
 }

@@ -18,27 +18,13 @@
  *
  */
 
-package com.coradec.coracore.trouble;
+package com.coradec.coragui.swing.bus.impl;
 
-import com.coradec.coracore.annotation.ToString;
+import com.coradec.corabus.model.impl.BasicHub;
 
 /**
- * ​​Indicates a failure to instantiate a class.
+ * Implementation of a swing node.
  */
-public class ClassInstantiationFailure extends BasicException {
+public class SwingWindowNode extends BasicHub {
 
-    private final String name;
-
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
-        super(problem);
-        this.name = name;
-    }
-
-    public ClassInstantiationFailure(final String name) {
-        this.name = name;
-    }
-
-    @ToString public String getName() {
-        return name;
-    }
 }

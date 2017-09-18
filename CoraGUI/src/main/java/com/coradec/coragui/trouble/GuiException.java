@@ -18,27 +18,27 @@
  *
  */
 
-package com.coradec.coracore.trouble;
+package com.coradec.coragui.trouble;
 
-import com.coradec.coracore.annotation.ToString;
+import com.coradec.coracore.trouble.BasicException;
 
 /**
- * ​​Indicates a failure to instantiate a class.
+ * ​​Base class of all GUI related exceptions.
  */
-public class ClassInstantiationFailure extends BasicException {
+public class GuiException extends BasicException {
 
-    private final String name;
+    public GuiException(final String explanation, final Throwable problem) {
+        super(explanation, problem);
+    }
 
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
+    public GuiException(final String explanation) {
+        super(explanation);
+    }
+
+    public GuiException() {
+    }
+
+    public GuiException(final Throwable problem) {
         super(problem);
-        this.name = name;
-    }
-
-    public ClassInstantiationFailure(final String name) {
-        this.name = name;
-    }
-
-    @ToString public String getName() {
-        return name;
     }
 }

@@ -18,27 +18,13 @@
  *
  */
 
-package com.coradec.coracore.trouble;
-
-import com.coradec.coracore.annotation.ToString;
+package com.coradec.coragui.model;
 
 /**
- * ​​Indicates a failure to instantiate a class.
+ * ​A panel showing a list of entries.
+ *
+ * @param <E> the list entry type.
  */
-public class ClassInstantiationFailure extends BasicException {
+public interface ListView<P, E> extends Container<P> {
 
-    private final String name;
-
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
-        super(problem);
-        this.name = name;
-    }
-
-    public ClassInstantiationFailure(final String name) {
-        this.name = name;
-    }
-
-    @ToString public String getName() {
-        return name;
-    }
 }

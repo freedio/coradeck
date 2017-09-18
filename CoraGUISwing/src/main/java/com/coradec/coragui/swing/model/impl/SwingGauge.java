@@ -18,27 +18,41 @@
  *
  */
 
-package com.coradec.coracore.trouble;
+package com.coradec.coragui.swing.model.impl;
 
 import com.coradec.coracore.annotation.ToString;
+import com.coradec.coracore.util.ClassUtil;
+import com.coradec.coragui.model.Gauge;
+
+import java.awt.*;
 
 /**
- * ​​Indicates a failure to instantiate a class.
+ * ​​Swing implementation of a gauge.
  */
-public class ClassInstantiationFailure extends BasicException {
+public class SwingGauge implements Gauge {
 
-    private final String name;
+    private final int height;
+    private final int width;
 
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
-        super(problem);
-        this.name = name;
+    public SwingGauge(final Dimension size) {
+        height = size.height;
+        width = size.width;
     }
 
-    public ClassInstantiationFailure(final String name) {
-        this.name = name;
+    public SwingGauge(final int height, final int width) {
+        this.height = height;
+        this.width = width;
     }
 
-    @ToString public String getName() {
-        return name;
+    @Override @ToString public int getHeight() {
+        return height;
+    }
+
+    @Override @ToString public int getWidth() {
+        return width;
+    }
+
+    @Override public String toString() {
+        return ClassUtil.toString(this);
     }
 }

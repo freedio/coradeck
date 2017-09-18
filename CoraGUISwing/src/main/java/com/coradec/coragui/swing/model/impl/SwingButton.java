@@ -18,27 +18,28 @@
  *
  */
 
-package com.coradec.coracore.trouble;
+package com.coradec.coragui.swing.model.impl;
 
-import com.coradec.coracore.annotation.ToString;
+import com.coradec.corabus.model.BusNode;
+import com.coradec.coracore.annotation.Implementation;
+import com.coradec.coracore.annotation.Register;
+import com.coradec.coragui.model.Button;
+import com.coradec.coragui.swing.bus.impl.SwingButtonNode;
+
+import javax.swing.*;
 
 /**
- * ​​Indicates a failure to instantiate a class.
+ * ​​Swing implementation of a button.
  */
-public class ClassInstantiationFailure extends BasicException {
+@Implementation
+@Register(SwingGUI.class)
+public class SwingButton extends SwingWidget<JButton> implements Button<JButton> {
 
-    private final String name;
-
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
-        super(problem);
-        this.name = name;
+    protected SwingButton(final String id, final BusNode node) {
+        super(id, new JButton(), node);
     }
 
-    public ClassInstantiationFailure(final String name) {
-        this.name = name;
-    }
-
-    @ToString public String getName() {
-        return name;
+    public SwingButton(final String id) {
+        this(id, new SwingButtonNode());
     }
 }

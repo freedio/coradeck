@@ -18,27 +18,30 @@
  *
  */
 
-package com.coradec.coracore.trouble;
+package com.coradec.coragui.swing.model.impl;
 
-import com.coradec.coracore.annotation.ToString;
+import com.coradec.corabus.model.BusHub;
+import com.coradec.coracore.annotation.Implementation;
+import com.coradec.coracore.annotation.Register;
+import com.coradec.coragui.model.Panel;
+import com.coradec.coragui.swing.bus.impl.SwingPanelNode;
+
+import javax.swing.*;
 
 /**
- * ​​Indicates a failure to instantiate a class.
+ * ​​Swing implementation of a panel.
  */
-public class ClassInstantiationFailure extends BasicException {
+@SuppressWarnings("ClassHasNoToStringMethod")
+@Implementation
+@Register(SwingGUI.class)
+public class SwingPanel extends SwingContainer<JPanel> implements Panel<JPanel> {
 
-    private final String name;
-
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
-        super(problem);
-        this.name = name;
+    protected SwingPanel(final String id, BusHub hub) {
+        super(id, new JPanel(), hub);
     }
 
-    public ClassInstantiationFailure(final String name) {
-        this.name = name;
+    public SwingPanel(final String id) {
+        this(id, new SwingPanelNode());
     }
 
-    @ToString public String getName() {
-        return name;
-    }
 }

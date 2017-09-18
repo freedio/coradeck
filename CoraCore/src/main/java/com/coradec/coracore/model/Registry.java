@@ -18,27 +18,17 @@
  *
  */
 
-package com.coradec.coracore.trouble;
-
-import com.coradec.coracore.annotation.ToString;
+package com.coradec.coracore.model;
 
 /**
- * ​​Indicates a failure to instantiate a class.
+ * ​​A component registry.
+ * <p>
+ * A component registry must have a method {@code public static registerComponent(Class<?>
+ * componentClass)} which will be invoked by the injector for each class that requests to be
+ * registered in the registry.
+ * <p>
+ * It is the registry's responsibility to accept or reject the class.
  */
-public class ClassInstantiationFailure extends BasicException {
+public interface Registry {
 
-    private final String name;
-
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
-        super(problem);
-        this.name = name;
-    }
-
-    public ClassInstantiationFailure(final String name) {
-        this.name = name;
-    }
-
-    @ToString public String getName() {
-        return name;
-    }
 }

@@ -18,27 +18,49 @@
  *
  */
 
-package com.coradec.coracore.trouble;
+/* SwingTestGUI style sheet. */
+.main {
+    position: absolute;
+    top: 50px;
+    left: 100px;
+    width: 800px;
+    height: 600px;
+}
 
-import com.coradec.coracore.annotation.ToString;
+.heading {
+    position: relative;
+    width: 100%;
+    height: 50px;
+    font-family: sans-serif;
+    font-size: 100%;
+}
 
-/**
- * ​​Indicates a failure to instantiate a class.
- */
-public class ClassInstantiationFailure extends BasicException {
+.control {
+    position: relative;
+    bottom: 0;
+    width: 100%;
+}
 
-    private final String name;
+.status {
+    position: relative;
+    left: 0;
+    width: 49%;
+}
 
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
-        super(problem);
-        this.name = name;
-    }
+.command {
+    position: relative;
+    right: 0;
+    width: 49%;
+}
 
-    public ClassInstantiationFailure(final String name) {
-        this.name = name;
-    }
+.content {
+    position: relative;
+    width: 80%;
+    height: 80%;
+}
 
-    @ToString public String getName() {
-        return name;
-    }
+.navigation {
+    position: relative;
+    height: 100%;
+    width: 20%;
 }

@@ -18,27 +18,25 @@
  *
  */
 
-package com.coradec.coracore.trouble;
-
-import com.coradec.coracore.annotation.ToString;
+package com.coradec.coragui.model;
 
 /**
- * ​​Indicates a failure to instantiate a class.
+ * ​A screen coordinate.
  */
-public class ClassInstantiationFailure extends BasicException {
+public interface Coordinate {
 
-    private final String name;
+    /**
+     * Returns the vertical position.
+     *
+     * @return the vertical position.
+     */
+    int getTop();
 
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
-        super(problem);
-        this.name = name;
-    }
+    /**
+     * Returns the horizontal position.
+     *
+     * @return the horizontal position.
+     */
+    int getLeft();
 
-    public ClassInstantiationFailure(final String name) {
-        this.name = name;
-    }
-
-    @ToString public String getName() {
-        return name;
-    }
 }

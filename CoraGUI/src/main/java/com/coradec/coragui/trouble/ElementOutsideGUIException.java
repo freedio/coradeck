@@ -18,27 +18,13 @@
  *
  */
 
-package com.coradec.coracore.trouble;
-
-import com.coradec.coracore.annotation.ToString;
+package com.coradec.coragui.trouble;
 
 /**
- * ​​Indicates a failure to instantiate a class.
+ * ​​Indicates an attempt to define GUI elements outside a GUI definition.
  */
-public class ClassInstantiationFailure extends BasicException {
+public class ElementOutsideGUIException extends GuiException {
 
-    private final String name;
-
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
-        super(problem);
-        this.name = name;
-    }
-
-    public ClassInstantiationFailure(final String name) {
-        this.name = name;
-    }
-
-    @ToString public String getName() {
-        return name;
+    public ElementOutsideGUIException(final String localName) {
     }
 }

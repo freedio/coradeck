@@ -18,27 +18,18 @@
  *
  */
 
-package com.coradec.coracore.trouble;
-
-import com.coradec.coracore.annotation.ToString;
+package com.coradec.coragui.model;
 
 /**
- * ​​Indicates a failure to instantiate a class.
+ * ​An opaque area on the screen.
  */
-public class ClassInstantiationFailure extends BasicException {
+public interface Window<P> extends Container<P> {
 
-    private final String name;
+    /**
+     * Discards the window, closing all its members recusrively and releasing all its resources.
+     *
+     * @see java.awt.Window#dispose()
+     */
+    void discard();
 
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
-        super(problem);
-        this.name = name;
-    }
-
-    public ClassInstantiationFailure(final String name) {
-        this.name = name;
-    }
-
-    @ToString public String getName() {
-        return name;
-    }
 }

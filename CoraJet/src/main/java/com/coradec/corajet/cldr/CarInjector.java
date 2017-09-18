@@ -28,10 +28,12 @@ import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.NonNull;
 import com.coradec.coracore.annotation.Nullable;
+import com.coradec.coracore.annotation.Register;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.model.Factory;
 import com.coradec.coracore.model.GenericType;
 import com.coradec.coracore.model.InjectionMode;
+import com.coradec.coracore.model.Registry;
 import com.coradec.coracore.model.Scope;
 import com.coradec.coracore.trouble.CannotInstantiateClassFailure;
 import com.coradec.coracore.trouble.ImplementationNotFoundException;
@@ -86,6 +88,7 @@ public class CarInjector {
     static final Map<String, Scope> implementations = new HashMap<>();
     private static final Map<Class<?>, Object> singletons = new HashMap<>();
     static final Set<String> components = new HashSet<>();
+    static final Map<String, String> register = new HashMap<>();
     private static Set<ImplementationClass<?>> implementationClasses;
 
     @SuppressWarnings("unchecked")
@@ -126,6 +129,26 @@ public class CarInjector {
         ClassWriter writer = new ClassWriter(reader, 0);
         reader.accept(new ClassModeler(writer), 0);
         return writer.toByteArray();
+    }
+
+    /**
+     * Post-load handling for implementation classes.  If the class wants to register itself, this
+     * is handled here.
+     */
+    public void postLoad() {
+        register.forEach((reg, regy) -> {
+            try {
+                final Class<?> registry = Class.forName(regy);
+                final Class<?> toReg = Class.forName(reg);
+                if (!Registry.class.isAssignableFrom(registry))
+                    Syslog.error("%s is not a registry class", registry);
+                registry.getDeclaredMethod("registerComponent", Class.class).invoke(null, toReg);
+            } catch (InvocationTargetException e) {
+                Syslog.error(e.getTargetException());
+            } catch (ClassNotFoundException | IllegalAccessException | NoSuchMethodException e) {
+                Syslog.error(e);
+            }
+        });
     }
 
     /**
@@ -374,6 +397,10 @@ public class CarInjector {
             this.scope = scope;
             this.typeParameters = klass.getTypeParameters();
             parametrizedInstances = new HashMap<>();
+        }
+
+        public T getSingleton() {
+            return singleton;
         }
 
         Class<? super T> getEmbeddedClass() {
@@ -628,7 +655,10 @@ public class CarInjector {
             }
         }
 
-        @SuppressWarnings({"LoopStatementThatDoesntLoop", "ConstantConditions"})
+        @SuppressWarnings({
+                                  "LoopStatementThatDoesntLoop", "ConstantConditions",
+                                  "LoopConditionNotUpdatedInsideLoop"
+                          })
         private @Nullable Match match(final Type[] paras, final Object[] values,
                 final List<Type> types, final Scope scope, @Nullable final Object context,
                 final Executable method) {
@@ -653,7 +683,8 @@ public class CarInjector {
                     if (rawType == Class.class && typeArgs.length == 1) {
                         Syslog.trace("Found class argument with type args %s and types %s",
                                 StringUtil.toString(typeArgs), StringUtil.toString(types));
-                        for (final TypeVariable<? extends Class<? super T>> typeParameter : typeParameters) {
+                        for (final TypeVariable<? extends Class<? super T>> typeParameter :
+                                typeParameters) {
                             if (typeArgs[0].getTypeName().equals(typeParameter.getTypeName())) {
                                 if (v < vs && values[v] == types.get(t)) ++v;
                                 if (t < ts) args[a++] = types.get(t++);
@@ -919,7 +950,9 @@ public class CarInjector {
                 patch = true;
             } else if (annClassName.equals(Implementation.class.getName())) {
                 implementations.put(currentClassName, TEMPLATE); // default
-                return new ClassAnnotationVisitor(currentClassName);
+                return new ImplementationClassAnnotationVisitor(currentClassName);
+            } else if (annClassName.equals(Register.class.getName())) {
+                return new RegisterClassAnnotationVisitor(currentClassName);
             }
             return null;
         }
@@ -1067,6 +1100,16 @@ public class CarInjector {
                     return "Byte";
                 case "C":
                     return "Character";
+                case "D":
+                    return "Double";
+                case "F":
+                    return "Float";
+                case "I":
+                    return "Integer";
+                case "J":
+                    return "Long";
+                case "S":
+                    return "Short";
             }
             return result.substring(1, result.length() - 1);
         } catch (StringIndexOutOfBoundsException e) {
@@ -1076,11 +1119,11 @@ public class CarInjector {
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")
-    private class ClassAnnotationVisitor extends AnnotationVisitor {
+    private class ImplementationClassAnnotationVisitor extends AnnotationVisitor {
 
         private final String className;
 
-        ClassAnnotationVisitor(final String className) {
+        ImplementationClassAnnotationVisitor(final String className) {
             super(Opcodes.ASM5);
             this.className = className;
         }
@@ -1102,6 +1145,27 @@ public class CarInjector {
                 Syslog.error(e);
             }
             super.visitEnum(name, desc, value);
+        }
+
+    }
+
+    @SuppressWarnings("ClassHasNoToStringMethod")
+    private class RegisterClassAnnotationVisitor extends AnnotationVisitor {
+
+        private final String className;
+
+        RegisterClassAnnotationVisitor(final String className) {
+            super(Opcodes.ASM5);
+            this.className = className;
+        }
+
+        @Override public void visit(final String name, final Object value) {
+            if ("value".equals(name) && value instanceof org.objectweb.asm.Type) {
+                String registry = ((org.objectweb.asm.Type)value).getClassName();
+                Syslog.debug("Found class to register %s with registry %s", className, value);
+                register.put(className, registry);
+            } else Syslog.error("Unrecognized combination: name=%s, registry=\"%s\"", name, value);
+            super.visit(name, value);
         }
 
     }

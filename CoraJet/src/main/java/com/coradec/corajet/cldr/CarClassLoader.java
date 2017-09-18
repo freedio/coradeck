@@ -71,7 +71,7 @@ public class CarClassLoader extends ClassLoader {
     private static final String NAME_INJECTOR = "com.coradec.corajet.cldr.CarInjector";
 
     private final Object injector;
-    private final Method embed, analyze, implement;
+    private final Method embed, analyze, implement, postLoad;
     private final Map<String, List<URL>> resourceMap;
     private final Map<String, Class<?>> classes = new HashMap<>();
     private final Map<String, byte[]> classData = new HashMap<>();
@@ -100,6 +100,7 @@ public class CarClassLoader extends ClassLoader {
                     Integer.TYPE, Integer.TYPE);
             implement = injectorClass.getMethod("implementationFor", Class.class, List.class,
                     Object.class, Object[].class);
+            postLoad = injectorClass.getMethod("postLoad");
             injector = injectorConstructor.newInstance();
             Syslog.info("Analyzing naked resources ...");
             for (final String file : fileList) {
@@ -114,6 +115,7 @@ public class CarClassLoader extends ClassLoader {
                     Syslog.error(e);
                 }
             });
+            postLoad.invoke(injector);
             Syslog.info("Ready.%n");
             Syslog.debug("Collected components: %s", components);
             Syslog.debug("Collected implementations: %s", implementations);

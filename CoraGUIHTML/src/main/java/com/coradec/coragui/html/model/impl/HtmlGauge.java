@@ -18,27 +18,33 @@
  *
  */
 
-package com.coradec.coracore.trouble;
+package com.coradec.coragui.html.model.impl;
 
-import com.coradec.coracore.annotation.ToString;
+import com.coradec.coracore.util.ClassUtil;
+import com.coradec.coragui.model.Gauge;
 
 /**
- * ​​Indicates a failure to instantiate a class.
+ * ​​HTML representation of a gauge.
  */
-public class ClassInstantiationFailure extends BasicException {
+public class HtmlGauge implements Gauge {
 
-    private final String name;
+    private final int height;
+    private final int width;
 
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
-        super(problem);
-        this.name = name;
+    public HtmlGauge(final int height, final int width) {
+        this.height = height;
+        this.width = width;
     }
 
-    public ClassInstantiationFailure(final String name) {
-        this.name = name;
+    @Override public int getHeight() {
+        return height;
     }
 
-    @ToString public String getName() {
-        return name;
+    @Override public int getWidth() {
+        return width;
+    }
+
+    @Override public String toString() {
+        return ClassUtil.toString(this);
     }
 }

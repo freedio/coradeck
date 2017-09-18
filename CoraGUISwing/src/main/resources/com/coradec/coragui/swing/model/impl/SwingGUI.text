@@ -1,0 +1,6 @@
+# Localized text base for default locale of class SwingGUI
+
+FromInaccessible: static %s.from() method is not public!
+TargetException: static %s.from() method failed on invocation!
+FromNotFound: %s does not define a static method from(XmlElement)!
+ClassNotFound: No gadget class found for tag %s in any of these packages: %s!

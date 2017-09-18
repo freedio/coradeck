@@ -18,27 +18,13 @@
  *
  */
 
-package com.coradec.coracore.trouble;
+package com.coradec.coragui.com;
 
-import com.coradec.coracore.annotation.ToString;
+import com.coradec.coracom.model.Command;
 
 /**
- * ​​Indicates a failure to instantiate a class.
+ * ​A command to change a widget's visibility.
  */
-public class ClassInstantiationFailure extends BasicException {
+public interface SetVisibilityCommand extends Command {
 
-    private final String name;
-
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
-        super(problem);
-        this.name = name;
-    }
-
-    public ClassInstantiationFailure(final String name) {
-        this.name = name;
-    }
-
-    @ToString public String getName() {
-        return name;
-    }
 }

@@ -18,27 +18,29 @@
  *
  */
 
-package com.coradec.coracore.trouble;
+package com.coradec.coragui.trouble;
 
 import com.coradec.coracore.annotation.ToString;
 
 /**
- * ​​Indicates a failure to instantiate a class.
+ * ​​Indicates an attempt to close a start tag with a mismatching end tag.
  */
-public class ClassInstantiationFailure extends BasicException {
+public class EndElementMismatch extends GuiException {
 
-    private final String name;
+    private final String expected;
+    private final String actual;
 
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
-        super(problem);
-        this.name = name;
+    public EndElementMismatch(final String expected, final String actual) {
+        this.expected = expected;
+        this.actual = actual;
     }
 
-    public ClassInstantiationFailure(final String name) {
-        this.name = name;
+    @ToString public String getExpected() {
+        return expected;
     }
 
-    @ToString public String getName() {
-        return name;
+    @ToString public String getActual() {
+        return actual;
     }
+
 }

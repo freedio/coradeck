@@ -18,27 +18,29 @@
  *
  */
 
-package com.coradec.coracore.trouble;
+package com.coradec.coragui.swing.model.impl;
 
-import com.coradec.coracore.annotation.ToString;
+import com.coradec.corabus.model.BusHub;
+import com.coradec.coracore.annotation.Implementation;
+import com.coradec.coracore.annotation.Register;
+import com.coradec.coragui.model.Tree;
+import com.coradec.coragui.swing.bus.impl.SwingTreeNode;
+
+import javax.swing.*;
 
 /**
- * ​​Indicates a failure to instantiate a class.
+ * ​​Swing implementation of a Tree.
  */
-public class ClassInstantiationFailure extends BasicException {
+@Implementation
+@Register(SwingGUI.class)
+public class SwingTree extends SwingContainer<JTree> implements Tree<JTree> {
 
-    private final String name;
-
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
-        super(problem);
-        this.name = name;
+    protected SwingTree(final String id, final BusHub hub) {
+        super(id, new JTree(), hub);
     }
 
-    public ClassInstantiationFailure(final String name) {
-        this.name = name;
+    public SwingTree(final String id) {
+        this(id, new SwingTreeNode());
     }
 
-    @ToString public String getName() {
-        return name;
-    }
 }

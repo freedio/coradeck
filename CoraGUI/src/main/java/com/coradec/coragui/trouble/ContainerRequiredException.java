@@ -18,27 +18,23 @@
  *
  */
 
-package com.coradec.coracore.trouble;
+package com.coradec.coragui.trouble;
 
 import com.coradec.coracore.annotation.ToString;
 
 /**
- * ​​Indicates a failure to instantiate a class.
+ * ​​Indicates an attempt to add an element to a non-container element.
  */
-public class ClassInstantiationFailure extends BasicException {
+public class ContainerRequiredException extends GuiException {
 
     private final String name;
 
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
-        super(problem);
-        this.name = name;
-    }
-
-    public ClassInstantiationFailure(final String name) {
+    public ContainerRequiredException(final String name) {
         this.name = name;
     }
 
     @ToString public String getName() {
         return name;
     }
+
 }

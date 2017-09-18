@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  ~ Copyright ⓒ 2017 by Coradec GmbH.
+  ~
+  ~ This file is part of the Coradeck.
+  ~
+  ~ Coradeck is free software: you can redistribute it under the the terms of the GNU General
+  ~ Public License as published by the Free Software Foundation, either version 3 of the License,
+  ~ or any later version.
+  ~
+  ~ Coradeck is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+  ~ even the implied warranty of MERCHANTABILITY or FITNESS FOR ANY PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for further details.
+  ~
+  ~ The GNU General Public License is available from <http://www.gnu.org/licenses/>.
+  ~
+  ~ @license GPL-3.0+ <http://spdx.org/licenses/GPL-3.0+>
+  ~ @author Dominik Wezel <dom@coradec.com>
+  ~
+  -->
+<GUI id="test-gui" name="Test" type="single-page" style-sheet="SwingTestGUI.css">
+    <model package="com.coradec.coragui.model"/>
+    <implementation package="com.coradec.coragui.swing.model.impl"/>
+    <Frame id="main-frame" title="Test Frame" class="main">
+        <Panel id="heading-pane" class="heading">
+            <Label id="main-frame-heading" text="SwingGUI Test"/>
+        </Panel>
+        <Panel id="control-pane" class="control">
+            <Panel id="status-panel" class="status">
+                <TextField id="status" text="Loading..."/>
+            </Panel>
+            <Panel id="command-panel" class="command">
+                <Button id="exit-button" text="Quit" action="exit"/>
+            </Panel>
+        </Panel>
+        <Panel id="content-pane" class="content">
+            <ListView id="task-list"/>
+        </Panel>
+        <Panel id="navi-pane" class="navigation">
+            <Tree id="navi-tree"/>
+        </Panel>
+    </Frame>
+</GUI>

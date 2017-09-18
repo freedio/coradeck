@@ -18,27 +18,21 @@
  *
  */
 
-package com.coradec.coracore.trouble;
+package com.coradec.coragui.trouble;
 
-import com.coradec.coracore.annotation.ToString;
+import com.coradec.coragui.model.Gadget;
 
 /**
- * ​​Indicates a failure to instantiate a class.
+ * ​​Indicates a problem with resolving a {@link Gadget}.
  */
-public class ClassInstantiationFailure extends BasicException {
+public class GadgetResolutionException extends GuiException {
 
-    private final String name;
-
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
-        super(problem);
-        this.name = name;
+    public GadgetResolutionException(final String explanation, final Throwable problem) {
+        super(explanation, problem);
     }
 
-    public ClassInstantiationFailure(final String name) {
-        this.name = name;
+    public GadgetResolutionException(final String explanation) {
+        super(explanation);
     }
 
-    @ToString public String getName() {
-        return name;
-    }
 }

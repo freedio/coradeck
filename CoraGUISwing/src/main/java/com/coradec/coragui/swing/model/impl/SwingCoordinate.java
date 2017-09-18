@@ -18,27 +18,42 @@
  *
  */
 
-package com.coradec.coracore.trouble;
+package com.coradec.coragui.swing.model.impl;
 
 import com.coradec.coracore.annotation.ToString;
+import com.coradec.coracore.util.ClassUtil;
+import com.coradec.coragui.model.Coordinate;
+
+import java.awt.*;
 
 /**
- * ​​Indicates a failure to instantiate a class.
+ * ​​Swing implementation of a screen coordinate.
  */
-public class ClassInstantiationFailure extends BasicException {
+public class SwingCoordinate implements Coordinate {
 
-    private final String name;
+    private final int top;
+    private final int left;
 
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
-        super(problem);
-        this.name = name;
+    public SwingCoordinate(final Point location) {
+        left = location.x;
+        top = location.y;
     }
 
-    public ClassInstantiationFailure(final String name) {
-        this.name = name;
+    public SwingCoordinate(final int x, final int y) {
+        left = x;
+        top = y;
     }
 
-    @ToString public String getName() {
-        return name;
+    @Override @ToString public int getTop() {
+        return top;
     }
+
+    @Override @ToString public int getLeft() {
+        return left;
+    }
+
+    @Override public String toString() {
+        return ClassUtil.toString(this);
+    }
+
 }

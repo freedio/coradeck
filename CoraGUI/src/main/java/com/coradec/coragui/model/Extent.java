@@ -18,27 +18,39 @@
  *
  */
 
-package com.coradec.coracore.trouble;
-
-import com.coradec.coracore.annotation.ToString;
+package com.coradec.coragui.model;
 
 /**
- * ​​Indicates a failure to instantiate a class.
+ * ​Extent of a widget (sometimes also referred to as bounds).
  */
-public class ClassInstantiationFailure extends BasicException {
+public interface Extent {
 
-    private final String name;
+    /**
+     * Returns the vertical position of the widget's origin.
+     *
+     * @return the vertical position.
+     */
+    int getTop();
 
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
-        super(problem);
-        this.name = name;
-    }
+    /**
+     * Returns the horizontal position of the widget's origin.
+     *
+     * @return the horizontal position.
+     */
+    int getLeft();
 
-    public ClassInstantiationFailure(final String name) {
-        this.name = name;
-    }
+    /**
+     * Returns the height of the widget.
+     *
+     * @return the height.
+     */
+    int getHeight();
 
-    @ToString public String getName() {
-        return name;
-    }
+    /**
+     * Returns the width of the widget.
+     *
+     * @return the width.
+     */
+    int getWidth();
+
 }

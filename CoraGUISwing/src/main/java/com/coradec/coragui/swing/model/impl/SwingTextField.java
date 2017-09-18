@@ -18,27 +18,29 @@
  *
  */
 
-package com.coradec.coracore.trouble;
+package com.coradec.coragui.swing.model.impl;
 
-import com.coradec.coracore.annotation.ToString;
+import com.coradec.corabus.model.BusNode;
+import com.coradec.coracore.annotation.Implementation;
+import com.coradec.coracore.annotation.Register;
+import com.coradec.coragui.model.TextField;
+import com.coradec.coragui.swing.bus.impl.SwingTextFieldNode;
+
+import javax.swing.*;
 
 /**
- * ​​Indicates a failure to instantiate a class.
+ * Swing implementation of a text field.​​
  */
-public class ClassInstantiationFailure extends BasicException {
+@SuppressWarnings("ClassHasNoToStringMethod")
+@Implementation
+@Register(SwingGUI.class)
+public class SwingTextField extends SwingWidget<JTextField> implements TextField<JTextField> {
 
-    private final String name;
-
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
-        super(problem);
-        this.name = name;
+    protected SwingTextField(final String id, final BusNode node) {
+        super(id, new JTextField(), node);
     }
 
-    public ClassInstantiationFailure(final String name) {
-        this.name = name;
-    }
-
-    @ToString public String getName() {
-        return name;
+    public SwingTextField(final String id) {
+        this(id, new SwingTextFieldNode());
     }
 }

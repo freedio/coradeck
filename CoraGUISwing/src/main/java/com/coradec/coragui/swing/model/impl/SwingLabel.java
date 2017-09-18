@@ -18,27 +18,30 @@
  *
  */
 
-package com.coradec.coracore.trouble;
+package com.coradec.coragui.swing.model.impl;
 
-import com.coradec.coracore.annotation.ToString;
+import com.coradec.corabus.model.BusNode;
+import com.coradec.coracore.annotation.Implementation;
+import com.coradec.coracore.annotation.Register;
+import com.coradec.coragui.model.Label;
+import com.coradec.coragui.swing.bus.impl.SwingLabelNode;
+
+import javax.swing.*;
 
 /**
- * ​​Indicates a failure to instantiate a class.
+ * ​​Swing implementation of a label.
  */
-public class ClassInstantiationFailure extends BasicException {
+@SuppressWarnings("ClassHasNoToStringMethod")
+@Implementation
+@Register(SwingGUI.class)
+public class SwingLabel extends SwingWidget<JLabel> implements Label<JLabel> {
 
-    private final String name;
-
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
-        super(problem);
-        this.name = name;
+    protected SwingLabel(final String id, final BusNode node) {
+        super(id, new JLabel(), node);
     }
 
-    public ClassInstantiationFailure(final String name) {
-        this.name = name;
+    public SwingLabel(final String id) {
+        this(id, new SwingLabelNode());
     }
 
-    @ToString public String getName() {
-        return name;
-    }
 }

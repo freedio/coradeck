@@ -18,27 +18,25 @@
  *
  */
 
-package com.coradec.coracore.trouble;
+package com.coradec.coragui.trouble;
 
 import com.coradec.coracore.annotation.ToString;
 
+import java.net.URL;
+
 /**
- * ​​Indicates a failure to instantiate a class.
+ * ​​Indicates a failure to construct the GUI model from an XML input source.
  */
-public class ClassInstantiationFailure extends BasicException {
+public class ModelConstructionFailure extends GuiException {
 
-    private final String name;
+    private final URL modelURL;
 
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
+    public ModelConstructionFailure(final URL modelURL, final Throwable problem) {
         super(problem);
-        this.name = name;
+        this.modelURL = modelURL;
     }
 
-    public ClassInstantiationFailure(final String name) {
-        this.name = name;
-    }
-
-    @ToString public String getName() {
-        return name;
+    @ToString public URL getModelURL() {
+        return modelURL;
     }
 }

@@ -18,27 +18,20 @@
  *
  */
 
-package com.coradec.coracore.trouble;
+package com.coradec.coragui.model;
 
-import com.coradec.coracore.annotation.ToString;
+import com.coradec.coracom.model.Request;
 
 /**
- * ​​Indicates a failure to instantiate a class.
+ * ​A widget that contains other widgets.
  */
-public class ClassInstantiationFailure extends BasicException {
+public interface Container<P> extends Widget<P> {
 
-    private final String name;
-
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
-        super(problem);
-        this.name = name;
-    }
-
-    public ClassInstantiationFailure(final String name) {
-        this.name = name;
-    }
-
-    @ToString public String getName() {
-        return name;
-    }
+    /**
+     * Adds the specified gadget to the container.
+     *
+     * @param gadget the gadget to add.
+     * @return a request to track progress of the operation.
+     */
+    Request add(Gadget gadget);
 }

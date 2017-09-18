@@ -18,27 +18,15 @@
  *
  */
 
-package com.coradec.coracore.trouble;
+package com.coradec.coragui.swing.model.impl;
 
-import com.coradec.coracore.annotation.ToString;
+import com.coradec.coracore.annotation.Implementation;
+import com.coradec.coragui.model.StyleSheet;
 
 /**
- * ​​Indicates a failure to instantiate a class.
+ * ​​Swing implementation of a style sheet.
  */
-public class ClassInstantiationFailure extends BasicException {
+@Implementation
+public class SwingStyleSheet implements StyleSheet {
 
-    private final String name;
-
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
-        super(problem);
-        this.name = name;
-    }
-
-    public ClassInstantiationFailure(final String name) {
-        this.name = name;
-    }
-
-    @ToString public String getName() {
-        return name;
-    }
 }

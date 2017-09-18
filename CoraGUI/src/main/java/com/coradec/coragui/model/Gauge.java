@@ -18,27 +18,25 @@
  *
  */
 
-package com.coradec.coracore.trouble;
-
-import com.coradec.coracore.annotation.ToString;
+package com.coradec.coragui.model;
 
 /**
- * ​​Indicates a failure to instantiate a class.
+ * ​Extent of a widget (sometimes also referred to as size or dimension).
  */
-public class ClassInstantiationFailure extends BasicException {
+public interface Gauge {
 
-    private final String name;
+    /**
+     * Returns the height of the widget.
+     *
+     * @return the height.
+     */
+    int getHeight();
 
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
-        super(problem);
-        this.name = name;
-    }
+    /**
+     * Returns the width of the widget.
+     *
+     * @return the width.
+     */
+    int getWidth();
 
-    public ClassInstantiationFailure(final String name) {
-        this.name = name;
-    }
-
-    @ToString public String getName() {
-        return name;
-    }
 }

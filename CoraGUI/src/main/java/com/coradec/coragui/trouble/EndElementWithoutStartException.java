@@ -18,27 +18,23 @@
  *
  */
 
-package com.coradec.coracore.trouble;
+package com.coradec.coragui.trouble;
 
 import com.coradec.coracore.annotation.ToString;
 
 /**
- * ​​Indicates a failure to instantiate a class.
+ * ​​Indicates that an end tag without a prior start tag was encountered.
  */
-public class ClassInstantiationFailure extends BasicException {
+public class EndElementWithoutStartException extends GuiException {
 
     private final String name;
 
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
-        super(problem);
-        this.name = name;
-    }
-
-    public ClassInstantiationFailure(final String name) {
+    public EndElementWithoutStartException(final String name) {
         this.name = name;
     }
 
     @ToString public String getName() {
         return name;
     }
+
 }

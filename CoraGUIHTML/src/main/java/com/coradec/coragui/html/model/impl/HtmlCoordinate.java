@@ -18,27 +18,33 @@
  *
  */
 
-package com.coradec.coracore.trouble;
+package com.coradec.coragui.html.model.impl;
 
-import com.coradec.coracore.annotation.ToString;
+import com.coradec.coracore.util.ClassUtil;
+import com.coradec.coragui.model.Coordinate;
 
 /**
- * ​​Indicates a failure to instantiate a class.
+ * ​​HTML representation of a coordinate.
  */
-public class ClassInstantiationFailure extends BasicException {
+public class HtmlCoordinate implements Coordinate {
 
-    private final String name;
+    private final int top;
+    private final int left;
 
-    public ClassInstantiationFailure(final String name, final Throwable problem) {
-        super(problem);
-        this.name = name;
+    public HtmlCoordinate(final int top, final int left) {
+        this.top = top;
+        this.left = left;
     }
 
-    public ClassInstantiationFailure(final String name) {
-        this.name = name;
+    @Override public int getTop() {
+        return top;
     }
 
-    @ToString public String getName() {
-        return name;
+    @Override public int getLeft() {
+        return left;
+    }
+
+    @Override public String toString() {
+        return ClassUtil.toString(this);
     }
 }
