@@ -79,7 +79,7 @@ public class BasicXmlParser<M extends XmlDocumentModel> implements XmlParser<M> 
         return this;
     }
 
-    @Override public void parse() throws ParseFailure {
+    @Override public XmlParser<M> parse() throws ParseFailure {
         StringBuilder collector = new StringBuilder();
         @Nullable String tag = null, attrName = null, piName = null;
         @Nullable XmlAttributes attributes = null;
@@ -290,6 +290,7 @@ public class BasicXmlParser<M extends XmlDocumentModel> implements XmlParser<M> 
                     break;
             }
         }
+        return this;
     }
 
     /**

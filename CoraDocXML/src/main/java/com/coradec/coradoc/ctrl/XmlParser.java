@@ -53,7 +53,7 @@ public interface XmlParser<M extends XmlDocumentModel> {
      *
      * @throws ParseFailure if the document could not be completely parsed.
      */
-    void parse() throws ParseFailure;
+    XmlParser<M> parse() throws ParseFailure;
 
     /**
      * Parses the document and returns the model.
