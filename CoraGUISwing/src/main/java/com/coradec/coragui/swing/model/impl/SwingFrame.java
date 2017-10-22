@@ -21,8 +21,10 @@
 package com.coradec.coragui.swing.model.impl;
 
 import com.coradec.corabus.model.BusHub;
+import com.coradec.coraconf.model.ValueMap;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Register;
+import com.coradec.coradoc.model.Style;
 import com.coradec.coragui.model.Frame;
 import com.coradec.coragui.swing.bus.impl.SwingFrameNode;
 
@@ -35,16 +37,22 @@ import javax.swing.*;
 @Register(SwingGUI.class)
 public class SwingFrame extends SwingContainer<JFrame> implements Frame<JFrame> {
 
-    protected SwingFrame(final String id, BusHub hub) {
-        super(id, new JFrame(), hub);
+    protected SwingFrame(final ValueMap attributes, BusHub hub) {
+        super(attributes, new JFrame(), hub);
     }
 
-    public SwingFrame(final String id) {
-        this(id, new SwingFrameNode());
+    public SwingFrame(final ValueMap attributes) {
+        this(attributes, new SwingFrameNode());
     }
 
     @Override public void discard() {
         getPeer().dispose();
+    }
+
+    @Override protected void setupStyle(final Style style) {
+        getAttributes().lookup("title").ifPresent(text -> getPeer().setTitle(text));
+        getPeer().pack();
+        super.setupStyle(style);
     }
 
 }

@@ -55,4 +55,15 @@ public class SwingGauge implements Gauge {
     @Override public String toString() {
         return ClassUtil.toString(this);
     }
+
+    @Override public boolean equals(final Object obj) {
+        return obj instanceof Gauge &&
+               getHeight() == ((Gauge)obj).getHeight() &&
+               getWidth() == ((Gauge)obj).getWidth();
+    }
+
+    @Override public int hashCode() {
+        return 3 * getHeight() ^ 7 * getWidth();
+    }
+
 }

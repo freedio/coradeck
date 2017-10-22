@@ -24,6 +24,7 @@ import static com.coradec.coracore.model.Scope.*;
 
 import com.coradec.corabus.model.BusNode;
 import com.coradec.coracom.model.Request;
+import com.coradec.coraconf.model.ValueMap;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Register;
 import com.coradec.coracore.trouble.UnimplementedOperationException;
@@ -42,12 +43,12 @@ import java.awt.*;
 @Register(SwingGUI.class)
 public class SwingScreen extends SwingGadget<Toolkit> implements Screen<Toolkit> {
 
-    protected SwingScreen(final String id, final BusNode node) {
-        super(id, Toolkit.getDefaultToolkit(), node);
+    protected SwingScreen(final ValueMap attributes, final BusNode node) {
+        super(attributes, Toolkit.getDefaultToolkit(), node);
     }
 
-    public SwingScreen(final String id) {
-        this(id, new SwingScreenNode());
+    public SwingScreen(final ValueMap attributes) {
+        this(attributes, new SwingScreenNode());
     }
 
     @Override public int getLeft() {

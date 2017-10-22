@@ -24,6 +24,7 @@ import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.ToString;
 import com.coradec.coracore.model.Factory;
 import com.coradec.coracore.model.Origin;
+import com.coradec.coracore.trouble.OperationInterruptedException;
 import com.coradec.coracore.util.ClassUtil;
 import com.coradec.coradoc.ctrl.XmlParser;
 import com.coradec.coradoc.model.XmlAttributes;
@@ -76,17 +77,21 @@ public final class SwingGuiModel extends BasicXmlDocumentModel {
         if (!empty) names.push(name);
         if ("GUI".equals(name)) {
             if (currentElement != null) throw new RecursiveGUIDefinition();
-            currentElement = gui = new SwingGUI();
+            currentElement = gui = new SwingGUI(attributes);
         } else if ("model".equals(name) && currentElement == gui)
-            gui.addModelPackage(attributes.getValue("package"));
+            gui.addModelPackage(attributes.get("package"));
         else if ("implementation".equals(name) && currentElement == gui)
-            gui.addImplementationPackage(attributes.getValue("package"));
+            gui.addImplementationPackage(attributes.get("package"));
         else if (currentElement == null) throw new ElementOutsideGUIException(name);
         else {
             if (currentElement == gui) currentElement = gui.addElement(name, attributes);
             else if (currentElement instanceof SwingContainer) {
                 final SwingGadget newElement = gui.createElement(name, attributes);
-                ((SwingContainer)currentElement).add(newElement);
+                try {
+                    ((SwingContainer)currentElement).add(newElement).standby();
+                } catch (InterruptedException e) {
+                    throw new OperationInterruptedException();
+                }
                 currentElement = newElement;
             } else throw new ContainerRequiredException(String.valueOf(currentElement));
         }
@@ -108,4 +113,5 @@ public final class SwingGuiModel extends BasicXmlDocumentModel {
     public SwingGUI getGUI() {
         return gui;
     }
+
 }

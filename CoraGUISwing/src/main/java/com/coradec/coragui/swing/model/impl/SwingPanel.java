@@ -21,6 +21,7 @@
 package com.coradec.coragui.swing.model.impl;
 
 import com.coradec.corabus.model.BusHub;
+import com.coradec.coraconf.model.ValueMap;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Register;
 import com.coradec.coragui.model.Panel;
@@ -36,12 +37,12 @@ import javax.swing.*;
 @Register(SwingGUI.class)
 public class SwingPanel extends SwingContainer<JPanel> implements Panel<JPanel> {
 
-    protected SwingPanel(final String id, BusHub hub) {
-        super(id, new JPanel(), hub);
+    protected SwingPanel(final ValueMap attributes, BusHub hub) {
+        super(attributes, new JPanel(), hub);
     }
 
-    public SwingPanel(final String id) {
-        this(id, new SwingPanelNode());
+    public SwingPanel(final ValueMap attributes) {
+        this(attributes, new SwingPanelNode());
     }
 
 }

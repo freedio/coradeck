@@ -39,7 +39,7 @@ public interface Document {
 
     static Document from(URL source) throws DocumentException {
         try {
-            return new BasicDocument(new URLigin(source), source.openStream(), StringUtil.CHARSET);
+            return new BasicDocument(new URLigin(source), source.openStream(), StringUtil.UTF8);
         } catch (IOException e) {
             throw new DocumentReadFailure(source.toString(), e);
         }
@@ -65,6 +65,14 @@ public interface Document {
     boolean isNext(CharSequence next);
 
     /**
+     * Checks if the next upcoming character matches the specified rule (without consuming it).
+     *
+     * @param rule the rule the next character must match to comply.
+     * @return {@code true} if the next character matches the rule, {@code false} if not.
+     */
+    boolean nextIs(Predicate<Character> rule);
+
+    /**
      * Checks if the next upcoming characters differ from the specified character sequence.
      *
      * @param next the next characters NOT expected.
@@ -73,11 +81,28 @@ public interface Document {
     boolean isNextNot(CharSequence next);
 
     /**
-     * Returns the next character of the document.
+     * Returns the next character of the document and consumes it.
      *
      * @return the next character.
      */
     char nextChar() throws EndOfDocumentException;
+
+    /**
+     * Returns the next character of the document without consuming it.
+     *
+     * @return the next character.
+     */
+    char peek() throws EndOfDocumentException;
+
+    /**
+     * Returns the next <i>n</i> characters of the document without consuming them.
+     *
+     * @param n the number of character to look ahead.
+     * @return next next <i>n</i> characters.
+     * @throws EndOfDocumentException if the end of the document was reached before the next
+     *                                <i>n</i> characters.
+     */
+    CharSequence peek(int n) throws EndOfDocumentException;
 
     /**
      * Returns the origin of the document.
@@ -108,6 +133,17 @@ public interface Document {
      * @return a sequence of characters valid according to the specified predicate.
      */
     CharSequence readWhile(Predicate<Character> valid);
+
+    /**
+     * Reads characters from the document while the document still has characters conforming to the
+     * specified predicate, but stop when the total number of valid characters reaches the specified
+     * limit.
+     *
+     * @param valid the predicate for valid characters.
+     * @param limit the maxmum number of characters to read.
+     * @return a sequence of characters valid according to the specified predicate.
+     */
+    CharSequence readWhile(Predicate<Character> valid, int limit);
 
     /**
      * Reads characters from the document until the predicate returns {@code true}.
@@ -147,4 +183,20 @@ public interface Document {
      * there are more characters to read.
      */
     boolean isFinished();
+
+    /**
+     * Checks if the document deems the specified character as whitespace.
+     *
+     * @param c the character.
+     * @return {@code true} if the document deems the character as whitespace, {@code false} if not.
+     */
+    boolean isBlank(char c);
+
+    /**
+     * Pushes the specified character back to the document.
+     *
+     * @param c the character to push bacl.
+     */
+    void pushback(char c);
+
 }

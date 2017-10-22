@@ -20,9 +20,37 @@
 
 package com.coradec.coradoc.model;
 
+import com.coradec.coracore.model.Origin;
+
 /**
  * ​A model for building a structured document.
  */
 public interface DocumentModel {
+
+    /**
+     * Callback invoked before the document starts.
+     *
+     * @param document the document origin.
+     */
+    void onStartOfDocument(Origin document);
+
+    /**
+     * Callback invoked before the document ends.
+     */
+    void onEndOfDocument();
+
+    /**
+     * Callback invoked when the specified comment was encountered.
+     *
+     * @param comment the comment.
+     */
+    void onComment(String comment);
+
+    /**
+     * Returns the document origin.
+     *
+     * @return the document origin.
+     */
+    Origin getDocument();
 
 }

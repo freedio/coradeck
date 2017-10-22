@@ -35,4 +35,9 @@ public class ParseFailure extends DocumentException {
 
     public ParseFailure() {
     }
+
+    public ParseFailure(final Throwable problem) {
+        super(problem);
+    }
+
 }

@@ -137,7 +137,7 @@ public class BasicXmlParserTest {
             comments.add(comment);
         }
 
-        Origin getDocument() {
+        @Override public Origin getDocument() {
             return document;
         }
 

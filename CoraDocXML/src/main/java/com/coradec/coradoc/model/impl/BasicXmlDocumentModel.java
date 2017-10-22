@@ -21,7 +21,6 @@
 package com.coradec.coradoc.model.impl;
 
 import com.coradec.coracore.annotation.Nullable;
-import com.coradec.coracore.model.Origin;
 import com.coradec.coradoc.model.XmlAttributes;
 import com.coradec.coradoc.model.XmlDocumentModel;
 
@@ -29,10 +28,6 @@ import com.coradec.coradoc.model.XmlDocumentModel;
  * ​​Basic implementation of an XML document model.
  */
 public class BasicXmlDocumentModel extends BasicDocumentModel implements XmlDocumentModel {
-
-    @Override public void onStartOfDocument(final Origin document) {
-
-    }
 
     @Override public void onEndOfDocument() {
 
@@ -70,4 +65,5 @@ public class BasicXmlDocumentModel extends BasicDocumentModel implements XmlDocu
     @Override public void onComment(final String comment) {
 
     }
+
 }

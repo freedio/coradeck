@@ -24,14 +24,11 @@ import static com.coradec.coradoc.state.ParserState.*;
 
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Nullable;
-import com.coradec.coracore.model.Origin;
-import com.coradec.coracore.model.impl.URLigin;
 import com.coradec.coradoc.ctrl.XmlParser;
 import com.coradec.coradoc.model.Document;
 import com.coradec.coradoc.model.XmlAttributes;
 import com.coradec.coradoc.model.XmlDocumentModel;
 import com.coradec.coradoc.model.impl.BasicXmlAttributes;
-import com.coradec.coradoc.model.impl.BasicXmlDocumentModel;
 import com.coradec.coradoc.state.ParserState;
 import com.coradec.coradoc.trouble.ParseFailure;
 import com.coradec.coratext.model.LocalizedText;
@@ -44,7 +41,8 @@ import java.net.URL;
  */
 @SuppressWarnings("ClassHasNoToStringMethod")
 @Implementation
-public class BasicXmlParser<M extends XmlDocumentModel> implements XmlParser<M> {
+public class BasicXmlParser<M extends XmlDocumentModel> extends BasicDocumentParser<M>
+        implements XmlParser<M> {
 
     private static final Text TEXT_FAILED_TO_PARSE = LocalizedText.define("FailedToParse");
     private static final Text TEXT_INVALID_NAME_START_CHARACTER =
@@ -62,21 +60,17 @@ public class BasicXmlParser<M extends XmlDocumentModel> implements XmlParser<M> 
             LocalizedText.define("AttributeRedefinition");
 
     private ParserState state = INITIAL;
-    private XmlDocumentModel model = new BasicXmlDocumentModel() {
-
-    };
-    private Origin origin;
-    private Document document;
 
     @Override public XmlParser<M> to(final M model) {
-        this.model = model;
-        return this;
+        return (XmlParser<M>)super.to(model);
     }
 
     @Override public XmlParser<M> from(final URL source) {
-        document = Document.from(source);
-        origin = new URLigin(source);
-        return this;
+        return (XmlParser<M>)super.from(source);
+    }
+
+    @Override public M getModel() {
+        return super.getModel();
     }
 
     @Override public XmlParser<M> parse() throws ParseFailure {
@@ -85,8 +79,9 @@ public class BasicXmlParser<M extends XmlDocumentModel> implements XmlParser<M> 
         @Nullable XmlAttributes attributes = null;
         boolean endTag = false, emptyTag = false;
         int radix = 10;
-        model.onStartOfDocument(origin);
-        final Document document = this.document;
+        final Document document = super.getDocument();
+        final M model = super.getModel();
+        startDocument();
         char c;
         outer:
         while (true) {
@@ -340,8 +335,4 @@ public class BasicXmlParser<M extends XmlDocumentModel> implements XmlParser<M> 
                isNameStart(c);
     }
 
-    @Override public M getModel() {
-        //noinspection unchecked
-        return (M)model;
-    }
 }

@@ -23,6 +23,14 @@ package com.coradec.coragui.swing.model.impl;
 import com.coradec.corabus.model.BusNode;
 import com.coradec.coracom.model.Request;
 import com.coradec.coracom.model.impl.BasicCommand;
+import com.coradec.coraconf.model.ValueMap;
+import com.coradec.coracore.annotation.Nullable;
+import com.coradec.coradoc.cssenum.CssUnit;
+import com.coradec.coradoc.cssenum.Distance;
+import com.coradec.coradoc.model.IntegerMeasure;
+import com.coradec.coradoc.model.Style;
+import com.coradec.coradoc.token.IntegerDimension;
+import com.coradec.coradoc.token.IntegerPercentage;
 import com.coradec.coragui.com.SetExtentCommand;
 import com.coradec.coragui.com.SetGaugeCommand;
 import com.coradec.coragui.com.SetHeightCommand;
@@ -31,6 +39,7 @@ import com.coradec.coragui.com.SetOriginCommand;
 import com.coradec.coragui.com.SetTopCommand;
 import com.coradec.coragui.com.SetVisibilityCommand;
 import com.coradec.coragui.com.SetWidthCommand;
+import com.coradec.coragui.com.SetupCommand;
 import com.coradec.coragui.model.Coordinate;
 import com.coradec.coragui.model.Extent;
 import com.coradec.coragui.model.Gauge;
@@ -42,10 +51,14 @@ import java.util.Map;
 /**
  * Swing implementation of a widget.​​
  */
+@SuppressWarnings("ClassHasNoToStringMethod")
 public class SwingWidget<P extends Component> extends SwingGadget<P> implements Widget<P> {
 
-    protected SwingWidget(final String id, final P peer, final BusNode node) {
-        super(id, peer, node);
+    private SwingGUI gui;
+    private Style style;
+
+    protected SwingWidget(final ValueMap attributes, final P peer, final BusNode node) {
+        super(attributes, peer, node);
         approve(SetPropertyCommand.class);
     }
 
@@ -136,6 +149,169 @@ public class SwingWidget<P extends Component> extends SwingGadget<P> implements 
     Rectangle fromExtent(final Extent extent) {
         return new Rectangle(extent.getLeft(), extent.getTop(), extent.getWidth(),
                 extent.getHeight());
+    }
+
+    void setGUI(SwingGUI gui) {
+        this.gui = gui;
+        gui.getStyle(this).andThen(this::startSetup);
+    }
+
+    private void startSetup(Style style) {
+        inject(new InternalSetupCommand(style));
+    }
+
+    /**
+     * Asynchronously sets up the widget's properties from the specified style.
+     * <p>
+     * Subclasses are supposed to wrap this method early (i.e. invoke the super method as early as
+     * possible) and then do their own local setup.
+     *
+     * @param style the style.
+     */
+    protected void setupStyle(final Style style) {
+        setExtent(new SwingExtent(calcTop(style.getTop(), style.getTopValue()),
+                calcLeft(style.getLeft(), style.getLeftValue()),
+                calcHeight(style.getHeight(), style.getHeightValue()),
+                calcWidth(style.getWidth(), style.getWidthValue())));
+    }
+
+    private int calcTop(final Distance top, final @Nullable IntegerMeasure topValue) {
+        int result = 0;
+        switch (top) {
+            case AUTO:
+            case INITIAL:
+                result = getPeer().getY();
+                break;
+            case INHERIT:
+                result = getParentTop();
+                break;
+            case EXPLICIT:
+                if (topValue instanceof IntegerPercentage)
+                    result = (int)(getParentHeight() * topValue.getValue() / 100.0);
+                else if (topValue instanceof IntegerDimension)
+                    result = dim((IntegerDimension)topValue);
+                else if (topValue != null) result = topValue.getValue();
+                break;
+        }
+        return result;
+    }
+
+    private int calcLeft(final Distance left, final @Nullable IntegerMeasure leftValue) {
+        int result = 0;
+        switch (left) {
+            case AUTO:
+            case INITIAL:
+                result = getPeer().getX();
+                break;
+            case INHERIT:
+                result = getParentLeft();
+                break;
+            case EXPLICIT:
+                if (leftValue instanceof IntegerPercentage)
+                    result = (int)(getParentWidth() * leftValue.getValue() / 100.0);
+                else if (leftValue instanceof IntegerDimension)
+                    result = dim((IntegerDimension)leftValue);
+                else if (leftValue != null) result = leftValue.getValue();
+                break;
+        }
+        return result;
+    }
+
+    private int calcHeight(final Distance height, final @Nullable IntegerMeasure heightValue) {
+        int result = 0;
+        switch (height) {
+            case AUTO:
+            case INITIAL:
+                result = getPeer().getHeight();
+                break;
+            case INHERIT:
+                result = getParentHeight();
+                break;
+            case EXPLICIT:
+                if (heightValue instanceof IntegerPercentage)
+                    result = (int)(getParentHeight() * heightValue.getValue() / 100.0);
+                else if (heightValue instanceof IntegerDimension)
+                    result = dim((IntegerDimension)heightValue);
+                else if (heightValue != null) result = heightValue.getValue();
+                break;
+        }
+        return result;
+    }
+
+    private int calcWidth(final Distance width, final @Nullable IntegerMeasure widthValue) {
+        int result = 0;
+        switch (width) {
+            case AUTO:
+            case INITIAL:
+                result = getPeer().getWidth();
+                break;
+            case INHERIT:
+                result = getParentWidth();
+                break;
+            case EXPLICIT:
+                if (widthValue instanceof IntegerPercentage)
+                    result = (int)(getParentWidth() * widthValue.getValue() / 100.0);
+                else if (widthValue instanceof IntegerDimension)
+                    result = dim((IntegerDimension)widthValue);
+                else if (widthValue != null) result = widthValue.getValue();
+                break;
+        }
+        return result;
+    }
+
+    private int getParentTop() {
+        return getParent().map(Widget::getTop).orElseGet(() -> gui.getScreen().getTop());
+    }
+
+    private int getParentLeft() {
+        return getParent().map(Widget::getLeft).orElseGet(() -> gui.getScreen().getLeft());
+    }
+
+    private int getParentHeight() {
+        return getParent().map(Widget::getHeight).orElseGet(() -> gui.getScreen().getHeight());
+    }
+
+    private int getParentWidth() {
+        return getParent().map(Widget::getWidth).orElseGet(() -> gui.getScreen().getWidth());
+    }
+
+    private int dim(final IntegerDimension width) {
+        return width.getValue() * unitToPixels(width.getUnit());
+    }
+
+    private int unitToPixels(final CssUnit unit) {
+        switch (unit) {
+            case em:
+                return 1;
+            case ex:
+                return 1;
+            case px:
+                return 1;
+            case cm:
+                return 1;
+            case mm:
+                return 1;
+            case in:
+                return 1;
+            case pt:
+                return 1;
+            case pc:
+                return 1;
+            case ch:
+                return 1;
+            case rem:
+                return 1;
+            case vh:
+                return 1;
+            case vw:
+                return 1;
+            case vmin:
+                return 1;
+            case vmax:
+                return 1;
+            default:
+                return 1;
+        }
     }
 
     private abstract class SetPropertyCommand extends BasicCommand {
@@ -275,4 +451,16 @@ public class SwingWidget<P extends Component> extends SwingGadget<P> implements 
 
     }
 
+    private class InternalSetupCommand extends SetPropertyCommand implements SetupCommand {
+
+        private final Style style;
+
+        public InternalSetupCommand(final Style style) {
+            this.style = style;
+        }
+
+        @Override public void execute() {
+            setupStyle(style);
+        }
+    }
 }

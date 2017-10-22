@@ -39,21 +39,23 @@ public class SwingGUITest {
     @Inject private Session session;
     private SwingGUI testee;
 
-    @Test public void testSwingGUI() throws IOException {
+    @Test public void testSwingGUI() throws IOException, InterruptedException {
         final URL gui = getClass().getClassLoader().getResource("SwingTestGUI.gui");
         if (gui == null) throw new NullPointerException("GUI definition file not found!");
         SwingGuiModel model = SwingGuiModel.from(gui);
         testee = model.getGUI();
 
         Frame frame = testee.getComponent(session, Frame.class, "main-frame");
+        frame.setVisible(true).standby();
 
-        frame.setVisible(true);
+        Thread.sleep(5000);
+
         assertThat(frame.getTop(), is(50));
         assertThat(frame.getLeft(), is(100));
         assertThat(frame.getGauge(), is(new SwingGauge(600, 800)));
         assertThat(frame.isVisible(), is(true));
 
-        frame.setVisible(false);
+        frame.setVisible(false).standby();
         assertThat(frame.isVisible(), is(false));
     }
 

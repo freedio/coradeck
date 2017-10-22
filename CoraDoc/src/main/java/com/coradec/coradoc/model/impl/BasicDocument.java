@@ -22,7 +22,7 @@ package com.coradec.coradoc.model.impl;
 
 import com.coradec.coracore.model.Origin;
 import com.coradec.coracore.util.ClassUtil;
-import com.coradec.coradoc.ctrl.Cbuffer;
+import com.coradec.coradoc.ctrl.CharBuffer;
 import com.coradec.coradoc.model.Document;
 import com.coradec.coradoc.trouble.DocumentReadFailure;
 import com.coradec.coradoc.trouble.EndOfDocumentException;
@@ -31,7 +31,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.function.Predicate;
 
@@ -42,7 +41,7 @@ public class BasicDocument implements Document {
 
     private final Origin origin;
     private final BufferedReader source;
-    private final Cbuffer pushback = Cbuffer.allocate(65536);
+    private final CharBuffer pushback = CharBuffer.allocate(65536);
     private int tabwidth = 8;
     private int page = 0, line = 0, column = 0;
     private int lastpage = 0, lastline = 0, lastcolumn = 0;
@@ -78,7 +77,7 @@ public class BasicDocument implements Document {
     }
 
     @Override public boolean isNext(final CharSequence next) {
-        CharBuffer buffer = CharBuffer.allocate(next.length());
+        java.nio.CharBuffer buffer = java.nio.CharBuffer.allocate(next.length());
         buffer.clear();
         flood(buffer);
         boolean result = equal(next, buffer);
@@ -87,8 +86,12 @@ public class BasicDocument implements Document {
         return result;
     }
 
+    @Override public boolean nextIs(final Predicate<Character> rule) {
+        return rule.test(peek());
+    }
+
     @Override public boolean isNextNot(final CharSequence next) {
-        CharBuffer buffer = CharBuffer.allocate(next.length());
+        java.nio.CharBuffer buffer = java.nio.CharBuffer.allocate(next.length());
         buffer.clear();
         flood(buffer);
         boolean result = !equal(next, buffer);
@@ -104,6 +107,26 @@ public class BasicDocument implements Document {
         } catch (IOException e) {
             throw new DocumentReadFailure(e);
         }
+    }
+
+    @Override public char peek() throws EndOfDocumentException {
+        if (pushback.hasRemaining()) return pushback.charAt(pushback.position());
+        try {
+            final int c = source.read();
+            pushback((char)c);
+            return (char)c;
+        } catch (IOException e) {
+            throw new DocumentReadFailure(e);
+        }
+    }
+
+    @Override public CharSequence peek(int n) throws EndOfDocumentException {
+        java.nio.CharBuffer buffer = java.nio.CharBuffer.allocate(n);
+        buffer.clear();
+        flood(buffer);
+        pushback(buffer);
+        buffer.position(0);
+        return buffer;
     }
 
     @Override public Origin getOrigin() {
@@ -122,6 +145,15 @@ public class BasicDocument implements Document {
         StringBuilder collector = new StringBuilder();
         char c;
         for (c = nextChar(); valid.test(c); c = nextChar()) collector.append(c);
+        pushback(c);
+        return collector;
+    }
+
+    @Override public CharSequence readWhile(final Predicate<Character> valid, final int limit) {
+        StringBuilder collector = new StringBuilder();
+        char c;
+        for (c = nextChar(); collector.length() < limit && valid.test(c); c = nextChar())
+            collector.append(c);
         pushback(c);
         return collector;
     }
@@ -153,10 +185,16 @@ public class BasicDocument implements Document {
 
     @Override public boolean isFinished() {
         try {
-            return pushback.isEmpty() && source.read() == -1;
+            return pushback.isEmpty() && probe(source);
         } catch (IOException e) {
             throw new DocumentReadFailure();
         }
+    }
+
+    private boolean probe(final BufferedReader source) throws IOException {
+        int c = source.read();
+        if (c != -1) pushback((char)c);
+        return c == -1;
     }
 
     /**
@@ -169,7 +207,7 @@ public class BasicDocument implements Document {
      * @param c the character to test.
      * @return {@code true} if the character is to be considered a blank, {@code false} if not.
      */
-    protected boolean isBlank(final char c) {
+    @Override public boolean isBlank(final char c) {
         return Character.isWhitespace(c);
     }
 
@@ -178,7 +216,7 @@ public class BasicDocument implements Document {
      *
      * @param c the character.
      */
-    private void pushback(final char c) {
+    @Override public void pushback(final char c) {
         pushback.compact();
         pushback.open(1);
         pushback.put(c);
@@ -191,7 +229,7 @@ public class BasicDocument implements Document {
      *
      * @param buffer the buffer.
      */
-    private void pushback(final CharBuffer buffer) {
+    private void pushback(final java.nio.CharBuffer buffer) {
         pushback.compact();
         pushback.open(buffer.remaining());
         pushback.put(buffer);
@@ -218,7 +256,7 @@ public class BasicDocument implements Document {
      * @param buffer the buffer.
      * @throws DocumentReadFailure if the document could not be read.
      */
-    private void flood(final CharBuffer buffer) throws DocumentReadFailure {
+    private void flood(final java.nio.CharBuffer buffer) throws DocumentReadFailure {
         mark();
         final int available = Integer.min(pushback.length(), buffer.remaining());
         char[] xfer = new char[available];
@@ -287,7 +325,7 @@ public class BasicDocument implements Document {
         return c;
     }
 
-    private void consume(final CharBuffer buffer) {
+    private void consume(final java.nio.CharBuffer buffer) {
         while (buffer.hasRemaining()) updatePosition(buffer.get());
     }
 

@@ -20,12 +20,12 @@
 
 package com.coradec.coradoc.model;
 
-import java.util.Map;
+import com.coradec.coraconf.model.ValueMap;
 
 /**
  * A list of typed attributes.
  */
-public interface XmlAttributes {
+public interface XmlAttributes extends ValueMap {
 
     /**
      * Adds a typeless attribute with the specified name and value.
@@ -35,20 +35,5 @@ public interface XmlAttributes {
      * @throws IllegalStateException if an attribute with the specified name already existed.
      */
     void add(String name, String value) throws IllegalStateException;
-
-    /**
-     * Returns the value of the attribute with the specified name.
-     *
-     * @param name the attribute name.
-     * @return the attribute value.
-     */
-    String getValue(String name);
-
-    /**
-     * Returns the name to value mapping.
-     *
-     * @return the name to value mapping.
-     */
-    Map<String, String> getValueMap();
 
 }

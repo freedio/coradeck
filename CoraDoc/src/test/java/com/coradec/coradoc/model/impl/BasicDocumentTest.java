@@ -45,7 +45,7 @@ public class BasicDocumentTest {
         if (location == null) throw new ResourceNotFoundException(name);
 
         Document testee =
-                new BasicDocument(new URLigin(location), location.openStream(), StringUtil.CHARSET);
+                new BasicDocument(new URLigin(location), location.openStream(), StringUtil.UTF8);
         assertThat(testee.skipBlanks(), is(0)); // no blanks at the beginning
         assertThat(testee.nextChar(), is('A'));
         assertThat(testee.skipBlanks(), is(1));

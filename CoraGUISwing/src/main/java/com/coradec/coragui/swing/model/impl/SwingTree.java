@@ -21,6 +21,7 @@
 package com.coradec.coragui.swing.model.impl;
 
 import com.coradec.corabus.model.BusHub;
+import com.coradec.coraconf.model.ValueMap;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Register;
 import com.coradec.coragui.model.Tree;
@@ -35,12 +36,12 @@ import javax.swing.*;
 @Register(SwingGUI.class)
 public class SwingTree extends SwingContainer<JTree> implements Tree<JTree> {
 
-    protected SwingTree(final String id, final BusHub hub) {
-        super(id, new JTree(), hub);
+    protected SwingTree(final ValueMap attributes, final BusHub hub) {
+        super(attributes, new JTree(), hub);
     }
 
-    public SwingTree(final String id) {
-        this(id, new SwingTreeNode());
+    public SwingTree(final ValueMap attributes) {
+        this(attributes, new SwingTreeNode());
     }
 
 }

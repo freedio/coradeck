@@ -30,7 +30,7 @@ import java.net.URL;
  *
  * @param <M> the model type.
  */
-public interface XmlParser<M extends XmlDocumentModel> {
+public interface XmlParser<M extends XmlDocumentModel> extends DocumentParser<M> {
 
     /**
      * Adds the specified document model to handle markup events.
@@ -54,12 +54,5 @@ public interface XmlParser<M extends XmlDocumentModel> {
      * @throws ParseFailure if the document could not be completely parsed.
      */
     XmlParser<M> parse() throws ParseFailure;
-
-    /**
-     * Parses the document and returns the model.
-     *
-     * @return the document model.
-     */
-    M getModel();
 
 }

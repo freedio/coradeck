@@ -21,6 +21,7 @@
 package com.coradec.coragui.swing.model.impl;
 
 import com.coradec.corabus.model.BusNode;
+import com.coradec.coraconf.model.ValueMap;
 import com.coradec.coracore.annotation.NonNull;
 import com.coradec.coracore.annotation.Nullable;
 import com.coradec.coractrl.ctrl.impl.BasicAgent;
@@ -30,7 +31,10 @@ import com.coradec.coratext.model.LocalizedText;
 import com.coradec.coratext.model.Text;
 
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * ​​Swing implementation of a gadget.
@@ -45,13 +49,19 @@ public class SwingGadget<P> extends BasicAgent implements Gadget<P> {
 
     private final P peer;
     private final BusNode node;
-    private final String name;
+    private final String id;
     private @Nullable SwingContainer parent;
+    private final ValueMap attributes;
 
-    protected SwingGadget(final String id, final P peer, final BusNode node) {
-        this.name = id;
+    protected SwingGadget(final ValueMap attributes, final P peer, final BusNode node) {
+        this.attributes = attributes;
+        this.id = attributes.lookup("id").orElse(UUID.randomUUID().toString());
         this.peer = peer;
         this.node = node;
+    }
+
+    public ValueMap getAttributes() {
+        return attributes;
     }
 
     @Override public P getPeer() {
@@ -71,7 +81,7 @@ public class SwingGadget<P> extends BasicAgent implements Gadget<P> {
     }
 
     @Override public String getName() {
-        return name;
+        return id;
     }
 
     @Override public Optional<Container> getParent() {
@@ -83,4 +93,11 @@ public class SwingGadget<P> extends BasicAgent implements Gadget<P> {
             throw new IllegalArgumentException(TEXT_EXPECTED_SWING_CONTAINER.resolve(parent));
         this.parent = (SwingContainer)parent;
     }
+
+    public List<String> getPath() {
+        final List<String> result = parent != null ? parent.getPath() : new ArrayList<>();
+        result.add(attributes.get("type"));
+        return result;
+    }
+
 }

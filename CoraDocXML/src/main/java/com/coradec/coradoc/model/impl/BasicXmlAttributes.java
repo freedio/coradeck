@@ -20,9 +20,10 @@
 
 package com.coradec.coradoc.model.impl;
 
+import com.coradec.coracore.trouble.PropertyNotFoundException;
 import com.coradec.coracore.util.ClassUtil;
 import com.coradec.coradoc.model.XmlAttributes;
-import com.coradec.coradoc.trouble.AttributeUndefinedException;
+import com.coradec.coratype.ctrl.TypeConverter;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -46,16 +47,29 @@ public class BasicXmlAttributes implements XmlAttributes {
         if (values.putIfAbsent(name, value) != null) throw new IllegalStateException();
     }
 
-    @Override public String getValue(final String name) {
-        return Optional.ofNullable(values.get(name))
-                       .orElseThrow(() -> new AttributeUndefinedException(name));
-    }
-
-    @Override public Map<String, String> getValueMap() {
-        return Collections.unmodifiableMap(values);
-    }
-
     @Override public String toString() {
         return ClassUtil.toString(this);
+    }
+
+    @Override public Optional<String> lookup(final String name) {
+        return Optional.ofNullable(values.get(name));
+    }
+
+    @Override public String get(final String name) throws PropertyNotFoundException {
+        return lookup(name).orElseThrow(() -> new PropertyNotFoundException(String.class, name));
+    }
+
+    @Override public <V> Optional<V> lookup(final Class<V> type, final String name) {
+        return lookup(name).map(property -> TypeConverter.to(type).decode(property));
+    }
+
+    @Override public <V> V get(final Class<V> type, final String name)
+            throws PropertyNotFoundException {
+        return lookup(type, name).orElseThrow(
+                () -> new PropertyNotFoundException(String.class, name));
+    }
+
+    @Override public Map<String, String> asMap() {
+        return Collections.unmodifiableMap(values);
     }
 }

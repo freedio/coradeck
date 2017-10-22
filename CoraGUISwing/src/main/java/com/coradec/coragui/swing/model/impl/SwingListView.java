@@ -21,6 +21,7 @@
 package com.coradec.coragui.swing.model.impl;
 
 import com.coradec.corabus.model.BusHub;
+import com.coradec.coraconf.model.ValueMap;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Register;
 import com.coradec.coragui.model.ListView;
@@ -37,12 +38,12 @@ import javax.swing.*;
 @Register(SwingGUI.class)
 public class SwingListView<E> extends SwingContainer<JList> implements ListView<JList, E> {
 
-    protected SwingListView(final String id, final BusHub hub) {
-        super(id, new JList<E>(), hub);
+    protected SwingListView(final ValueMap attributes, final BusHub hub) {
+        super(attributes, new JList<E>(), hub);
     }
 
-    public SwingListView(final String id) {
-        this(id, new SwingListViewNode());
+    public SwingListView(final ValueMap attributes) {
+        this(attributes, new SwingListViewNode());
     }
 
 }

@@ -1,0 +1,9 @@
+# Localized text base for default locale of class BasicCssParser
+
+ChildSelectorWithoutPredecessor: Child selector without predecessor in document %s at %d.%d!
+NeighborSelectorWithoutPredecessor: Neighbor selector without predecessor in document %s at %d.%d!
+AdditionalSelectorWithoutPredecessor: Additional selector without predecessor in document %s at %d.%d!
+SiblingSelectorWithoutPredecessor: Sibling selector without predecessor in document %s at %d.%d!
+InvalidAttributeOperator: Invalid attribute operator ‹%c› in document %s at %d.%d!
+AttributeFilterWithoutAttributeName: Attribute filter without attribute name in document %s at %d.%d!
+ColonExpected: Expected a colon (:), but got ‹%c› in document %s at %d.%d!

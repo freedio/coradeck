@@ -20,11 +20,20 @@
 
 package com.coradec.coragui.trouble;
 
+import com.coradec.coracore.annotation.ToString;
+
 /**
  * ​​Indicates an attempt to define GUI elements outside a GUI definition.
  */
 public class ElementOutsideGUIException extends GuiException {
 
-    public ElementOutsideGUIException(final String localName) {
+    private final String name;
+
+    public ElementOutsideGUIException(final String name) {
+        this.name = name;
+    }
+
+    @ToString public String getName() {
+        return name;
     }
 }

@@ -21,8 +21,10 @@
 package com.coradec.coragui.swing.model.impl;
 
 import com.coradec.corabus.model.BusNode;
+import com.coradec.coraconf.model.ValueMap;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Register;
+import com.coradec.coradoc.model.Style;
 import com.coradec.coragui.model.Label;
 import com.coradec.coragui.swing.bus.impl.SwingLabelNode;
 
@@ -36,12 +38,17 @@ import javax.swing.*;
 @Register(SwingGUI.class)
 public class SwingLabel extends SwingWidget<JLabel> implements Label<JLabel> {
 
-    protected SwingLabel(final String id, final BusNode node) {
-        super(id, new JLabel(), node);
+    protected SwingLabel(final ValueMap attributes, final BusNode node) {
+        super(attributes, new JLabel(), node);
     }
 
-    public SwingLabel(final String id) {
-        this(id, new SwingLabelNode());
+    public SwingLabel(final ValueMap attributes) {
+        this(attributes, new SwingLabelNode());
+    }
+
+    @Override protected void setupStyle(final Style style) {
+        getAttributes().lookup("text").ifPresent(text -> getPeer().setText(text));
+        super.setupStyle(style);
     }
 
 }

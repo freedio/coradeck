@@ -23,6 +23,7 @@ package com.coradec.coragui.swing.model.impl;
 import com.coradec.corabus.model.BusHub;
 import com.coradec.coracom.model.Request;
 import com.coradec.coracom.model.impl.BasicCommand;
+import com.coradec.coraconf.model.ValueMap;
 import com.coradec.coragui.model.Container;
 import com.coradec.coragui.model.Gadget;
 import com.coradec.coratext.model.LocalizedText;
@@ -44,8 +45,8 @@ public class SwingContainer<P extends java.awt.Container> extends SwingWidget<P>
 
     List<SwingGadget> elements = new ArrayList<>();
 
-    protected SwingContainer(final String id, final P peer, final BusHub hub) {
-        super(id, peer, hub);
+    protected SwingContainer(final ValueMap attributes, final P peer, final BusHub hub) {
+        super(attributes, peer, hub);
         approve(AddGadgetCommand.class);
     }
 

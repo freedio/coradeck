@@ -21,24 +21,11 @@
 package com.coradec.coradoc.model;
 
 import com.coradec.coracore.annotation.Nullable;
-import com.coradec.coracore.model.Origin;
 
 /**
- * A model for building a structured document.
+ * A model for building a structured XML document.
  */
 public interface XmlDocumentModel extends DocumentModel {
-
-    /**
-     * Callback invoked before the document starts.
-     *
-     * @param document the document origin.
-     */
-    void onStartOfDocument(Origin document);
-
-    /**
-     * Callback invoked before the document ends.
-     */
-    void onEndOfDocument();
 
     /**
      * Callback invoked when a start tag has been encountered.
@@ -99,10 +86,4 @@ public interface XmlDocumentModel extends DocumentModel {
      */
     void onEntityReference(String name);
 
-    /**
-     * Callback invoked when the specified comment was encountered.
-     *
-     * @param comment the comment.
-     */
-    void onComment(String comment);
 }

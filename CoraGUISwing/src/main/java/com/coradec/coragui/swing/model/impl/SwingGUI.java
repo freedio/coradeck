@@ -22,12 +22,23 @@ package com.coradec.coragui.swing.model.impl;
 
 import static com.coradec.coracore.model.Scope.*;
 
+import com.coradec.coracom.model.Message;
+import com.coradec.coracom.model.Voucher;
+import com.coradec.coracom.model.impl.BasicVoucher;
+import com.coradec.coraconf.model.ValueMap;
 import com.coradec.coracore.annotation.Implementation;
+import com.coradec.coracore.annotation.Inject;
 import com.coradec.coracore.annotation.Nullable;
+import com.coradec.coracore.annotation.ToString;
+import com.coradec.coracore.model.Factory;
 import com.coradec.coracore.model.Registry;
 import com.coradec.coracore.trouble.ClassInstantiationFailure;
+import com.coradec.coracore.trouble.ResourceNotAccessibleFailure;
 import com.coradec.coractrl.ctrl.impl.BasicAgent;
+import com.coradec.coradoc.model.CascadingStyleSheet;
+import com.coradec.coradoc.model.Style;
 import com.coradec.coradoc.model.XmlAttributes;
+import com.coradec.coradoc.model.impl.BasicXmlAttributes;
 import com.coradec.coragui.model.GUI;
 import com.coradec.coragui.model.Gadget;
 import com.coradec.coragui.trouble.ComponentNotFoundException;
@@ -37,8 +48,11 @@ import com.coradec.corasession.model.Session;
 import com.coradec.coratext.model.LocalizedText;
 import com.coradec.coratext.model.Text;
 
+import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -57,7 +71,44 @@ public class SwingGUI extends BasicAgent implements GUI, Registry {
     private static final Text TEXT_FROM_NOT_FOUND = LocalizedText.define("FromNotFound");
     private static final Text TEXT_CLASS_NOT_FOUND = LocalizedText.define("ClassNotFound");
 
+    @Inject private static Factory<CascadingStyleSheet> STYLESHEET;
+
     private static final Set<Class<? extends SwingGadget>> COMPONENTS = new HashSet<>();
+    private final String id;
+    private final String name;
+    private final String type;
+    private final CascadingStyleSheet styleSheet;
+    private SwingScreen screen;
+
+    public <R extends Message> SwingGUI(final XmlAttributes attributes) {
+        id = attributes.get("id");
+        name = attributes.get("name");
+        type = attributes.get("type");
+        styleSheet = loadStyleSheetFrom(attributes.get("style-sheet"));
+        addRoute(GetStyleVoucher.class, this::reportStyle);
+    }
+
+    private void reportStyle(final GetStyleVoucher voucher) {
+        final SwingWidget<?> widget = voucher.getWidget();
+        voucher.setValue(styleSheet.getStyle(widget.getPath(), widget.getAttributes())).succeed();
+    }
+
+    private CascadingStyleSheet loadStyleSheetFrom(final String path) {
+        try {
+            return STYLESHEET.get(new URL(path));
+        } catch (IOException e) {
+            // try next type.
+        }
+        try {
+            final File file = new File(path);
+            if (file.canRead()) return STYLESHEET.get(file.toURI().toURL());
+        } catch (IOException e) {
+            // try next type
+        }
+        URL resource = getClass().getClassLoader().getResource(path);
+        if (resource != null) return STYLESHEET.get(resource);
+        throw new ResourceNotAccessibleFailure(path);
+    }
 
     public static void registerComponent(Class<?> componentClass) {
         if (SwingGadget.class.isAssignableFrom(componentClass)) {
@@ -114,6 +165,7 @@ public class SwingGUI extends BasicAgent implements GUI, Registry {
      */
     public SwingGadget addElement(final String name, final XmlAttributes attributes) {
         final SwingGadget element = createElement(name, attributes);
+        if (element instanceof SwingScreen) screen = (SwingScreen)element;
         String id = element.getName();
         components.put(id, element);
         return element;
@@ -155,14 +207,14 @@ public class SwingGUI extends BasicAgent implements GUI, Registry {
      * interface in the CarClassLoader, restricting candidates to classes whose package name is one
      * of the predefined implementation packages.
      *
-     * @param name       the gadget name.
+     * @param type       the gadget type.
      * @param attributes attributes of the gadget.
      * @return the gadget implementation.
      */
-    public SwingGadget createElement(final String name, final XmlAttributes attributes) {
-        final String id = attributes.getValue("id");
+    public SwingGadget createElement(final String type, final XmlAttributes attributes) {
+        attributes.add("type", type);
         try {
-            return modelPackages.stream().map(pkg -> compose(pkg, name)).filter(cn -> {
+            return modelPackages.stream().map(pkg -> compose(pkg, type)).filter(cn -> {
                 try {
                     Class.forName(cn);
                     return true;
@@ -174,23 +226,62 @@ public class SwingGUI extends BasicAgent implements GUI, Registry {
                 return COMPONENTS.stream()
                                  .filter(gadgetInterface::isAssignableFrom)
                                  .findAny()
-                                 .map(cc -> instantiate(cc, id))
-                                 .orElseThrow(() -> new NoImplementationFoundException(name));
-            }).orElseThrow(() -> new NoImplementationFoundException(name));
+                                 .map(cc -> instantiate(cc, attributes))
+                                 .orElseThrow(() -> new NoImplementationFoundException(type));
+            }).orElseThrow(() -> new NoImplementationFoundException(type));
         } catch (ClassCastException e) {
             throw new CarClassLoaderRequiredException();
         }
     }
 
-    private SwingGadget instantiate(final Class<? extends SwingGadget> component, final String id) {
+    private SwingGadget instantiate(final Class<? extends SwingGadget> component,
+            final XmlAttributes attributes) {
         Constructor<? extends SwingGadget> constructor;
         try {
             //noinspection JavaReflectionMemberAccess
-            return component.getConstructor(String.class).newInstance(id);
+            final SwingGadget gadget =
+                    component.getConstructor(ValueMap.class).newInstance(attributes);
+            if (gadget instanceof SwingWidget) ((SwingWidget)gadget).setGUI(this);
+            return gadget;
         } catch (InvocationTargetException e) {
             throw new ClassInstantiationFailure(component.getName(), e.getTargetException());
         } catch (InstantiationException | IllegalAccessException | NoSuchMethodException e) {
             throw new ClassInstantiationFailure(component.getName(), e);
+        }
+    }
+
+    /**
+     * Returns the style of the specified widget from the style sheet asynchronously.
+     *
+     * @param widget the widget.
+     * @return the widget's style.
+     */
+    public Voucher<Style> getStyle(final SwingWidget<?> widget) {
+        return inject(new GetStyleVoucher(widget));
+    }
+
+    public SwingScreen getScreen() {
+        if (screen == null) screen = createScreen();
+        return screen;
+    }
+
+    private SwingScreen createScreen() {
+        final BasicXmlAttributes attributes = new BasicXmlAttributes();
+        attributes.add("id", "screen");
+        return new SwingScreen(attributes);
+    }
+
+    private class GetStyleVoucher extends BasicVoucher<Style> {
+
+        private final SwingWidget<?> widget;
+
+        public GetStyleVoucher(final SwingWidget<?> widget) {
+            super(SwingGUI.this, SwingGUI.this, Style.class);
+            this.widget = widget;
+        }
+
+        @ToString public SwingWidget<?> getWidget() {
+            return widget;
         }
     }
 

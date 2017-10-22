@@ -56,6 +56,18 @@
             <groupId>com.coradec.coradeck</groupId>
             <artifactId>corabus</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.coradec.coradeck</groupId>
+            <artifactId>coradoc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.coradec.coradeck</groupId>
+            <artifactId>coradoc-xml</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.coradec.coradeck</groupId>
+            <artifactId>coradoc-css</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>com.coradec.coradeck</groupId>
@@ -101,14 +113,6 @@
             <groupId>com.coradec.coradeck</groupId>
             <artifactId>corasession-basic</artifactId>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.coradec.coradeck</groupId>
-            <artifactId>coradoc</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.coradec.coradeck</groupId>
-            <artifactId>coradoc-xml</artifactId>
         </dependency>
     </dependencies>
 

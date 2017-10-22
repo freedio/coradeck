@@ -22,12 +22,11 @@ package com.coradec.coradoc.ctrl;
 
 import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
-import java.nio.CharBuffer;
 
 /**
  * ​​A versatile character buffer.
  */
-public final class Cbuffer implements CharSequence {
+public final class CharBuffer implements CharSequence {
 
     int position;
     int limit;
@@ -35,12 +34,13 @@ public final class Cbuffer implements CharSequence {
     int mark = -1;
     char[] array;
 
-    private Cbuffer(final int capacity) {
+    private CharBuffer(final int capacity) {
         this.capacity = capacity;
         array = new char[capacity];
     }
 
-    private Cbuffer(final char[] array, final int position, final int limit, final int capacity) {
+    private CharBuffer(final char[] array, final int position, final int limit,
+            final int capacity) {
         this.position = position;
         this.limit = limit;
         this.capacity = capacity;
@@ -53,8 +53,8 @@ public final class Cbuffer implements CharSequence {
      * @param capacity the buffer capacity.
      * @return a character buffer.
      */
-    public static Cbuffer allocate(final int capacity) {
-        return new Cbuffer(capacity);
+    public static CharBuffer allocate(final int capacity) {
+        return new CharBuffer(capacity);
     }
 
     /**
@@ -103,7 +103,7 @@ public final class Cbuffer implements CharSequence {
         return position;
     }
 
-    public Cbuffer position(final int i) {
+    public CharBuffer position(final int i) {
         position = i;
         return this;
     }
@@ -167,13 +167,14 @@ public final class Cbuffer implements CharSequence {
      * @param buffer the buffer to copy.
      * @throws BufferOverflowException if the specified buffer doesn't fit into this buffer.
      */
-    public void put(final CharBuffer buffer) throws BufferOverflowException {
+    public void put(final java.nio.CharBuffer buffer) throws BufferOverflowException {
 //        if (buffer == this) throw new IllegalArgumentException();
         final int toCopy = buffer.remaining();
         if (remaining() < toCopy) throw new BufferOverflowException();
         if (buffer.hasArray()) {
             System.arraycopy(buffer.array(), buffer.arrayOffset(), array, position, toCopy);
             position += toCopy;
+            buffer.position(buffer.position() + toCopy);
         } else for (int i = 0; i < toCopy; ++i) array[position++] = buffer.get();
         if (limit < position) limit = position;
     }
@@ -210,7 +211,7 @@ public final class Cbuffer implements CharSequence {
     }
 
     @Override public CharSequence subSequence(final int start, final int end) {
-        return new Cbuffer(array, position + start, position + end, capacity);
+        return new CharBuffer(array, position + start, position + end, capacity);
     }
 
     /**

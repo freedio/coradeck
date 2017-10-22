@@ -52,6 +52,13 @@ public class SwingExtent implements Extent {
         width = gauge.getWidth();
     }
 
+    public SwingExtent(final int top, final int left, final int height, final int width) {
+        this.top = top;
+        this.left = left;
+        this.height = height;
+        this.width = width;
+    }
+
     @Override @ToString public int getTop() {
         return top;
     }

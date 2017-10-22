@@ -25,6 +25,7 @@ import static org.hamcrest.MatcherAssert.*;
 
 import com.coradec.coracom.ctrl.MessageQueue;
 import com.coradec.coracore.annotation.Inject;
+import com.coradec.coradoc.model.impl.BasicXmlAttributes;
 import com.coradec.corajet.test.CoradeckJUnit4TestRunner;
 import com.coradec.corasession.model.Session;
 import org.junit.Test;
@@ -36,8 +37,13 @@ import javax.swing.*;
 public class SwingFrameTest {
 
     @Inject private static MessageQueue MQ;
+    private static final BasicXmlAttributes ATTRIBUTES = new BasicXmlAttributes();
 
-    private final SwingFrame testee = new SwingFrame("main");
+    static {
+        ATTRIBUTES.add("id", "main");
+    }
+
+    private final SwingFrame testee = new SwingFrame(ATTRIBUTES);
     @Inject private Session session;
 
     @Test public void testEmptyFrame() throws InterruptedException {

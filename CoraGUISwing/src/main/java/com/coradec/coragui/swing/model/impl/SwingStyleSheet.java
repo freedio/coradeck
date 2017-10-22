@@ -21,7 +21,7 @@
 package com.coradec.coragui.swing.model.impl;
 
 import com.coradec.coracore.annotation.Implementation;
-import com.coradec.coragui.model.StyleSheet;
+import com.coradec.coradoc.model.StyleSheet;
 
 /**
  * ​​Swing implementation of a style sheet.

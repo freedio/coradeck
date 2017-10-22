@@ -21,8 +21,10 @@
 package com.coradec.coragui.swing.model.impl;
 
 import com.coradec.corabus.model.BusNode;
+import com.coradec.coraconf.model.ValueMap;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Register;
+import com.coradec.coradoc.model.Style;
 import com.coradec.coragui.model.Button;
 import com.coradec.coragui.swing.bus.impl.SwingButtonNode;
 
@@ -35,11 +37,17 @@ import javax.swing.*;
 @Register(SwingGUI.class)
 public class SwingButton extends SwingWidget<JButton> implements Button<JButton> {
 
-    protected SwingButton(final String id, final BusNode node) {
-        super(id, new JButton(), node);
+    protected SwingButton(final ValueMap attributes, final BusNode node) {
+        super(attributes, new JButton(), node);
     }
 
-    public SwingButton(final String id) {
-        this(id, new SwingButtonNode());
+    public SwingButton(final ValueMap attributes) {
+        this(attributes, new SwingButtonNode());
     }
+
+    @Override protected void setupStyle(final Style style) {
+        getAttributes().lookup("text").ifPresent(text -> getPeer().setText(text));
+        super.setupStyle(style);
+    }
+
 }

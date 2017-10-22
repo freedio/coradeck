@@ -21,6 +21,7 @@
 package com.coradec.coragui.swing.model.impl;
 
 import com.coradec.corabus.model.BusHub;
+import com.coradec.coraconf.model.ValueMap;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Register;
 import com.coradec.coragui.model.Window;
@@ -36,12 +37,12 @@ import javax.swing.*;
 @Register(SwingGUI.class)
 public class SwingWindow extends SwingContainer<JWindow> implements Window<JWindow> {
 
-    protected SwingWindow(final String id, final BusHub hub) {
-        super(id, new JWindow(), hub);
+    protected SwingWindow(final ValueMap attributes, final BusHub hub) {
+        super(attributes, new JWindow(), hub);
     }
 
-    public SwingWindow(final String id) {
-        this(id, new SwingWindowNode());
+    public SwingWindow(final ValueMap attributes) {
+        this(attributes, new SwingWindowNode());
     }
 
     @Override public void discard() {

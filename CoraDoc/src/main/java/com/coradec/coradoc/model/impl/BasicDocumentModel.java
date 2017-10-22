@@ -20,6 +20,8 @@
 
 package com.coradec.coradoc.model.impl;
 
+import com.coradec.coracore.model.Origin;
+import com.coradec.coracore.util.ClassUtil;
 import com.coradec.coradoc.model.DocumentModel;
 
 /**
@@ -27,4 +29,25 @@ import com.coradec.coradoc.model.DocumentModel;
  */
 public class BasicDocumentModel implements DocumentModel {
 
+    private Origin document;
+
+    @Override public void onStartOfDocument(final Origin document) {
+        this.document = document;
+    }
+
+    @Override public void onEndOfDocument() {
+
+    }
+
+    @Override public void onComment(final String comment) {
+
+    }
+
+    @Override public Origin getDocument() {
+        return document;
+    }
+
+    @Override public String toString() {
+        return ClassUtil.toString(this);
+    }
 }

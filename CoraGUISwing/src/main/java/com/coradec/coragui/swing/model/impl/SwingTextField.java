@@ -21,8 +21,10 @@
 package com.coradec.coragui.swing.model.impl;
 
 import com.coradec.corabus.model.BusNode;
+import com.coradec.coraconf.model.ValueMap;
 import com.coradec.coracore.annotation.Implementation;
 import com.coradec.coracore.annotation.Register;
+import com.coradec.coradoc.model.Style;
 import com.coradec.coragui.model.TextField;
 import com.coradec.coragui.swing.bus.impl.SwingTextFieldNode;
 
@@ -36,11 +38,17 @@ import javax.swing.*;
 @Register(SwingGUI.class)
 public class SwingTextField extends SwingWidget<JTextField> implements TextField<JTextField> {
 
-    protected SwingTextField(final String id, final BusNode node) {
-        super(id, new JTextField(), node);
+    protected SwingTextField(final ValueMap attributes, final BusNode node) {
+        super(attributes, new JTextField(), node);
     }
 
-    public SwingTextField(final String id) {
-        this(id, new SwingTextFieldNode());
+    public SwingTextField(final ValueMap attributes) {
+        this(attributes, new SwingTextFieldNode());
     }
+
+    @Override protected void setupStyle(final Style style) {
+        getAttributes().lookup("text").ifPresent(text -> getPeer().setText(text));
+        super.setupStyle(style);
+    }
+
 }
