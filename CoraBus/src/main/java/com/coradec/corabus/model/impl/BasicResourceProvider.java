@@ -18,11 +18,23 @@
  *
  */
 
-package com.coradec.coragui.model;
+package com.coradec.corabus.model.impl;
+
+import com.coradec.corabus.model.ResourceProvider;
+import com.coradec.corabus.view.BusResource;
+
+import java.util.Collection;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
- * ​​A style sheet defining the arrangement and properties of widgets.
+ * ​​Basic implementation of a service provider.
  */
-public interface StyleSheet {
+public abstract class BasicResourceProvider extends BasicNode implements ResourceProvider {
+
+    private final Collection<BusResource> registeredResources = new ConcurrentLinkedQueue<>();
+
+    protected void registerResource(final BusResource resource) {
+        registeredResources.add(resource);
+    }
 
 }

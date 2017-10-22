@@ -20,37 +20,37 @@
 
 package com.coradec.corabus.model;
 
-import com.coradec.corabus.view.BusService;
-import com.coradec.coracore.trouble.ServiceNotAvailableException;
+import com.coradec.corabus.view.BusResource;
+import com.coradec.coracore.trouble.ResourceNotAvailableException;
 import com.coradec.corasession.model.Session;
 
 /**
- * ​A bus node providing a service.
+ * ​A bus node providing a resource.
  */
-public interface ServiceProvider extends BusNode {
+public interface ResourceProvider extends BusNode {
 
     /**
-     * Checks if the provider provides a service of the specified type with the specified
+     * Checks if the provider provides a resource of the specified type with the specified
      * parameters.
      *
      * @param session the session context.
      * @param type    the type.
-     * @param args    parameters to select the service.
-     * @return {@code true} if the provider provides this type of service, {@code false} if not.
+     * @param args    parameters to select the resource.
+     * @return {@code true} if the provider provides this type of resource, {@code false} if not.
      */
-    <S extends BusService> boolean provides(final Session session, Class<? super S> type,
+    <S extends BusResource> boolean provides(final Session session, Class<? super S> type,
             Object... args);
 
     /**
-     * Returns the service of the specified type with the specified service parameters.
+     * Returns the resource of the specified type with the specified resource parameters.
      *
-     * @param <S>     the service type.
+     * @param <S>     the resource type.
      * @param session the session context.
-     * @param type    the service type selector.
-     * @param args    the service parameters.
-     * @return a service of the specified type.
+     * @param type    the resource type selector.
+     * @param args    the resource parameters.
+     * @return a resource of the specified type.
      */
-    <S extends BusService> S getService(final Session session, Class<? super S> type,
-            Object... args) throws ServiceNotAvailableException;
+    <S extends BusResource> S getResource(final Session session, Class<? super S> type,
+            Object... args) throws ResourceNotAvailableException;
 
 }

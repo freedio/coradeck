@@ -158,12 +158,11 @@ public class CMP_Handler extends BasicServiceProvider implements ProtocolHandler
             if (info instanceof PayloadMessage) {
                 final @Nullable byte[] body = ((PayloadMessage)info).getBody();
                 if (body != null && body.length > 0) //
-                    collector.append(del)
-                             .append(new String(ENCODER.encode(body), StringUtil.CHARSET));
+                    collector.append(del).append(new String(ENCODER.encode(body), StringUtil.UTF8));
             }
             final String serialized = collector.toString();
             debug("Message serialized as \"%s\"", serialized);
-            final byte[] serializedBytes = serialized.getBytes(StringUtil.CHARSET);
+            final byte[] serializedBytes = serialized.getBytes(StringUtil.UTF8);
             final ByteBuffer buffer = ByteBuffer.allocate(serializedBytes.length + Integer.BYTES);
             buffer.putInt(serializedBytes.length);
             buffer.put(serializedBytes);
@@ -176,7 +175,7 @@ public class CMP_Handler extends BasicServiceProvider implements ProtocolHandler
             Map<String, Object> attributes = new HashMap<>();
             byte[] all = new byte[buffer.limit()], body = null;
             buffer.get(all);
-            final String message = new String(all, StringUtil.CHARSET);
+            final String message = new String(all, StringUtil.UTF8);
             debug("Deserializing message \"%s\".", message);
             boolean doBody = false;
             for (final String attribute : message.split(delimiter)) {
@@ -191,7 +190,7 @@ public class CMP_Handler extends BasicServiceProvider implements ProtocolHandler
             if (doBody) {
                 int bodySep = message.indexOf(delimiter + delimiter);
                 String bodyPart = message.substring(bodySep + 2);
-                body = DECODER.decode(bodyPart.getBytes(StringUtil.CHARSET));
+                body = DECODER.decode(bodyPart.getBytes(StringUtil.UTF8));
             }
             final SessionInformation info = construct(session, attributes);
             if (body != null && info instanceof PayloadMessage)
