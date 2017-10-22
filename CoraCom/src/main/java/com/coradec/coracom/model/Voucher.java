@@ -32,6 +32,7 @@ import java.util.Optional;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 
 /**
  * ​An object that will hold a value once it gets set by another thread.  Similar to {@link
@@ -106,5 +107,19 @@ public interface Voucher<V> extends Request {
      * @return the voucher itself, for method chaining.
      */
     Voucher<V> setValue(V value);
+
+    /**
+     * Performs the specified action on the value when the request was successful.
+     * <p>
+     * <span style="color: yellow; background:red;"><strong>IMPORTANT NOTE:</strong></span>
+     * <p>
+     * The specified action is executed asynchronously and may re-introduce concurrency in an
+     * otherwise single-threaded context.  Do not perform any state changes or other side effects
+     * inside the action without proper caution.
+     *
+     * @param action the action to take on the value.
+     * @return this voucher, for method chaining.
+     */
+    Voucher<V> andThen(Consumer<V> action);
 
 }

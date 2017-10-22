@@ -125,6 +125,7 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
                 }
                 this.successCallbacks.clear();
             }
+            furtherSuccessActions();
             sendCompletionEvents();
             this.completion.release();
         } else if (state == FAILED || state == CANCELLED) {
@@ -143,6 +144,10 @@ public class BasicRequest extends BasicMessage implements Request, Asynchronous 
             sendCompletionEvents();
             this.completion.release();
         }
+    }
+
+    protected void furtherSuccessActions() {
+
     }
 
     private void setRequestState(final RequestState state, @Nullable final Throwable problem) {

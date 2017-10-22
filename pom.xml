@@ -66,6 +66,7 @@
         <module>CoraDoc</module>
         <module>CoraDocBasic</module>
         <module>CoraDocXML</module>
+        <module>CoraDocCSS</module>
     </modules>
 
     <properties>
@@ -263,6 +264,11 @@
             <dependency>
                 <groupId>com.coradec.coradeck</groupId>
                 <artifactId>coradoc-xml</artifactId>
+                <version>0.3</version>
+            </dependency>
+            <dependency>
+                <groupId>com.coradec.coradeck</groupId>
+                <artifactId>coradoc-css</artifactId>
                 <version>0.3</version>
             </dependency>
         </dependencies>

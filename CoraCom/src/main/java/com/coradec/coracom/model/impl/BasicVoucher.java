@@ -31,8 +31,11 @@ import com.coradec.coracore.model.Origin;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 
 /**
  * ​​Basic implementation of a voucher.
@@ -42,6 +45,7 @@ public class BasicVoucher<V> extends BasicRequest implements Voucher<V> {
 
     private @Nullable V value;
     private final GenericType<V> type;
+    Set<Consumer<V>> valueCallbacks = new CopyOnWriteArraySet<>();
 
     /**
      * Initializes a new instance of BasicVoucher with the specified type, sender and recipient.
@@ -108,9 +112,33 @@ public class BasicVoucher<V> extends BasicRequest implements Voucher<V> {
         return this;
     }
 
+    @Override public Voucher<V> andThen(final Consumer<V> action) {
+        if (isSuccessful()) {
+//            debug("Exec direct of success action %s", action);
+            action.accept(getValue());
+        } else valueCallbacks.add(action);
+        return this;
+    }
+
     @Override protected void collect() {
         super.collect();
         set(PROP_RESULT_TYPE, type);
         if (value != null) set(PROP_VALUE, value);
     }
+
+    @Override protected void furtherSuccessActions() {
+        super.furtherSuccessActions();
+        if (!this.valueCallbacks.isEmpty()) {
+            for (final Consumer<V> successCallback : this.valueCallbacks) {
+                try {
+//                            debug("success >> %s", successCallback);
+                    successCallback.accept(value);
+                } catch (Exception e) {
+                    error(e);
+                }
+            }
+            this.valueCallbacks.clear();
+        }
+    }
+
 }
