@@ -25,7 +25,7 @@ import com.coradec.coracore.annotation.ToString;
 /**
  * ​​Indicates an attempt to request a resource which is not available.
  */
-public class ResourceNotAvailableException extends BasicException {
+public class ResourceNotAvailableException extends ResourceException {
 
     private final Class<?> type;
     private final Object[] args;

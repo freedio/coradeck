@@ -70,11 +70,11 @@ public class URLConverter extends BasicTypeConverter<URL> {
     }
 
     @Override public URL unmarshal(final byte[] value) throws TypeConversionException {
-        return decode(new String(value, StringUtil.CHARSET));
+        return decode(new String(value, StringUtil.UTF8));
     }
 
     @Override public byte[] marshal(final URL value) {
-        return value.toExternalForm().getBytes(StringUtil.CHARSET);
+        return value.toExternalForm().getBytes(StringUtil.UTF8);
     }
 
 }

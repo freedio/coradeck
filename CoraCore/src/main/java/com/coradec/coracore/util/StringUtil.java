@@ -76,7 +76,7 @@ public final class StringUtil {
             "upon", "down", "near", "off", "onto", "unto", "yet", "nor", "so", "if", "once", "than",
             "that", "till", "when", "into", "out", "by", "and", "or", "but", "up", "over",
             };
-    public static final Charset CHARSET = Charset.forName("UTF-8");
+    public static final Charset UTF8 = Charset.forName("UTF-8");
 
     private StringUtil() {
     }

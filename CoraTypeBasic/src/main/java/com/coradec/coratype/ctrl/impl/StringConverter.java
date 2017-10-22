@@ -48,10 +48,10 @@ public class StringConverter extends BasicTypeConverter<String> {
     }
 
     @Override public String unmarshal(final byte[] value) throws TypeConversionException {
-        return new String(value, StringUtil.CHARSET);
+        return new String(value, StringUtil.UTF8);
     }
 
     @Override public byte[] marshal(final String value) {
-        return value.getBytes(StringUtil.CHARSET);
+        return value.getBytes(StringUtil.UTF8);
     }
 }

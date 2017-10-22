@@ -20,26 +20,15 @@
 
 package com.coradec.coracore.trouble;
 
-import com.coradec.coracore.annotation.ToString;
-
 /**
- * ​​Base class of all resource file problems.
+ * ​​Base class of all exceptions concerning resources.
  */
-public class ResourceFileException extends ResourceException {
+public class ResourceException extends BasicException {
 
-    private final String fileName;
-
-    /**
-     * Initializzes a new instance of ResourceFileException with the specified resource file name.
-     *
-     * @param fileName the resource file name.
-     */
-    public ResourceFileException(final String fileName) {
-        this.fileName = fileName;
+    public ResourceException(final Throwable problem) {
+        super(problem);
     }
 
-    @ToString public String getFileName() {
-        return this.fileName;
+    public ResourceException() {
     }
-
 }

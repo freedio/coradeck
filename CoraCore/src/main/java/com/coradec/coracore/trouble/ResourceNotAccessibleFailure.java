@@ -23,23 +23,18 @@ package com.coradec.coracore.trouble;
 import com.coradec.coracore.annotation.ToString;
 
 /**
- * ​​Base class of all resource file problems.
+ * ​​Indicates a failure to access a particular resource.  The reason is usually that there is a
+ * limited amount of means (URL, File, ...), none of which can handle the resource.
  */
-public class ResourceFileException extends ResourceException {
+public class ResourceNotAccessibleFailure extends ResourceException {
 
-    private final String fileName;
+    private final String path;
 
-    /**
-     * Initializzes a new instance of ResourceFileException with the specified resource file name.
-     *
-     * @param fileName the resource file name.
-     */
-    public ResourceFileException(final String fileName) {
-        this.fileName = fileName;
+    public ResourceNotAccessibleFailure(final String path) {
+        this.path = path;
     }
 
-    @ToString public String getFileName() {
-        return this.fileName;
+    @ToString public String getPath() {
+        return path;
     }
-
 }

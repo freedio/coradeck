@@ -69,11 +69,11 @@ public class FileConverter extends BasicTypeConverter<File> {
     }
 
     @Override public File unmarshal(final byte[] value) throws TypeConversionException {
-        return decode(new String(value, StringUtil.CHARSET));
+        return decode(new String(value, StringUtil.UTF8));
     }
 
     @Override public byte[] marshal(final File value) {
-        return value.getPath().getBytes(StringUtil.CHARSET);
+        return value.getPath().getBytes(StringUtil.UTF8);
     }
 
 }

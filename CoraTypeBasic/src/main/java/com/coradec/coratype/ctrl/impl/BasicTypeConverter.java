@@ -97,11 +97,11 @@ public abstract class BasicTypeConverter<T> implements TypeConverter<T> {
     }
 
     protected byte[] standardMarshal(final T value) {
-        return encode(value).getBytes(StringUtil.CHARSET);
+        return encode(value).getBytes(StringUtil.UTF8);
     }
 
     protected T standardUnmarshal(final byte[] value) {
-        return decode(new String(value, StringUtil.CHARSET));
+        return decode(new String(value, StringUtil.UTF8));
     }
 
     @SuppressWarnings("ClassHasNoToStringMethod")

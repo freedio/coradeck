@@ -69,11 +69,11 @@ public class StateConverter extends BasicTypeConverter<State> {
     }
 
     @Override public State unmarshal(final byte[] value) throws TypeConversionException {
-        return decode(new String(value, StringUtil.CHARSET));
+        return decode(new String(value, StringUtil.UTF8));
     }
 
     @Override public byte[] marshal(final State value) {
-        return encode(value).getBytes(StringUtil.CHARSET);
+        return encode(value).getBytes(StringUtil.UTF8);
     }
 
 }

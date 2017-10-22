@@ -39,6 +39,10 @@ public interface Configuration {
     @SuppressWarnings("unchecked")
     Factory<Configuration> CONFIGURATION = new GenericFactory(Configuration.class);
 
+    static Configuration of(Class<?> context) {
+        return CONFIGURATION.get(context.getName());
+    }
+
     /**
      * Returns the context, if present.
      * <p>

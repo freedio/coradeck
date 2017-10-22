@@ -359,22 +359,15 @@ public class CarClassLoader extends ClassLoader {
     @Override public Class<?> findClass(final String name) throws ClassNotFoundException {
         if (name.startsWith("java.") || name.startsWith("sun.") || name.startsWith("javax."))
             return super.findClass(name);
-        final Exception[] problem = new Exception[1];
-        final Class<?> result = classes.computeIfAbsent(name, k -> {
-            URL location = findResource(toResourceName(name));
+        Class<?> result = classes.get(name);
+        if (result == null) {
+            final URL location = findResource(toResourceName(name));
             try {
-                if (location == null) return super.findClass(name);
-                else return loadClass(name, location);
-            } catch (Exception e) {
-                Syslog.error(e);
-                problem[0] = e;
+                result = location == null ? super.findClass(name) : loadClass(name, location);
+                classes.put(name, result);
+            } catch (InstantiationException e) {
+                throw new ClassNotFoundException("Failed to loaad class", e);
             }
-            return null;
-        });
-        if (problem[0] != null) {
-            if (problem[0] instanceof ClassNotFoundException)
-                throw (ClassNotFoundException)problem[0];
-            else throw new ClassNotFoundException("Failed to load class", problem[0]);
         }
         return result;
     }

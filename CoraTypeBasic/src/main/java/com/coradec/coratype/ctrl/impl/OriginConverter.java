@@ -99,7 +99,7 @@ public class OriginConverter extends BasicTypeConverter<Origin> {
      * @throws TypeConversionException if the type conversion failed.
      */
     @Override public Origin unmarshal(final byte[] value) throws TypeConversionException {
-        return decode(new String(value, StringUtil.CHARSET));
+        return decode(new String(value, StringUtil.UTF8));
     }
 
     /**
@@ -110,7 +110,7 @@ public class OriginConverter extends BasicTypeConverter<Origin> {
      * @return the encoded object.
      */
     @Override public byte[] marshal(final Origin value) {
-        return encode(value).getBytes(StringUtil.CHARSET);
+        return encode(value).getBytes(StringUtil.UTF8);
     }
 
 }
